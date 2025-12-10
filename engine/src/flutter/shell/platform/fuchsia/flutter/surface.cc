@@ -29,7 +29,7 @@ bool Surface::IsValid() {
 
 // |flutter::Surface|
 std::unique_ptr<flutter::SurfaceFrame> Surface::AcquireFrame(
-    const flutter::DlISize& size) {
+    const SkISize& size) {
   flutter::SurfaceFrame::FramebufferInfo framebuffer_info;
   framebuffer_info.supports_readback = true;
   return std::make_unique<flutter::SurfaceFrame>(
@@ -45,10 +45,12 @@ GrDirectContext* Surface::GetContext() {
 }
 
 // |flutter::Surface|
-flutter::DlMatrix Surface::GetRootTransformation() const {
+SkMatrix Surface::GetRootTransformation() const {
   // This backend does not support delegating to the underlying platform to
   // query for root surface transformations. Just return identity.
-  return flutter::DlMatrix();
+  SkMatrix matrix;
+  matrix.reset();
+  return matrix;
 }
 
 }  // namespace flutter_runner

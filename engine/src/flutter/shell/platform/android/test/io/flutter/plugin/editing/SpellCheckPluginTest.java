@@ -82,10 +82,7 @@ public class SpellCheckPluginTest {
     SpellCheckerSession fakeSpellCheckerSession = mock(SpellCheckerSession.class);
 
     when(fakeTextServicesManager.newSpellCheckerSession(
-            null,
-            new Locale.Builder().setLanguage("en").setRegion("US").build(),
-            spellCheckPlugin,
-            true))
+            null, new Locale("en", "US"), spellCheckPlugin, true))
         .thenReturn(fakeSpellCheckerSession);
 
     spellCheckPlugin.initiateSpellCheck("en-US", "Hello, wrold!", mockResult);
@@ -121,10 +118,7 @@ public class SpellCheckPluginTest {
     SpellCheckerSession fakeSpellCheckerSession = mock(SpellCheckerSession.class);
 
     when(fakeTextServicesManager.newSpellCheckerSession(
-            null,
-            new Locale.Builder().setLanguage("en").setRegion("US").build(),
-            spellCheckPlugin,
-            true))
+            null, new Locale("en", "US"), spellCheckPlugin, true))
         .thenReturn(fakeSpellCheckerSession);
 
     spellCheckPlugin.performSpellCheck("en-US", "Hello, wrold!");
@@ -144,7 +138,7 @@ public class SpellCheckPluginTest {
     SpellCheckPlugin spellCheckPlugin =
         spy(new SpellCheckPlugin(fakeTextServicesManager, fakeSpellCheckChannel));
     SpellCheckerSession fakeSpellCheckerSession = mock(SpellCheckerSession.class);
-    Locale english_US = new Locale.Builder().setLanguage("en").setRegion("US").build();
+    Locale english_US = new Locale("en", "US");
 
     when(fakeTextServicesManager.newSpellCheckerSession(null, english_US, spellCheckPlugin, true))
         .thenReturn(fakeSpellCheckerSession);
@@ -171,7 +165,7 @@ public class SpellCheckPluginTest {
     SpellCheckPlugin spellCheckPlugin =
         spy(new SpellCheckPlugin(fakeTextServicesManager, fakeSpellCheckChannel));
     SpellCheckerSession fakeSpellCheckerSession = mock(SpellCheckerSession.class);
-    Locale english_US = new Locale.Builder().setLanguage("en").setRegion("US").build();
+    Locale english_US = new Locale("en", "US");
 
     when(fakeTextServicesManager.newSpellCheckerSession(null, english_US, spellCheckPlugin, true))
         .thenReturn(fakeSpellCheckerSession);

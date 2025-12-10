@@ -6,7 +6,7 @@
 
 namespace flutter {
 
-AndroidEnvironmentGL::AndroidEnvironmentGL() {
+AndroidEnvironmentGL::AndroidEnvironmentGL() : display_(EGL_NO_DISPLAY) {
   // Get the display.
   display_ = eglGetDisplay(EGL_DEFAULT_DISPLAY);
 

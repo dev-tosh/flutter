@@ -4,8 +4,6 @@
 
 #include "flutter/display_list/image/dl_image_skia.h"
 
-#include "flutter/display_list/geometry/dl_geometry_conversions.h"
-
 namespace flutter {
 
 DlImageSkia::DlImageSkia(sk_sp<SkImage> image) : image_(std::move(image)) {}
@@ -45,8 +43,8 @@ bool DlImageSkia::isUIThreadSafe() const {
 }
 
 // |DlImage|
-DlISize DlImageSkia::GetSize() const {
-  return image_ ? ToDlISize(image_->dimensions()) : DlISize();
+SkISize DlImageSkia::dimensions() const {
+  return image_ ? image_->dimensions() : SkISize::MakeEmpty();
 }
 
 // |DlImage|

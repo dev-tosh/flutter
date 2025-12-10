@@ -339,7 +339,7 @@ import java.util.Set;
     // to use it, otherwise an error stack trace will appear that says there is no
     // flutter/platform_views channel.
     flutterEngine
-        .getPlatformViewsControllerDelegator()
+        .getPlatformViewsController()
         .attach(activity, flutterEngine.getRenderer(), flutterEngine.getDartExecutor());
 
     // Notify all ActivityAware plugins that they are now attached to a new Activity.
@@ -391,7 +391,6 @@ import java.util.Set;
   private void detachFromActivityInternal() {
     // Deactivate PlatformViewsController.
     flutterEngine.getPlatformViewsController().detach();
-    flutterEngine.getPlatformViewsController2().detach();
 
     exclusiveActivity = null;
     activityPluginBinding = null;

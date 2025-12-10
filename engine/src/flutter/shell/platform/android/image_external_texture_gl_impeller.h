@@ -22,8 +22,7 @@ class ImageExternalTextureGLImpeller : public ImageExternalTextureGL {
       int64_t id,
       const fml::jni::ScopedJavaGlobalRef<jobject>&
           hardware_buffer_texture_entry,
-      const std::shared_ptr<PlatformViewAndroidJNI>& jni_facade,
-      ImageExternalTexture::ImageLifecycle lifecycle);
+      const std::shared_ptr<PlatformViewAndroidJNI>& jni_facade);
 
  private:
   // |ImageExternalTexture|

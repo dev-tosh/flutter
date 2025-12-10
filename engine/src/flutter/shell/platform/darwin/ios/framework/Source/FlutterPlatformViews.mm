@@ -12,63 +12,28 @@
 
 FLUTTER_ASSERT_ARC
 
+static constexpr int kMaxPointsInVerb = 4;
+
 namespace {
-static CGRect GetCGRectFromDlRect(const flutter::DlRect& clipDlRect) {
-  return CGRectMake(clipDlRect.GetX(),      //
-                    clipDlRect.GetY(),      //
-                    clipDlRect.GetWidth(),  //
-                    clipDlRect.GetHeight());
+CGRect GetCGRectFromSkRect(const SkRect& clipSkRect) {
+  return CGRectMake(clipSkRect.fLeft, clipSkRect.fTop, clipSkRect.fRight - clipSkRect.fLeft,
+                    clipSkRect.fBottom - clipSkRect.fTop);
 }
 
-CATransform3D GetCATransform3DFromDlMatrix(const flutter::DlMatrix& matrix) {
+CATransform3D GetCATransform3DFromSkMatrix(const SkMatrix& matrix) {
+  // Skia only supports 2D transform so we don't map z.
   CATransform3D transform = CATransform3DIdentity;
-  transform.m11 = matrix.m[0];
-  transform.m12 = matrix.m[1];
-  transform.m13 = matrix.m[2];
-  transform.m14 = matrix.m[3];
+  transform.m11 = matrix.getScaleX();
+  transform.m21 = matrix.getSkewX();
+  transform.m41 = matrix.getTranslateX();
+  transform.m14 = matrix.getPerspX();
 
-  transform.m21 = matrix.m[4];
-  transform.m22 = matrix.m[5];
-  transform.m23 = matrix.m[6];
-  transform.m24 = matrix.m[7];
-
-  transform.m31 = matrix.m[8];
-  transform.m32 = matrix.m[9];
-  transform.m33 = matrix.m[10];
-  transform.m34 = matrix.m[11];
-
-  transform.m41 = matrix.m[12];
-  transform.m42 = matrix.m[13];
-  transform.m43 = matrix.m[14];
-  transform.m44 = matrix.m[15];
+  transform.m12 = matrix.getSkewY();
+  transform.m22 = matrix.getScaleY();
+  transform.m42 = matrix.getTranslateY();
+  transform.m24 = matrix.getPerspY();
   return transform;
 }
-
-class CGPathReceiver final : public flutter::DlPathReceiver {
- public:
-  void MoveTo(const flutter::DlPoint& p2, bool will_be_closed) override {  //
-    CGPathMoveToPoint(path_ref_, nil, p2.x, p2.y);
-  }
-  void LineTo(const flutter::DlPoint& p2) override {
-    CGPathAddLineToPoint(path_ref_, nil, p2.x, p2.y);
-  }
-  void QuadTo(const flutter::DlPoint& cp, const flutter::DlPoint& p2) override {
-    CGPathAddQuadCurveToPoint(path_ref_, nil, cp.x, cp.y, p2.x, p2.y);
-  }
-  // bool conic_to(...) { CGPath has no equivalent to the conic curve type }
-  void CubicTo(const flutter::DlPoint& cp1,
-               const flutter::DlPoint& cp2,
-               const flutter::DlPoint& p2) override {
-    CGPathAddCurveToPoint(path_ref_, nil,  //
-                          cp1.x, cp1.y, cp2.x, cp2.y, p2.x, p2.y);
-  }
-  void Close() override { CGPathCloseSubpath(path_ref_); }
-
-  CGMutablePathRef TakePath() const { return path_ref_; }
-
- private:
-  CGMutablePathRef path_ref_ = CGPathCreateMutable();
-};
 }  // namespace
 
 @interface PlatformViewFilter ()
@@ -317,12 +282,12 @@ static BOOL _preparedOnce = NO;
   }
 }
 
-- (void)clipRect:(const flutter::DlRect&)clipDlRect matrix:(const flutter::DlMatrix&)matrix {
-  CGRect clipRect = GetCGRectFromDlRect(clipDlRect);
+- (void)clipRect:(const SkRect&)clipSkRect matrix:(const SkMatrix&)matrix {
+  CGRect clipRect = GetCGRectFromSkRect(clipSkRect);
   CGPathRef path = CGPathCreateWithRect(clipRect, nil);
   // The `matrix` is based on the physical pixels, convert it to UIKit points.
   CATransform3D matrixInPoints =
-      CATransform3DConcat(GetCATransform3DFromDlMatrix(matrix), _reverseScreenScale);
+      CATransform3DConcat(GetCATransform3DFromSkMatrix(matrix), _reverseScreenScale);
   paths_.push_back([self getTransformedPath:path matrix:matrixInPoints]);
   CGAffineTransform affine = [self affineWithMatrix:matrixInPoints];
   // Make sure the rect is not rotated (only translated or scaled).
@@ -333,97 +298,140 @@ static BOOL _preparedOnce = NO;
   }
 }
 
-- (void)clipRRect:(const flutter::DlRoundRect&)clipDlRRect matrix:(const flutter::DlMatrix&)matrix {
-  if (clipDlRRect.IsEmpty()) {
-    return;
-  } else if (clipDlRRect.IsRect()) {
-    [self clipRect:clipDlRRect.GetBounds() matrix:matrix];
-    return;
-  } else {
-    CGPathRef pathRef = nullptr;
-    containsNonRectPath_ = YES;
-
-    if (clipDlRRect.GetRadii().AreAllCornersSame()) {
-      CGRect clipRect = GetCGRectFromDlRect(clipDlRRect.GetBounds());
-      auto radii = clipDlRRect.GetRadii();
-      pathRef =
-          CGPathCreateWithRoundedRect(clipRect, radii.top_left.width, radii.top_left.height, nil);
-    } else {
+- (void)clipRRect:(const SkRRect&)clipSkRRect matrix:(const SkMatrix&)matrix {
+  containsNonRectPath_ = YES;
+  CGPathRef pathRef = nullptr;
+  switch (clipSkRRect.getType()) {
+    case SkRRect::kEmpty_Type: {
+      break;
+    }
+    case SkRRect::kRect_Type: {
+      [self clipRect:clipSkRRect.rect() matrix:matrix];
+      return;
+    }
+    case SkRRect::kOval_Type:
+    case SkRRect::kSimple_Type: {
+      CGRect clipRect = GetCGRectFromSkRect(clipSkRRect.rect());
+      pathRef = CGPathCreateWithRoundedRect(clipRect, clipSkRRect.getSimpleRadii().x(),
+                                            clipSkRRect.getSimpleRadii().y(), nil);
+      break;
+    }
+    case SkRRect::kNinePatch_Type:
+    case SkRRect::kComplex_Type: {
       CGMutablePathRef mutablePathRef = CGPathCreateMutable();
       // Complex types, we manually add each corner.
-      flutter::DlRect clipDlRect = clipDlRRect.GetBounds();
-      auto left = clipDlRect.GetLeft();
-      auto top = clipDlRect.GetTop();
-      auto right = clipDlRect.GetRight();
-      auto bottom = clipDlRect.GetBottom();
-      flutter::DlRoundingRadii radii = clipDlRRect.GetRadii();
-      auto& top_left = radii.top_left;
-      auto& top_right = radii.top_right;
-      auto& bottom_left = radii.bottom_left;
-      auto& bottom_right = radii.bottom_right;
+      SkRect clipSkRect = clipSkRRect.rect();
+      SkVector topLeftRadii = clipSkRRect.radii(SkRRect::kUpperLeft_Corner);
+      SkVector topRightRadii = clipSkRRect.radii(SkRRect::kUpperRight_Corner);
+      SkVector bottomRightRadii = clipSkRRect.radii(SkRRect::kLowerRight_Corner);
+      SkVector bottomLeftRadii = clipSkRRect.radii(SkRRect::kLowerLeft_Corner);
 
       // Start drawing RRect
-      // These calculations are off, the AddCurve methods add a Bezier curve
-      // which, for round rects should be a "magic distance" from the end
-      // point of the horizontal/vertical section to the corner.
       // Move point to the top left corner adding the top left radii's x.
-      CGPathMoveToPoint(mutablePathRef, nil,  //
-                        left + top_left.width, top);
+      CGPathMoveToPoint(mutablePathRef, nil, clipSkRect.fLeft + topLeftRadii.x(), clipSkRect.fTop);
       // Move point horizontally right to the top right corner and add the top right curve.
-      CGPathAddLineToPoint(mutablePathRef, nil,  //
-                           right - top_right.width, top);
-      CGPathAddCurveToPoint(mutablePathRef, nil,            //
-                            right, top,                     //
-                            right, top + top_right.height,  //
-                            right, top + top_right.height);
+      CGPathAddLineToPoint(mutablePathRef, nil, clipSkRect.fRight - topRightRadii.x(),
+                           clipSkRect.fTop);
+      CGPathAddCurveToPoint(mutablePathRef, nil, clipSkRect.fRight, clipSkRect.fTop,
+                            clipSkRect.fRight, clipSkRect.fTop + topRightRadii.y(),
+                            clipSkRect.fRight, clipSkRect.fTop + topRightRadii.y());
       // Move point vertically down to the bottom right corner and add the bottom right curve.
-      CGPathAddLineToPoint(mutablePathRef, nil,  //
-                           right, bottom - bottom_right.height);
-      CGPathAddCurveToPoint(mutablePathRef, nil,                 //
-                            right, bottom,                       //
-                            right - bottom_right.width, bottom,  //
-                            right - bottom_right.width, bottom);
+      CGPathAddLineToPoint(mutablePathRef, nil, clipSkRect.fRight,
+                           clipSkRect.fBottom - bottomRightRadii.y());
+      CGPathAddCurveToPoint(mutablePathRef, nil, clipSkRect.fRight, clipSkRect.fBottom,
+                            clipSkRect.fRight - bottomRightRadii.x(), clipSkRect.fBottom,
+                            clipSkRect.fRight - bottomRightRadii.x(), clipSkRect.fBottom);
       // Move point horizontally left to the bottom left corner and add the bottom left curve.
-      CGPathAddLineToPoint(mutablePathRef, nil,  //
-                           left + bottom_left.width, bottom);
-      CGPathAddCurveToPoint(mutablePathRef, nil,                //
-                            left, bottom,                       //
-                            left, bottom - bottom_left.height,  //
-                            left, bottom - bottom_left.height);
+      CGPathAddLineToPoint(mutablePathRef, nil, clipSkRect.fLeft + bottomLeftRadii.x(),
+                           clipSkRect.fBottom);
+      CGPathAddCurveToPoint(mutablePathRef, nil, clipSkRect.fLeft, clipSkRect.fBottom,
+                            clipSkRect.fLeft, clipSkRect.fBottom - bottomLeftRadii.y(),
+                            clipSkRect.fLeft, clipSkRect.fBottom - bottomLeftRadii.y());
       // Move point vertically up to the top left corner and add the top left curve.
-      CGPathAddLineToPoint(mutablePathRef, nil,  //
-                           left, top + top_left.height);
-      CGPathAddCurveToPoint(mutablePathRef, nil,         //
-                            left, top,                   //
-                            left + top_left.width, top,  //
-                            left + top_left.width, top);
+      CGPathAddLineToPoint(mutablePathRef, nil, clipSkRect.fLeft,
+                           clipSkRect.fTop + topLeftRadii.y());
+      CGPathAddCurveToPoint(mutablePathRef, nil, clipSkRect.fLeft, clipSkRect.fTop,
+                            clipSkRect.fLeft + topLeftRadii.x(), clipSkRect.fTop,
+                            clipSkRect.fLeft + topLeftRadii.x(), clipSkRect.fTop);
       CGPathCloseSubpath(mutablePathRef);
+
       pathRef = mutablePathRef;
+      break;
     }
-    // The `matrix` is based on the physical pixels, convert it to UIKit points.
-    CATransform3D matrixInPoints =
-        CATransform3DConcat(GetCATransform3DFromDlMatrix(matrix), _reverseScreenScale);
-    // TODO(cyanglaz): iOS does not seem to support hard edge on CAShapeLayer. It clearly stated
-    // that the CAShaperLayer will be drawn antialiased. Need to figure out a way to do the hard
-    // edge clipping on iOS.
-    paths_.push_back([self getTransformedPath:pathRef matrix:matrixInPoints]);
   }
-}
-
-- (void)clipPath:(const flutter::DlPath&)dlPath matrix:(const flutter::DlMatrix&)matrix {
-  containsNonRectPath_ = YES;
-
-  CGPathReceiver receiver;
-
-  // TODO(flar): https://github.com/flutter/flutter/issues/164826
-  // CGPaths do not have an inherit fill type, we would need to remember
-  // the fill type and employ it when we use the path.
-  dlPath.Dispatch(receiver);
-
   // The `matrix` is based on the physical pixels, convert it to UIKit points.
   CATransform3D matrixInPoints =
-      CATransform3DConcat(GetCATransform3DFromDlMatrix(matrix), _reverseScreenScale);
-  paths_.push_back([self getTransformedPath:receiver.TakePath() matrix:matrixInPoints]);
+      CATransform3DConcat(GetCATransform3DFromSkMatrix(matrix), _reverseScreenScale);
+  // TODO(cyanglaz): iOS does not seem to support hard edge on CAShapeLayer. It clearly stated that
+  // the CAShaperLayer will be drawn antialiased. Need to figure out a way to do the hard edge
+  // clipping on iOS.
+  paths_.push_back([self getTransformedPath:pathRef matrix:matrixInPoints]);
+}
+
+- (void)clipPath:(const SkPath&)path matrix:(const SkMatrix&)matrix {
+  if (!path.isValid()) {
+    return;
+  }
+  if (path.isEmpty()) {
+    return;
+  }
+  containsNonRectPath_ = YES;
+  CGMutablePathRef pathRef = CGPathCreateMutable();
+
+  // Loop through all verbs and translate them into CGPath
+  SkPath::Iter iter(path, true);
+  SkPoint pts[kMaxPointsInVerb];
+  SkPath::Verb verb = iter.next(pts);
+  SkPoint last_pt_from_last_verb = SkPoint::Make(0, 0);
+  while (verb != SkPath::kDone_Verb) {
+    if (verb == SkPath::kLine_Verb || verb == SkPath::kQuad_Verb || verb == SkPath::kConic_Verb ||
+        verb == SkPath::kCubic_Verb) {
+      FML_DCHECK(last_pt_from_last_verb == pts[0]);
+    }
+    switch (verb) {
+      case SkPath::kMove_Verb: {
+        CGPathMoveToPoint(pathRef, nil, pts[0].x(), pts[0].y());
+        last_pt_from_last_verb = pts[0];
+        break;
+      }
+      case SkPath::kLine_Verb: {
+        CGPathAddLineToPoint(pathRef, nil, pts[1].x(), pts[1].y());
+        last_pt_from_last_verb = pts[1];
+        break;
+      }
+      case SkPath::kQuad_Verb: {
+        CGPathAddQuadCurveToPoint(pathRef, nil, pts[1].x(), pts[1].y(), pts[2].x(), pts[2].y());
+        last_pt_from_last_verb = pts[2];
+        break;
+      }
+      case SkPath::kConic_Verb: {
+        // Conic is not available in quartz, we use quad to approximate.
+        // TODO(cyanglaz): Better approximate the conic path.
+        // https://github.com/flutter/flutter/issues/35062
+        CGPathAddQuadCurveToPoint(pathRef, nil, pts[1].x(), pts[1].y(), pts[2].x(), pts[2].y());
+        last_pt_from_last_verb = pts[2];
+        break;
+      }
+      case SkPath::kCubic_Verb: {
+        CGPathAddCurveToPoint(pathRef, nil, pts[1].x(), pts[1].y(), pts[2].x(), pts[2].y(),
+                              pts[3].x(), pts[3].y());
+        last_pt_from_last_verb = pts[3];
+        break;
+      }
+      case SkPath::kClose_Verb: {
+        CGPathCloseSubpath(pathRef);
+        break;
+      }
+      case SkPath::kDone_Verb: {
+        break;
+      }
+    }
+    verb = iter.next(pts);
+  }
+  // The `matrix` is based on the physical pixels, convert it to UIKit points.
+  CATransform3D matrixInPoints =
+      CATransform3DConcat(GetCATransform3DFromSkMatrix(matrix), _reverseScreenScale);
+  paths_.push_back([self getTransformedPath:pathRef matrix:matrixInPoints]);
 }
 
 - (CGAffineTransform)affineWithMatrix:(CATransform3D)matrix {
@@ -587,11 +595,7 @@ static BOOL _preparedOnce = NO;
       // from the web view plugin level. Right now we only observe this issue for
       // FlutterPlatformViewGestureRecognizersBlockingPolicyEager, but we should try it if a similar
       // issue arises for the other policy.
-      if (@available(iOS 26.0, *)) {
-        // This workaround does not work on iOS 26.
-        // TODO(hellohuanlin): find a solution for iOS 26,
-        // https://github.com/flutter/flutter/issues/175099.
-      } else if (@available(iOS 18.2, *)) {
+      if (@available(iOS 18.2, *)) {
         // This workaround is designed for WKWebView only. The 1P web view plugin provides a
         // WKWebView itself as the platform view. However, some 3P plugins provide wrappers of
         // WKWebView instead. So we perform DFS to search the view hierarchy (with a depth limit).

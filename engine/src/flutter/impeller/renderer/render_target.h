@@ -162,8 +162,7 @@ class RenderTargetAllocator {
       std::optional<RenderTarget::AttachmentConfig> stencil_attachment_config =
           RenderTarget::kDefaultStencilAttachmentConfig,
       const std::shared_ptr<Texture>& existing_color_texture = nullptr,
-      const std::shared_ptr<Texture>& existing_depth_stencil_texture = nullptr,
-      std::optional<PixelFormat> target_pixel_format = std::nullopt);
+      const std::shared_ptr<Texture>& existing_depth_stencil_texture = nullptr);
 
   virtual RenderTarget CreateOffscreenMSAA(
       const Context& context,
@@ -176,14 +175,7 @@ class RenderTargetAllocator {
           RenderTarget::kDefaultStencilAttachmentConfig,
       const std::shared_ptr<Texture>& existing_color_msaa_texture = nullptr,
       const std::shared_ptr<Texture>& existing_color_resolve_texture = nullptr,
-      const std::shared_ptr<Texture>& existing_depth_stencil_texture = nullptr,
-      std::optional<PixelFormat> target_pixel_format = std::nullopt);
-
-  /// @brief Disable any caching until the next call to `EnabledCache`.
-  virtual void DisableCache() {}
-
-  /// @brief Re-enable any caching if disabled.
-  virtual void EnableCache() {}
+      const std::shared_ptr<Texture>& existing_depth_stencil_texture = nullptr);
 
   /// @brief Mark the beginning of a frame workload.
   ///

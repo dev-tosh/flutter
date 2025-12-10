@@ -18,18 +18,7 @@ inline SkBlendMode ToSk(DlBlendMode mode) {
   return static_cast<SkBlendMode>(mode);
 }
 
-// Returns an SkColor4f representing this color in the sRGB color space.
-inline SkColor4f ToSkColor4f(DlColor color) {
-  if (color.getColorSpace() == DlColorSpace::kSRGB ||
-      color.getColorSpace() == DlColorSpace::kExtendedSRGB) {
-    return SkColor4f{color.getRedF(), color.getGreenF(), color.getBlueF(),
-                     color.getAlphaF()};
-  } else {
-    return ToSkColor4f(color.withColorSpace(DlColorSpace::kExtendedSRGB));
-  }
-}
-
-inline SkColor ToSkColor(DlColor color) {
+inline SkColor ToSk(DlColor color) {
   return color.argb();
 }
 
@@ -74,15 +63,16 @@ inline SkSamplingOptions ToSk(DlImageSampling sampling) {
   }
 }
 
-inline SkCanvas::SrcRectConstraint ToSk(DlSrcRectConstraint constraint) {
+inline SkCanvas::SrcRectConstraint ToSk(
+    DlCanvas::SrcRectConstraint constraint) {
   return static_cast<SkCanvas::SrcRectConstraint>(constraint);
 }
 
-inline SkClipOp ToSk(DlClipOp op) {
+inline SkClipOp ToSk(DlCanvas::ClipOp op) {
   return static_cast<SkClipOp>(op);
 }
 
-inline SkCanvas::PointMode ToSk(DlPointMode mode) {
+inline SkCanvas::PointMode ToSk(DlCanvas::PointMode mode) {
   return static_cast<SkCanvas::PointMode>(mode);
 }
 
@@ -129,10 +119,6 @@ inline SkMatrix* ToSk(const DlMatrix* matrix, SkMatrix& scratch) {
 }
 
 extern sk_sp<SkVertices> ToSk(const std::shared_ptr<DlVertices>& vertices);
-
-inline const SkRSXform* ToSk(const DlRSTransform* transforms) {
-  return reinterpret_cast<const SkRSXform*>(transforms);
-}
 
 }  // namespace flutter
 

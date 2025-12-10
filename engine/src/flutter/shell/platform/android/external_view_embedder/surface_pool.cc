@@ -13,12 +13,11 @@ OverlayLayer::OverlayLayer(int id,
                            std::unique_ptr<Surface> surface)
     : id(id),
       android_surface(std::move(android_surface)),
-      surface(std::move(surface)) {};
+      surface(std::move(surface)){};
 
 OverlayLayer::~OverlayLayer() = default;
 
-SurfacePool::SurfacePool(bool use_new_surface_methods)
-    : use_new_surface_methods_(use_new_surface_methods) {}
+SurfacePool::SurfacePool() = default;
 
 SurfacePool::~SurfacePool() = default;
 
@@ -43,13 +42,10 @@ std::shared_ptr<OverlayLayer> SurfacePool::GetLayer(
            "rendering.";
 
     std::unique_ptr<PlatformViewAndroidJNI::OverlayMetadata> java_metadata =
-        use_new_surface_methods_
-            ? jni_facade->createOverlaySurface2()
-            : jni_facade->FlutterViewCreateOverlaySurface();
+        jni_facade->FlutterViewCreateOverlaySurface();
 
     FML_CHECK(java_metadata->window);
-    android_surface->SetNativeWindow(java_metadata->window, jni_facade);
-    android_surface->SetupImpellerSurface();
+    android_surface->SetNativeWindow(java_metadata->window);
 
     std::unique_ptr<Surface> surface =
         android_surface->CreateGPUSurface(gr_context);
@@ -100,11 +96,7 @@ void SurfacePool::DestroyLayersLocked(
   if (layers_.empty()) {
     return;
   }
-  if (use_new_surface_methods_) {
-    jni_facade->destroyOverlaySurface2();
-  } else {
-    jni_facade->FlutterViewDestroyOverlaySurfaces();
-  }
+  jni_facade->FlutterViewDestroyOverlaySurfaces();
   layers_.clear();
   available_layer_index_ = 0;
 }
@@ -118,18 +110,9 @@ std::vector<std::shared_ptr<OverlayLayer>> SurfacePool::GetUnusedLayers() {
   return results;
 }
 
-void SurfacePool::SetFrameSize(DlISize frame_size) {
+void SurfacePool::SetFrameSize(SkISize frame_size) {
   std::lock_guard lock(mutex_);
   requested_frame_size_ = frame_size;
 }
 
-void SurfacePool::ResetLayers() {
-  available_layer_index_ = 0;
-}
-
-void SurfacePool::TrimLayers() {
-  std::lock_guard lock(mutex_);
-  layers_.erase(layers_.begin() + available_layer_index_, layers_.end());
-  available_layer_index_ = 0;
-}
 }  // namespace flutter

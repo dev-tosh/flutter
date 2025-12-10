@@ -14,10 +14,11 @@ import 'logger.dart';
 /// Validates the list of builds.
 /// Calls assert.
 void debugCheckBuilds(List<Build> builds) {
-  final names = <String>{};
+  final Set<String> names = <String>{};
 
-  for (final build in builds) {
-    assert(!names.contains(build.name), 'More than one build has the name ${build.name}');
+  for (final Build build in builds) {
+    assert(!names.contains(build.name),
+        'More than one build has the name ${build.name}');
     names.add(build.name);
   }
 }
@@ -85,10 +86,13 @@ Future<int> runBuild(
   int concurrency = 0,
   RbeConfig rbeConfig = const RbeConfig(),
 }) async {
-  final gnArgs = <String>[if (!enableRbe) '--no-rbe', ...extraGnArgs];
+  final List<String> gnArgs = <String>[
+    if (!enableRbe) '--no-rbe',
+    ...extraGnArgs,
+  ];
 
   // TODO(loic-sharma): Fetch dependencies if needed.
-  final buildRunner = BuildRunner(
+  final BuildRunner buildRunner = BuildRunner(
     platform: environment.platform,
     processRunner: environment.processRunner,
     abi: environment.abi,
@@ -121,9 +125,9 @@ Future<int> runBuild(
         {
           spinner?.finish();
           spinner = null;
-          final percent = '${event.percent.toStringAsFixed(1)}%';
-          final fraction = '(${event.completed}/${event.total})';
-          final prefix = '[${event.name}] $percent $fraction ';
+          final String percent = '${event.percent.toStringAsFixed(1)}%';
+          final String fraction = '(${event.completed}/${event.total})';
+          final String prefix = '[${event.name}] $percent $fraction ';
           final String what = event.what;
           environment.logger.clearLine();
           environment.logger.status('$prefix$what', newline: false, fit: true);
@@ -147,7 +151,12 @@ Future<bool> ensureBuildDir(
   required bool enableRbe,
 }) async {
   // TODO(matanlurey): https://github.com/flutter/flutter/issues/148442.
-  final buildDir = io.Directory(p.join(environment.engine.outDir.path, build.ninja.config));
+  final io.Directory buildDir = io.Directory(
+    p.join(
+      environment.engine.outDir.path,
+      build.ninja.config,
+    ),
+  );
   if (buildDir.existsSync()) {
     return true;
   }
@@ -174,9 +183,12 @@ Future<bool> _runGn(
   List<String> extraGnArgs = const <String>[],
   required bool enableRbe,
 }) async {
-  final gnArgs = <String>[if (!enableRbe) '--no-rbe', ...extraGnArgs];
+  final List<String> gnArgs = <String>[
+    if (!enableRbe) '--no-rbe',
+    ...extraGnArgs,
+  ];
 
-  final buildRunner = BuildRunner(
+  final BuildRunner buildRunner = BuildRunner(
     platform: environment.platform,
     processRunner: environment.processRunner,
     abi: environment.abi,

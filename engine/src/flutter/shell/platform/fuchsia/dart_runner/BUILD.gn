@@ -32,12 +32,12 @@ template("runner_sources") {
     dart_public_deps = []
     if (!invoker.product) {
       dart_public_deps += [
-        "$dart_src/runtime/bin:common_embedder_dart_io",
-        "//flutter/shell/platform/fuchsia/runtime/dart/utils",
+        "$dart_src/runtime/bin:dart_io_api",
+        "//flutter/shell/platform/fuchsia/runtime/dart/utils:utils",
       ]
     } else {
       dart_public_deps += [
-        "$dart_src/runtime/bin:common_embedder_dart_io_product",
+        "$dart_src/runtime/bin:dart_io_api_product",
         "//flutter/shell/platform/fuchsia/runtime/dart/utils:utils_product",
       ]
     }
@@ -169,6 +169,10 @@ template("aot_runner_package") {
       deps += [
         "vmservice:vmservice_snapshot",
         "//flutter/shell/platform/fuchsia/runtime/dart/profiler_symbols:dart_aot_runner",
+
+        # TODO(kaushikiska): Figure out how to get the profiler symbols for `libdart_aotruntime`
+        # "$dart_src/runtime:libdart_aotruntime",
+        observatory_target,
       ]
     }
 
@@ -190,6 +194,10 @@ template("aot_runner_package") {
         {
           path = vmservice_snapshot
           dest = "vmservice_snapshot.so"
+        },
+        {
+          path = rebase_path(observatory_archive_file)
+          dest = "observatory.tar"
         },
         {
           path = dart_profiler_symbols
@@ -214,7 +222,10 @@ template("jit_runner_package") {
     ]
 
     if (!invoker.product) {
-      deps += [ "//flutter/shell/platform/fuchsia/runtime/dart/profiler_symbols:dart_jit_runner" ]
+      deps += [
+        "//flutter/shell/platform/fuchsia/runtime/dart/profiler_symbols:dart_jit_runner",
+        observatory_target,
+      ]
     }
 
     binary = "dart_jit${product_suffix}_runner"
@@ -236,6 +247,10 @@ template("jit_runner_package") {
 
     if (!invoker.product) {
       resources += [
+        {
+          path = rebase_path(observatory_archive_file)
+          dest = "observatory.tar"
+        },
         {
           path = rebase_path(
                   get_label_info(

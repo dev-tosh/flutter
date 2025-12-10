@@ -15,19 +15,14 @@
 #include "flutter/fml/platform/darwin/platform_version.h"
 #include "flutter/runtime/ptrace_check.h"
 #include "flutter/shell/common/thread_host.h"
-#import "flutter/shell/platform/darwin/common/InternalFlutterSwiftCommon/InternalFlutterSwiftCommon.h"
 #import "flutter/shell/platform/darwin/common/framework/Source/FlutterBinaryMessengerRelay.h"
-#import "flutter/shell/platform/darwin/ios/framework/Source/FlutterAppDelegate_Internal.h"
 #import "flutter/shell/platform/darwin/ios/framework/Source/FlutterChannelKeyResponder.h"
 #import "flutter/shell/platform/darwin/ios/framework/Source/FlutterEmbedderKeyResponder.h"
 #import "flutter/shell/platform/darwin/ios/framework/Source/FlutterEngine_Internal.h"
 #import "flutter/shell/platform/darwin/ios/framework/Source/FlutterKeyPrimaryResponder.h"
 #import "flutter/shell/platform/darwin/ios/framework/Source/FlutterKeyboardManager.h"
-#import "flutter/shell/platform/darwin/ios/framework/Source/FlutterLaunchEngine.h"
 #import "flutter/shell/platform/darwin/ios/framework/Source/FlutterPlatformPlugin.h"
 #import "flutter/shell/platform/darwin/ios/framework/Source/FlutterPlatformViews_Internal.h"
-#import "flutter/shell/platform/darwin/ios/framework/Source/FlutterPluginAppLifeCycleDelegate_internal.h"
-#import "flutter/shell/platform/darwin/ios/framework/Source/FlutterSharedApplication.h"
 #import "flutter/shell/platform/darwin/ios/framework/Source/FlutterTextInputDelegate.h"
 #import "flutter/shell/platform/darwin/ios/framework/Source/FlutterTextInputPlugin.h"
 #import "flutter/shell/platform/darwin/ios/framework/Source/FlutterView.h"
@@ -79,7 +74,6 @@ typedef struct MouseState {
 @property(nonatomic, assign) UIStatusBarStyle statusBarStyle;
 @property(nonatomic, assign) BOOL initialized;
 @property(nonatomic, assign) BOOL engineNeedsLaunch;
-@property(nonatomic, assign) BOOL awokenFromNib;
 
 @property(nonatomic, readwrite, getter=isDisplayingFlutterUI) BOOL displayingFlutterUI;
 @property(nonatomic, assign) BOOL isHomeIndicatorHidden;
@@ -101,6 +95,7 @@ typedef struct MouseState {
  * Whether we should ignore viewport metrics updates during rotation transition.
  */
 @property(nonatomic, assign) BOOL shouldIgnoreViewportMetricsUpdatesDuringRotation;
+
 /**
  * Keyboard animation properties
  */
@@ -129,10 +124,6 @@ typedef struct MouseState {
 /// With this VSyncClient, it can correct the delivery frame rate of touch events to let it keep
 /// the same with frame rate of rendering.
 @property(nonatomic, strong) VSyncClient* touchRateCorrectionVSyncClient;
-
-/// The size of the FlutterView's frame, as determined by auto-layout,
-/// before Flutter's custom auto-resizing constraints are applied.
-@property(nonatomic, assign) CGSize sizeBeforeAutoResized;
 
 /*
  * Mouse and trackpad gesture recognizers
@@ -183,19 +174,17 @@ typedef struct MouseState {
 - (instancetype)initWithEngine:(FlutterEngine*)engine
                        nibName:(nullable NSString*)nibName
                         bundle:(nullable NSBundle*)nibBundle {
-  FML_CHECK(engine) << "initWithEngine:nibName:bundle: must be called with non-nil engine";
+  NSAssert(engine != nil, @"Engine is required");
   self = [super initWithNibName:nibName bundle:nibBundle];
   if (self) {
     _viewOpaque = YES;
     if (engine.viewController) {
-      NSString* errorMessage =
-          [NSString stringWithFormat:
-                        @"The supplied FlutterEngine %@ is already used with FlutterViewController "
-                         "instance %@. One instance of the FlutterEngine can only be attached to "
-                         "one FlutterViewController at a time. Set FlutterEngine.viewController to "
-                         "nil before attaching it to another FlutterViewController.",
-                        engine.description, engine.viewController.description];
-      [FlutterLogger logError:errorMessage];
+      FML_LOG(ERROR) << "The supplied FlutterEngine " << [[engine description] UTF8String]
+                     << " is already used with FlutterViewController instance "
+                     << [[engine.viewController description] UTF8String]
+                     << ". One instance of the FlutterEngine can only be attached to one "
+                        "FlutterViewController at a time. Set FlutterEngine.viewController "
+                        "to nil before attaching it to another FlutterViewController.";
     }
     _engine = engine;
     _engineNeedsLaunch = NO;
@@ -251,7 +240,6 @@ typedef struct MouseState {
 
 - (void)awakeFromNib {
   [super awakeFromNib];
-  self.awokenFromNib = YES;
   if (!self.engine) {
     [self sharedSetupWithProject:nil initialRoute:nil];
   }
@@ -263,33 +251,16 @@ typedef struct MouseState {
 
 - (void)sharedSetupWithProject:(nullable FlutterDartProject*)project
                   initialRoute:(nullable NSString*)initialRoute {
-  id appDelegate = FlutterSharedApplication.application.delegate;
-  FlutterEngine* engine;
-  if ([appDelegate respondsToSelector:@selector(takeLaunchEngine)]) {
-    if (self.nibName) {
-      // Only grab the launch engine if it was created with a nib.
-      // FlutterViewControllers created from nibs can't specify their initial
-      // routes so it's safe to take it.
-      engine = [appDelegate takeLaunchEngine];
-    } else {
-      // If we registered plugins with a FlutterAppDelegate without a xib, throw
-      // away the engine that was registered through the FlutterAppDelegate.
-      // That's not a valid usage of the API.
-      [appDelegate takeLaunchEngine];
-    }
+  // Need the project to get settings for the view. Initializing it here means
+  // the Engine class won't initialize it later.
+  if (!project) {
+    project = [[FlutterDartProject alloc] init];
   }
-  if (!engine) {
-    // Need the project to get settings for the view. Initializing it here means
-    // the Engine class won't initialize it later.
-    if (!project) {
-      project = [[FlutterDartProject alloc] init];
-    }
-
-    engine = [[FlutterEngine alloc] initWithName:@"io.flutter"
-                                         project:project
-                          allowHeadlessExecution:self.engineAllowHeadlessExecution
-                              restorationEnabled:self.restorationIdentifier != nil];
-  }
+  FlutterView.forceSoftwareRendering = project.settings.enable_software_rendering;
+  FlutterEngine* engine = [[FlutterEngine alloc] initWithName:@"io.flutter"
+                                                      project:project
+                                       allowHeadlessExecution:self.engineAllowHeadlessExecution
+                                           restorationEnabled:self.restorationIdentifier != nil];
   if (!engine) {
     return;
   }
@@ -298,36 +269,8 @@ typedef struct MouseState {
   _engine = engine;
   _flutterView = [[FlutterView alloc] initWithDelegate:_engine
                                                 opaque:_viewOpaque
-                                       enableWideGamut:engine.project.isWideGamutEnabled];
+                                       enableWideGamut:project.isWideGamutEnabled];
   [_engine createShell:nil libraryURI:nil initialRoute:initialRoute];
-
-  // We call this from the FlutterViewController instead of the FlutterEngine directly because this
-  // is only needed when the FlutterEngine is implicit. If it's not implicit there's no need for
-  // them to have a callback to expose the engine since they created the FlutterEngine directly.
-  // This is the earliest this can be called because it depends on the shell being created.
-  BOOL performedCallback = [_engine performImplicitEngineCallback];
-
-  // TODO(vashworth): Deprecate, see https://github.com/flutter/flutter/issues/176424
-  if ([FlutterSharedApplication.application.delegate
-          respondsToSelector:@selector(pluginRegistrant)]) {
-    NSObject<FlutterPluginRegistrant>* pluginRegistrant =
-        [FlutterSharedApplication.application.delegate performSelector:@selector(pluginRegistrant)];
-    [pluginRegistrant registerWithRegistry:self];
-    performedCallback = YES;
-  }
-  // When migrated to scenes, the FlutterViewController from the storyboard is initialized after the
-  // application launch events. Therefore, plugins may not be registered yet since they're expected
-  // to be registered during the implicit engine callbacks. As a workaround, send the app launch
-  // events after the application callbacks.
-  if (self.awokenFromNib && performedCallback && FlutterSharedApplication.hasSceneDelegate &&
-      [appDelegate isKindOfClass:[FlutterAppDelegate class]]) {
-    id applicationLifeCycleDelegate = ((FlutterAppDelegate*)appDelegate).lifeCycleDelegate;
-    [applicationLifeCycleDelegate
-        sceneFallbackWillFinishLaunchingApplication:FlutterSharedApplication.application];
-    [applicationLifeCycleDelegate
-        sceneFallbackDidFinishLaunchingApplication:FlutterSharedApplication.application];
-  }
-
   _engineNeedsLaunch = YES;
   _ongoingTouches = [[NSMutableSet alloc] init];
 
@@ -377,11 +320,15 @@ typedef struct MouseState {
                  name:@(flutter::kOverlayStyleUpdateNotificationName)
                object:nil];
 
-  if (FlutterSharedApplication.isAvailable) {
-    [self setUpApplicationLifecycleNotifications:center];
-  } else {
+#if APPLICATION_EXTENSION_API_ONLY
+  if (@available(iOS 13.0, *)) {
     [self setUpSceneLifecycleNotifications:center];
+  } else {
+    [self setUpApplicationLifecycleNotifications:center];
   }
+#else
+  [self setUpApplicationLifecycleNotifications:center];
+#endif
 
   [center addObserver:self
              selector:@selector(keyboardWillChangeFrame:)
@@ -433,10 +380,12 @@ typedef struct MouseState {
                  name:UIAccessibilityDarkerSystemColorsStatusDidChangeNotification
                object:nil];
 
-  [center addObserver:self
-             selector:@selector(onAccessibilityStatusChanged:)
-                 name:UIAccessibilityOnOffSwitchLabelsDidChangeNotification
-               object:nil];
+  if (@available(iOS 13.0, *)) {
+    [center addObserver:self
+               selector:@selector(onAccessibilityStatusChanged:)
+                   name:UIAccessibilityOnOffSwitchLabelsDidChangeNotification
+                 object:nil];
+  }
 
   [center addObserver:self
              selector:@selector(onUserSettingsChanged:)
@@ -530,7 +479,11 @@ static UIView* GetViewOrPlaceholder(UIView* existing_view) {
   auto placeholder = [[UIView alloc] init];
 
   placeholder.autoresizingMask = UIViewAutoresizingFlexibleWidth | UIViewAutoresizingFlexibleHeight;
-  placeholder.backgroundColor = UIColor.systemBackgroundColor;
+  if (@available(iOS 13.0, *)) {
+    placeholder.backgroundColor = UIColor.systemBackgroundColor;
+  } else {
+    placeholder.backgroundColor = UIColor.whiteColor;
+  }
   placeholder.autoresizesSubviews = YES;
 
   // Only add the label when we know we have failed to enable tracing (and it was necessary).
@@ -770,48 +723,6 @@ static void SendFakeTouchEvent(UIScreen* screen,
   _flutterViewRenderedCallback = callback;
 }
 
-- (UISceneActivationState)activationState {
-  return self.flutterWindowSceneIfViewLoaded.activationState;
-}
-
-- (BOOL)stateIsActive {
-  // [UIApplication sharedApplication API is not available for app extension.
-  UIApplication* flutterApplication = FlutterSharedApplication.application;
-  BOOL isActive = flutterApplication
-                      ? [self isApplicationStateMatching:UIApplicationStateActive
-                                         withApplication:flutterApplication]
-                      : [self isSceneStateMatching:UISceneActivationStateForegroundActive];
-  return isActive;
-}
-
-- (BOOL)stateIsBackground {
-  // [UIApplication sharedApplication API is not available for app extension.
-  UIApplication* flutterApplication = FlutterSharedApplication.application;
-  return flutterApplication ? [self isApplicationStateMatching:UIApplicationStateBackground
-                                               withApplication:flutterApplication]
-                            : [self isSceneStateMatching:UISceneActivationStateBackground];
-}
-
-- (BOOL)isApplicationStateMatching:(UIApplicationState)match
-                   withApplication:(UIApplication*)application {
-  switch (application.applicationState) {
-    case UIApplicationStateActive:
-    case UIApplicationStateInactive:
-    case UIApplicationStateBackground:
-      return application.applicationState == match;
-  }
-}
-
-- (BOOL)isSceneStateMatching:(UISceneActivationState)match API_AVAILABLE(ios(13.0)) {
-  switch (self.activationState) {
-    case UISceneActivationStateForegroundActive:
-    case UISceneActivationStateUnattached:
-    case UISceneActivationStateForegroundInactive:
-    case UISceneActivationStateBackground:
-      return self.activationState == match;
-  }
-}
-
 #pragma mark - Surface creation and teardown updates
 
 - (void)surfaceUpdated:(BOOL)appeared {
@@ -938,8 +849,16 @@ static void SendFakeTouchEvent(UIScreen* screen,
   if (self.engine.viewController == self) {
     [self onUserSettingsChanged:nil];
     [self onAccessibilityStatusChanged:nil];
-
-    if (self.stateIsActive) {
+    BOOL stateIsActive = YES;
+#if APPLICATION_EXTENSION_API_ONLY
+    if (@available(iOS 13.0, *)) {
+      stateIsActive = self.flutterWindowSceneIfViewLoaded.activationState ==
+                      UISceneActivationStateForegroundActive;
+    }
+#else
+    stateIsActive = UIApplication.sharedApplication.applicationState == UIApplicationStateActive;
+#endif
+    if (stateIsActive) {
       [self.engine.lifecycleChannel sendMessage:@"AppLifecycleState.resumed"];
     }
   }
@@ -1461,16 +1380,26 @@ static flutter::PointerData::DeviceKind DeviceKindFromTouchType(UITouch* touch) 
   bool firstViewBoundsUpdate = !_viewportMetrics.physical_width;
   _viewportMetrics.device_pixel_ratio = scale;
   [self setViewportMetricsSize];
-  [self checkAndUpdateAutoResizeConstraints];
   [self setViewportMetricsPaddings];
   [self updateViewportMetricsIfNeeded];
 
   // There is no guarantee that UIKit will layout subviews when the application/scene is active.
   // Creating the surface when inactive will cause GPU accesses from the background. Only wait for
   // the first frame to render when the application/scene is actually active.
+  bool applicationOrSceneIsActive = YES;
+#if APPLICATION_EXTENSION_API_ONLY
+  if (@available(iOS 13.0, *)) {
+    applicationOrSceneIsActive = self.flutterWindowSceneIfViewLoaded.activationState ==
+                                 UISceneActivationStateForegroundActive;
+  }
+#else
+  applicationOrSceneIsActive =
+      [UIApplication sharedApplication].applicationState == UIApplicationStateActive;
+#endif
+
   // This must run after updateViewportMetrics so that the surface creation tasks are queued after
   // the viewport metrics update tasks.
-  if (firstViewBoundsUpdate && self.stateIsActive && self.engine) {
+  if (firstViewBoundsUpdate && applicationOrSceneIsActive && self.engine) {
     [self surfaceUpdated:YES];
 #if FLUTTER_RUNTIME_MODE == FLUTTER_RUNTIME_MODE_DEBUG
     NSTimeInterval timeout = 0.2;
@@ -1481,96 +1410,13 @@ static flutter::PointerData::DeviceKind DeviceKindFromTouchType(UITouch* touch) 
         waitForFirstFrameSync:timeout
                      callback:^(BOOL didTimeout) {
                        if (didTimeout) {
-                         [FlutterLogger logInfo:@"Timeout waiting for the first frame to render. "
-                                                 "This may happen in unoptimized builds. If this is"
-                                                 "a release build, you should load a less complex "
-                                                 "frame to avoid the timeout."];
+                         FML_LOG(INFO)
+                             << "Timeout waiting for the first frame to render. This may happen in "
+                                "unoptimized builds. If this is a release build, you should load a "
+                                "less complex frame to avoid the timeout.";
                        }
                      }];
   }
-}
-
-- (BOOL)isAutoResizable {
-  return self.flutterView.autoResizable;
-}
-
-- (void)setAutoResizable:(BOOL)value {
-  self.flutterView.autoResizable = value;
-  self.flutterView.contentMode = UIViewContentModeCenter;
-}
-
-- (void)checkAndUpdateAutoResizeConstraints {
-  if (!self.isAutoResizable) {
-    return;
-  }
-
-  [self updateAutoResizeConstraints];
-}
-
-/**
- * Updates the FlutterAutoResizeLayoutConstraints based on the view's
- * current frame.
- *
- * This method is invoked during viewDidLayoutSubviews, at which point the
- * view has completed its subview layout and applied any existing Auto Layout
- * constraints.
- *
- * Initially, the view's frame is used to determine the maximum size allowed
- * by the native layout system. This size is then used to establish the viewport
- * constraints for the Flutter engine.
- *
- * A critical consideration is that this initial frame-based sizing is only
- * applicable if FlutterAutoResizeLayoutConstraints have not yet been applied
- * by Flutter. Once Flutter applies its own FlutterAutoResizeLayoutConstraints,
- * these constraints will subsequently dictate the view's frame.
- *
- * This interaction imposes a limitation: native layout constraints that are
- * updated after Flutter has applied its auto-resize constraints may not
- * function as expected or properly influence the FlutterView's size.
- */
-- (void)updateAutoResizeConstraints {
-  BOOL hasBeenAutoResized = NO;
-  for (NSLayoutConstraint* constraint in self.view.constraints) {
-    if ([constraint isKindOfClass:[FlutterAutoResizeLayoutConstraint class]]) {
-      hasBeenAutoResized = YES;
-      break;
-    }
-  }
-  if (!hasBeenAutoResized) {
-    self.sizeBeforeAutoResized = self.view.frame.size;
-  }
-
-  CGFloat maxWidth = self.sizeBeforeAutoResized.width;
-  CGFloat maxHeight = self.sizeBeforeAutoResized.height;
-  CGFloat minWidth = self.sizeBeforeAutoResized.width;
-  CGFloat minHeight = self.sizeBeforeAutoResized.height;
-
-  // maxWidth or maxHeight may be 0 when the width/height are ambiguous, eg. for
-  // unsized widgets
-  if (maxWidth == 0) {
-    maxWidth = CGFLOAT_MAX;
-    [FlutterLogger
-        logWarning:
-            @"Warning: The outermost widget in the autoresizable Flutter view is unsized or has "
-            @"ambiguous dimensions, causing the host native view's width to be 0. The autoresizing "
-            @"logic is setting the viewport constraint to unbounded DBL_MAX to prevent "
-            @"rendering failure. Please ensure your top-level Flutter widget has explicit "
-            @"constraints (e.g., using SizedBox or Container)."];
-  }
-  if (maxHeight == 0) {
-    maxHeight = CGFLOAT_MAX;
-    [FlutterLogger
-        logWarning:
-            @"Warning: The outermost widget in the autoresizable Flutter view is unsized or has "
-            @"ambiguous dimensions, causing the host native view's width to be 0. The autoresizing "
-            @"logic is setting the viewport constraint to unbounded DBL_MAX to prevent "
-            @"rendering failure. Please ensure your top-level Flutter widget has explicit "
-            @"constraints (e.g., using SizedBox or Container)."];
-  }
-  _viewportMetrics.physical_min_width_constraint = minWidth * _viewportMetrics.device_pixel_ratio;
-  _viewportMetrics.physical_max_width_constraint = maxWidth * _viewportMetrics.device_pixel_ratio;
-  _viewportMetrics.physical_min_height_constraint = minHeight * _viewportMetrics.device_pixel_ratio;
-  _viewportMetrics.physical_max_height_constraint = maxHeight * _viewportMetrics.device_pixel_ratio;
 }
 
 - (void)viewSafeAreaInsetsDidChange {
@@ -1589,11 +1435,6 @@ static flutter::PointerData::DeviceKind DeviceKindFromTouchType(UITouch* touch) 
   CGFloat scale = screen.scale;
   _viewportMetrics.physical_width = self.view.bounds.size.width * scale;
   _viewportMetrics.physical_height = self.view.bounds.size.height * scale;
-  // TODO(louisehsu): update for https://github.com/flutter/flutter/issues/169147
-  _viewportMetrics.physical_min_width_constraint = _viewportMetrics.physical_width;
-  _viewportMetrics.physical_max_width_constraint = _viewportMetrics.physical_width;
-  _viewportMetrics.physical_min_height_constraint = _viewportMetrics.physical_height;
-  _viewportMetrics.physical_max_height_constraint = _viewportMetrics.physical_height;
 }
 
 // Set _viewportMetrics physical paddings.
@@ -1649,17 +1490,6 @@ static flutter::PointerData::DeviceKind DeviceKindFromTouchType(UITouch* touch) 
   CGRect keyboardFrame = [info[UIKeyboardFrameEndUserInfoKey] CGRectValue];
   FlutterKeyboardMode keyboardMode = [self calculateKeyboardAttachMode:notification];
   CGFloat calculatedInset = [self calculateKeyboardInset:keyboardFrame keyboardMode:keyboardMode];
-  NSTimeInterval duration = [info[UIKeyboardAnimationDurationUserInfoKey] doubleValue];
-
-  // If the software keyboard is displayed before displaying the PasswordManager prompt,
-  // UIKeyboardWillHideNotification will occur immediately after UIKeyboardWillShowNotification.
-  // The duration of the animation will be 0.0, and the calculated inset will be 0.0.
-  // In this case, it is necessary to cancel the animation and hide the keyboard immediately.
-  // https://github.com/flutter/flutter/pull/164884
-  if (keyboardMode == FlutterKeyboardModeHidden && calculatedInset == 0.0 && duration == 0.0) {
-    [self hideKeyboardImmediately];
-    return;
-  }
 
   // Avoid double triggering startKeyBoardAnimation.
   if (self.targetViewInsetBottom == calculatedInset) {
@@ -1667,6 +1497,7 @@ static flutter::PointerData::DeviceKind DeviceKindFromTouchType(UITouch* touch) 
   }
 
   self.targetViewInsetBottom = calculatedInset;
+  NSTimeInterval duration = [info[UIKeyboardAnimationDurationUserInfoKey] doubleValue];
 
   // Flag for simultaneous compounding animation calls.
   // This captures animation calls made while the keyboard animation is currently animating. If the
@@ -1718,6 +1549,20 @@ static flutter::PointerData::DeviceKind DeviceKindFromTouchType(UITouch* touch) 
   if ([self isKeyboardNotificationForDifferentView:notification]) {
     return YES;
   }
+
+  if (@available(iOS 13.0, *)) {
+    // noop
+  } else {
+    // If OS version is less than 13, ignore notification if the app is in the background
+    // or is transitioning from the background. In older versions, when switching between
+    // apps with the keyboard open in the secondary app, notifications are sent when
+    // the app is in the background/transitioning from background as if they belong
+    // to the app and as if the keyboard is showing even though it is not.
+    if (self.isKeyboardInOrTransitioningFromBackground) {
+      return YES;
+    }
+  }
+
   return NO;
 }
 
@@ -1895,21 +1740,6 @@ static flutter::PointerData::DeviceKind DeviceKindFromTouchType(UITouch* touch) 
       }];
 }
 
-- (void)hideKeyboardImmediately {
-  [self invalidateKeyboardAnimationVSyncClient];
-  if (self.keyboardAnimationView) {
-    [self.keyboardAnimationView.layer removeAllAnimations];
-    [self removeKeyboardAnimationView];
-    self.keyboardAnimationView = nil;
-  }
-  if (self.keyboardSpringAnimation) {
-    self.keyboardSpringAnimation = nil;
-  }
-  // Reset targetViewInsetBottom to 0.0.
-  self.targetViewInsetBottom = 0.0;
-  [self ensureViewportMetricsIsCorrect];
-}
-
 - (void)setUpKeyboardSpringAnimationIfNeeded:(CAAnimation*)keyboardAnimation {
   // If keyboard animation is null or not a spring animation, fallback to DisplayLink tracking.
   if (keyboardAnimation == nil || ![keyboardAnimation isKindOfClass:[CASpringAnimation class]]) {
@@ -2016,6 +1846,34 @@ static flutter::PointerData::DeviceKind DeviceKindFromTouchType(UITouch* touch) 
   [self.keyboardManager handlePress:press nextAction:next];
 }
 
+- (void)sendDeepLinkToFramework:(NSURL*)url completionHandler:(void (^)(BOOL success))completion {
+  __weak FlutterViewController* weakSelf = self;
+  [self.engine
+      waitForFirstFrame:3.0
+               callback:^(BOOL didTimeout) {
+                 if (didTimeout) {
+                   FML_LOG(ERROR) << "Timeout waiting for the first frame when launching an URL.";
+                   completion(NO);
+                 } else {
+                   // invove the method and get the result
+                   [weakSelf.engine.navigationChannel
+                       invokeMethod:@"pushRouteInformation"
+                          arguments:@{
+                            @"location" : url.absoluteString ?: [NSNull null],
+                          }
+                             result:^(id _Nullable result) {
+                               BOOL success =
+                                   [result isKindOfClass:[NSNumber class]] && [result boolValue];
+                               if (!success) {
+                                 // Logging the error if the result is not successful
+                                 FML_LOG(ERROR) << "Failed to handle route information in Flutter.";
+                               }
+                               completion(success);
+                             }];
+                 }
+               }];
+}
+
 // The documentation for presses* handlers (implemented below) is entirely
 // unclear about how to handle the case where some, but not all, of the presses
 // are handled here. I've elected to call super separately for each of the
@@ -2055,7 +1913,7 @@ static flutter::PointerData::DeviceKind DeviceKindFromTouchType(UITouch* touch) 
   if (@available(iOS 13.4, *)) {
     __weak FlutterViewController* weakSelf = self;
     for (UIPress* press in presses) {
-      [self handlePressEvent:[[FlutterUIPressProxy alloc] initWithPress:press event:event]
+      [self handlePressEvent:[[FlutterUIPressProxy alloc] initWithPress:press withEvent:event]
                   nextAction:^() {
                     [weakSelf superPressesBegan:[NSSet setWithObject:press] withEvent:event];
                   }];
@@ -2070,7 +1928,7 @@ static flutter::PointerData::DeviceKind DeviceKindFromTouchType(UITouch* touch) 
   if (@available(iOS 13.4, *)) {
     __weak FlutterViewController* weakSelf = self;
     for (UIPress* press in presses) {
-      [self handlePressEvent:[[FlutterUIPressProxy alloc] initWithPress:press event:event]
+      [self handlePressEvent:[[FlutterUIPressProxy alloc] initWithPress:press withEvent:event]
                   nextAction:^() {
                     [weakSelf superPressesChanged:[NSSet setWithObject:press] withEvent:event];
                   }];
@@ -2085,7 +1943,7 @@ static flutter::PointerData::DeviceKind DeviceKindFromTouchType(UITouch* touch) 
   if (@available(iOS 13.4, *)) {
     __weak FlutterViewController* weakSelf = self;
     for (UIPress* press in presses) {
-      [self handlePressEvent:[[FlutterUIPressProxy alloc] initWithPress:press event:event]
+      [self handlePressEvent:[[FlutterUIPressProxy alloc] initWithPress:press withEvent:event]
                   nextAction:^() {
                     [weakSelf superPressesEnded:[NSSet setWithObject:press] withEvent:event];
                   }];
@@ -2100,7 +1958,7 @@ static flutter::PointerData::DeviceKind DeviceKindFromTouchType(UITouch* touch) 
   if (@available(iOS 13.4, *)) {
     __weak FlutterViewController* weakSelf = self;
     for (UIPress* press in presses) {
-      [self handlePressEvent:[[FlutterUIPressProxy alloc] initWithPress:press event:event]
+      [self handlePressEvent:[[FlutterUIPressProxy alloc] initWithPress:press withEvent:event]
                   nextAction:^() {
                     [weakSelf superPressesCancelled:[NSSet setWithObject:press] withEvent:event];
                   }];
@@ -2146,28 +2004,38 @@ static flutter::PointerData::DeviceKind DeviceKindFromTouchType(UITouch* touch) 
     self.orientationPreferences = new_preferences;
 
     if (@available(iOS 16.0, *)) {
-      UIApplication* flutterApplication = FlutterSharedApplication.application;
-      NSSet<UIScene*>* scenes = [NSSet set];
-      if (flutterApplication) {
-        scenes = [flutterApplication.connectedScenes
-            filteredSetUsingPredicate:[NSPredicate predicateWithBlock:^BOOL(
-                                                       id scene, NSDictionary* bindings) {
-              return [scene isKindOfClass:[UIWindowScene class]];
-            }]];
-      } else if (self.flutterWindowSceneIfViewLoaded) {
-        scenes = [NSSet setWithObject:self.flutterWindowSceneIfViewLoaded];
-      }
+      NSSet<UIScene*>* scenes =
+#if APPLICATION_EXTENSION_API_ONLY
+          self.flutterWindowSceneIfViewLoaded
+              ? [NSSet setWithObject:self.flutterWindowSceneIfViewLoaded]
+              : [NSSet set];
+#else
+          [UIApplication.sharedApplication.connectedScenes
+              filteredSetUsingPredicate:[NSPredicate predicateWithBlock:^BOOL(
+                                                         id scene, NSDictionary* bindings) {
+                return [scene isKindOfClass:[UIWindowScene class]];
+              }]];
+#endif
       [self requestGeometryUpdateForWindowScenes:scenes];
     } else {
       UIInterfaceOrientationMask currentInterfaceOrientation = 0;
-      UIWindowScene* windowScene = self.flutterWindowSceneIfViewLoaded;
-      if (!windowScene) {
-        [FlutterLogger
-            logWarning:
-                @"Accessing the interface orientation when the window scene is unavailable."];
-        return;
+      if (@available(iOS 13.0, *)) {
+        UIWindowScene* windowScene = self.flutterWindowSceneIfViewLoaded;
+        if (!windowScene) {
+          FML_LOG(WARNING)
+              << "Accessing the interface orientation when the window scene is unavailable.";
+          return;
+        }
+        currentInterfaceOrientation = 1 << windowScene.interfaceOrientation;
+      } else {
+#if APPLICATION_EXTENSION_API_ONLY
+        FML_LOG(ERROR) << "Application based status bar orentiation update is not supported in "
+                          "app extension. Orientation: "
+                       << currentInterfaceOrientation;
+#else
+        currentInterfaceOrientation = 1 << [[UIApplication sharedApplication] statusBarOrientation];
+#endif
       }
-      currentInterfaceOrientation = 1 << windowScene.interfaceOrientation;
       if (!(self.orientationPreferences & currentInterfaceOrientation)) {
         [UIViewController attemptRotationToDeviceOrientation];
         // Force orientation switch if the current orientation is not allowed
@@ -2274,7 +2142,11 @@ static flutter::PointerData::DeviceKind DeviceKindFromTouchType(UITouch* touch) 
 }
 
 + (BOOL)accessibilityIsOnOffSwitchLabelsEnabled {
-  return UIAccessibilityIsOnOffSwitchLabelsEnabled();
+  if (@available(iOS 13, *)) {
+    return UIAccessibilityIsOnOffSwitchLabelsEnabled();
+  } else {
+    return NO;
+  }
 }
 
 #pragma mark - Set user settings
@@ -2282,12 +2154,6 @@ static flutter::PointerData::DeviceKind DeviceKindFromTouchType(UITouch* touch) 
 - (void)traitCollectionDidChange:(UITraitCollection*)previousTraitCollection {
   [super traitCollectionDidChange:previousTraitCollection];
   [self onUserSettingsChanged:nil];
-
-  // Since this method can get triggered by changes in device orientation, reset and recalculate the
-  // instrinsic size.
-  if (self.isAutoResizable) {
-    [self.flutterView resetIntrinsicContentSize];
-  }
 }
 
 - (void)onUserSettingsChanged:(NSNotification*)notification {
@@ -2302,13 +2168,11 @@ static flutter::PointerData::DeviceKind DeviceKindFromTouchType(UITouch* touch) 
 }
 
 - (CGFloat)textScaleFactor {
-  UIApplication* flutterApplication = FlutterSharedApplication.application;
-  if (flutterApplication == nil) {
-    [FlutterLogger logWarning:@"Dynamic content size update is not supported in app extension."];
-    return 1.0;
-  }
-
-  UIContentSizeCategory category = flutterApplication.preferredContentSizeCategory;
+#if APPLICATION_EXTENSION_API_ONLY
+  FML_LOG(WARNING) << "Dynamic content size update is not supported in app extension.";
+  return 1.0;
+#else
+  UIContentSizeCategory category = [UIApplication sharedApplication].preferredContentSizeCategory;
   // The delta is computed by approximating Apple's typography guidelines:
   // https://developer.apple.com/ios/human-interface-guidelines/visual-design/typography/
   //
@@ -2358,6 +2222,7 @@ static flutter::PointerData::DeviceKind DeviceKindFromTouchType(UITouch* touch) 
   } else {
     return 1.0;
   }
+#endif
 }
 
 - (BOOL)supportsShowingSystemContextMenu {
@@ -2372,10 +2237,14 @@ static flutter::PointerData::DeviceKind DeviceKindFromTouchType(UITouch* touch) 
 // is understood by the Flutter framework. See the settings
 // system channel for more information.
 - (NSString*)brightnessMode {
-  UIUserInterfaceStyle style = self.traitCollection.userInterfaceStyle;
+  if (@available(iOS 13, *)) {
+    UIUserInterfaceStyle style = self.traitCollection.userInterfaceStyle;
 
-  if (style == UIUserInterfaceStyleDark) {
-    return @"dark";
+    if (style == UIUserInterfaceStyleDark) {
+      return @"dark";
+    } else {
+      return @"light";
+    }
   } else {
     return @"light";
   }
@@ -2385,10 +2254,14 @@ static flutter::PointerData::DeviceKind DeviceKindFromTouchType(UITouch* touch) 
 // understood by the Flutter framework. See the settings system channel for more
 // information.
 - (NSString*)contrastMode {
-  UIAccessibilityContrast contrast = self.traitCollection.accessibilityContrast;
+  if (@available(iOS 13, *)) {
+    UIAccessibilityContrast contrast = self.traitCollection.accessibilityContrast;
 
-  if (contrast == UIAccessibilityContrastHigh) {
-    return @"high";
+    if (contrast == UIAccessibilityContrastHigh) {
+      return @"high";
+    } else {
+      return @"normal";
+    }
   } else {
     return @"normal";
   }
@@ -2775,10 +2648,6 @@ static flutter::PointerData::DeviceKind DeviceKindFromTouchType(UITouch* touch) 
 
 - (FlutterRestorationPlugin*)restorationPlugin {
   return self.engine.restorationPlugin;
-}
-
-- (FlutterTextInputPlugin*)textInputPlugin {
-  return self.engine.textInputPlugin;
 }
 
 @end

@@ -82,7 +82,7 @@ class DlImage : public SkRefCnt {
   //----------------------------------------------------------------------------
   /// @return     The dimensions of the pixel grid.
   ///
-  virtual DlISize GetSize() const = 0;
+  virtual SkISize dimensions() const = 0;
 
   //----------------------------------------------------------------------------
   /// @return     The approximate byte size of the allocation of this image.
@@ -107,7 +107,13 @@ class DlImage : public SkRefCnt {
   /// @return     The bounds of the pixel grid with 0, 0 as origin. A
   ///             convenience method that calls |DlImage::dimensions|.
   ///
-  DlIRect GetBounds() const;
+  SkIRect bounds() const;
+
+  //----------------------------------------------------------------------------
+  /// @return     The bounds of the pixel grid with 0, 0 as origin. A
+  ///             convenience method that calls |DlImage::dimensions|.
+  ///
+  DlIRect GetBounds() const { return ToDlIRect(bounds()); }
 
   //----------------------------------------------------------------------------
   /// @return     Specifies which context was used to create this image. The

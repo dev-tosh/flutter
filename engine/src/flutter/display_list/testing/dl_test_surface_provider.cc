@@ -4,8 +4,11 @@
 
 #include "flutter/display_list/testing/dl_test_surface_provider.h"
 
+#include "third_party/skia/include/core/SkCanvas.h"
+#include "third_party/skia/include/core/SkData.h"
+#include "third_party/skia/include/core/SkImage.h"
+#include "third_party/skia/include/core/SkSurface.h"
 #include "third_party/skia/include/encode/SkPngEncoder.h"
-#include "third_party/skia/include/gpu/ganesh/GrDirectContext.h"
 
 namespace flutter::testing {
 
@@ -40,7 +43,7 @@ bool DlSurfaceProvider::Snapshot(std::string& filename) const {
   if (!image) {
     return false;
   }
-  auto raster = image->makeRasterImage(nullptr);
+  auto raster = image->makeRasterImage();
   if (!raster) {
     return false;
   }
@@ -69,16 +72,5 @@ std::unique_ptr<DlSurfaceProvider> DlSurfaceProvider::CreateMetal() {
   return nullptr;
 }
 #endif
-
-void DlSurfaceInstance::FlushSubmitCpuSync() {
-  auto surface = sk_surface();
-  if (!surface) {
-    return;
-  }
-  if (GrDirectContext* dContext =
-          GrAsDirectContext(surface->recordingContext())) {
-    dContext->flushAndSubmit(surface.get(), GrSyncCpu::kYes);
-  }
-}
 
 }  // namespace flutter::testing

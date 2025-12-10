@@ -48,13 +48,15 @@ void main() async {
   }
 
   // Create a client.
-  final skiaGoldClient = SkiaGoldClient(engine.flutterDir);
+  final SkiaGoldClient skiaGoldClient = SkiaGoldClient(
+    engine.flutterDir,
+  );
 
   // Authenticate the client.
   await skiaGoldClient.auth();
 
-  const prefix = 'SkiaGoldClientE2ETest';
-  const digests = <_Digest>[
+  const String prefix = 'SkiaGoldClientE2ETest';
+  const List<_Digest> digests = <_Digest>[
     _Digest(
       name: '${prefix}_SolidBlueSquare',
       source: 'e2e_fixtures/solid_blue_square.png',
@@ -73,13 +75,17 @@ void main() async {
   ];
 
   // Upload the digests to Skia Gold.
-  final comparisonsFailed = <_Digest>{};
-  for (final digest in digests) {
+  final Set<_Digest> comparisonsFailed = <_Digest>{};
+  for (final _Digest digest in digests) {
     final String digestPath = digest.source;
     final String digestName = digest.name;
-    final digestFile = File(
-      path.join(engine.flutterDir.path, 'testing', 'skia_gold_client', 'tool', digestPath),
-    );
+    final File digestFile = File(path.join(
+      engine.flutterDir.path,
+      'testing',
+      'skia_gold_client',
+      'tool',
+      digestPath,
+    ));
     if (!digestFile.existsSync()) {
       stderr.writeln('The digest file "$digestPath" does not exist.');
       exitCode = 1;
@@ -89,7 +95,11 @@ void main() async {
     print('Uploading digest: $digestName ($digestPath): ${digest.pixelCount} pixels...');
 
     try {
-      await skiaGoldClient.addImg(digestName, digestFile, screenshotSize: 0);
+      await skiaGoldClient.addImg(
+        digestName,
+        digestFile,
+        screenshotSize: 0,
+      );
       stderr.writeln('Comparison success: $digestName');
     } on Exception catch (e) {
       stderr.writeln('Comparison failure: $digestName: $e');
@@ -99,7 +109,7 @@ void main() async {
 
   if (comparisonsFailed.isNotEmpty) {
     stdout.writeln('${comparisonsFailed.length} digest(s) failed.');
-    for (final digest in comparisonsFailed) {
+    for (final _Digest digest in comparisonsFailed) {
       stderr.writeln('  ${digest.name} (${digest.source})');
     }
     exitCode = 1;
@@ -108,7 +118,11 @@ void main() async {
 }
 
 final class _Digest {
-  const _Digest({required this.name, required this.source, required this.pixelCount});
+  const _Digest({
+    required this.name,
+    required this.source,
+    required this.pixelCount,
+  });
 
   /// The name of the digest/test.
   final String name;

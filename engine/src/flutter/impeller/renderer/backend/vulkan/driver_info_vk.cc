@@ -13,7 +13,6 @@
 
 namespace impeller {
 
-namespace {
 const std::unordered_map<std::string_view, AdrenoGPU> kAdrenoVersions = {
     // X
     // Note: I don't know if these strings actually match as there don't seem to
@@ -106,17 +105,6 @@ const std::unordered_map<std::string_view, MaliGPU> kMaliVersions = {
     {"T760", MaliGPU::kT760},
 };
 
-constexpr std::array<std::pair<std::string_view, PowerVRGPU>, 6> kGpuSeriesMap =
-    {{
-        {"BXE", PowerVRGPU::kBXE},
-        {"BXM", PowerVRGPU::kBXM},
-        {"BXS", PowerVRGPU::kBXS},
-        {"BXT", PowerVRGPU::kBXT},
-        {"CXT", PowerVRGPU::kCXT},
-        {"DXT", PowerVRGPU::kDXT},
-    }};
-}  // namespace
-
 AdrenoGPU GetAdrenoVersion(std::string_view version) {
   /// The format that Adreno names follow is "Adreno (TM) VERSION".
   auto paren_pos = version.find("Adreno (TM) ");
@@ -129,16 +117,6 @@ AdrenoGPU GetAdrenoVersion(std::string_view version) {
     return AdrenoGPU::kUnknown;
   }
   return result->second;
-}
-
-PowerVRGPU GetPowerVRVersion(std::string_view version) {
-  for (const auto& entry : kGpuSeriesMap) {
-    if (version.find(entry.first) != std::string::npos) {
-      return entry.second;
-    }
-  }
-
-  return PowerVRGPU::kUnknown;
 }
 
 MaliGPU GetMaliVersion(std::string_view version) {
@@ -188,8 +166,6 @@ constexpr VendorVK IdentifyVendor(uint32_t vendor) {
       return VendorVK::kApple;
     case 0x19E5:
       return VendorVK::kHuawei;
-    case 0x144D:
-      return VendorVK::kSamsung;
   }
   // Check if the ID is a known Khronos vendor.
   switch (vendor) {
@@ -225,8 +201,6 @@ constexpr const char* VendorToString(VendorVK vendor) {
       return "Apple";
     case VendorVK::kHuawei:
       return "Huawei";
-    case VendorVK::kSamsung:
-      return "Samsung";
   }
   FML_UNREACHABLE();
 }
@@ -286,9 +260,6 @@ DriverInfoVK::DriverInfoVK(const vk::PhysicalDevice& device) {
     case VendorVK::kARM:
       mali_gpu_ = GetMaliVersion(driver_name_);
       break;
-    case VendorVK::kPowerVR:
-      powervr_gpu_ = GetPowerVRVersion(driver_name_);
-      break;
     default:
       break;
   }
@@ -346,6 +317,12 @@ void DriverInfoVK::DumpToLog() const {
   FML_LOG(IMPORTANT) << stream.str();
 }
 
+bool DriverInfoVK::CanBatchSubmitCommandBuffers() const {
+  return vendor_ == VendorVK::kARM ||
+         (adreno_gpu_.has_value() &&
+          adreno_gpu_.value() >= AdrenoGPU::kAdreno702);
+}
+
 bool DriverInfoVK::IsEmulator() const {
 #if FML_OS_ANDROID
   // Google SwiftShader on Android.
@@ -358,56 +335,27 @@ bool DriverInfoVK::IsEmulator() const {
 }
 
 bool DriverInfoVK::IsKnownBadDriver() const {
-  // Fall back to OpenGL ES on older Adreno devices that require additional
-  // workarounds in the Impeller Vulkan back end such as disabling framebuffer
-  // fetch.
-  //
-  // See the following issues:
-  // https://github.com/flutter/flutter/issues/178285
-  // https://github.com/flutter/flutter/issues/178498
-  if (adreno_gpu_ && *adreno_gpu_ <= AdrenoGPU::kAdreno650) {
-    return true;
+  if (adreno_gpu_.has_value()) {
+    AdrenoGPU adreno = adreno_gpu_.value();
+    // See:
+    // https://github.com/flutter/flutter/issues/154103
+    //
+    // Reports "VK_INCOMPLETE" when compiling certain entity shader with
+    // vkCreateGraphicsPipelines, which is not a valid return status.
+    // See https://github.com/flutter/flutter/issues/155185 .
+    //
+    // https://github.com/flutter/flutter/issues/155185
+    // Unknown crashes but device is not easily acquirable.
+    if (adreno <= AdrenoGPU::kAdreno630) {
+      return true;
+    }
   }
-
   // Disable Maleoon series GPUs, see:
   // https://github.com/flutter/flutter/issues/156623
   if (vendor_ == VendorVK::kHuawei) {
     return true;
   }
-
-  if (vendor_ == VendorVK::kSamsung) {
-    // The first version of the Xclipse series GPU has reported
-    // bugs, unfortunately all versions of this GPU report the
-    // same driver version. Instead we use the Vulkan version
-    // as a proxy, assuming that any newer devices would not
-    // lower the supported Vulkan API level.
-    // See
-    // https://vulkan.gpuinfo.org/listreports.php?devicename=samsung+SM-S906B&platform=android
-    // https://github.com/flutter/flutter/issues/161334
-    return !api_version_.IsAtLeast(Version{1, 3, 0});
-  }
-
-  // https://github.com/flutter/flutter/issues/161122
-  // https://github.com/flutter/flutter/issues/160960
-  // https://github.com/flutter/flutter/issues/160866
-  // https://github.com/flutter/flutter/issues/160804
-  // https://github.com/flutter/flutter/issues/160406
-  if (powervr_gpu_.has_value() && powervr_gpu_.value() < PowerVRGPU::kBXE) {
-    return true;
-  }
   return false;
-}
-
-std::optional<MaliGPU> DriverInfoVK::GetMaliGPUInfo() const {
-  return mali_gpu_;
-}
-
-std::optional<AdrenoGPU> DriverInfoVK::GetAdrenoGPUInfo() const {
-  return adreno_gpu_;
-}
-
-std::optional<PowerVRGPU> DriverInfoVK::GetPowerVRGPUInfo() const {
-  return powervr_gpu_;
 }
 
 }  // namespace impeller

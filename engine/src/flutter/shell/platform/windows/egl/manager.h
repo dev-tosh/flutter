@@ -14,12 +14,9 @@
 
 // Windows platform specific includes
 #include <d3d11.h>
-#include <dxgi.h>
-#include <dxgi1_6.h>
 #include <windows.h>
 #include <wrl/client.h>
 #include <memory>
-#include <optional>
 
 #include "flutter/fml/macros.h"
 #include "flutter/shell/platform/windows/egl/context.h"
@@ -29,17 +26,11 @@
 namespace flutter {
 namespace egl {
 
-enum class GpuPreference {
-  NoPreference,
-  LowPowerPreference,
-  HighPerformancePreference,
-};
-
 // A manager for initializing ANGLE correctly and using it to create and
 // destroy surfaces
 class Manager {
  public:
-  static std::unique_ptr<Manager> Create(GpuPreference gpu_preference);
+  static std::unique_ptr<Manager> Create();
 
   virtual ~Manager();
 
@@ -80,25 +71,17 @@ class Manager {
   // Get the EGL context used for async texture uploads.
   virtual Context* resource_context() const;
 
-  static std::optional<LUID> GetLowPowerGpuLuid();
-
-  static std::optional<LUID> GetHighPerformanceGpuLuid();
-
  protected:
   // Creates a new surface manager retaining reference to the passed-in target
   // for the lifetime of the manager.
-  explicit Manager(GpuPreference gpu_preference);
+  explicit Manager();
 
  private:
   // Number of active instances of Manager
   static int instance_count_;
 
-  // Helper function to get GPU LUID by preference.
-  static std::optional<LUID> GetGpuLuidByPreference(
-      DXGI_GPU_PREFERENCE preference);
-
   // Initialize the EGL display.
-  bool InitializeDisplay(GpuPreference gpu_preference);
+  bool InitializeDisplay();
 
   // Initialize the EGL configs.
   bool InitializeConfig();

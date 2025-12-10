@@ -48,7 +48,7 @@ void main() {
       test('the path does not contain a "flutter" directory', () {
         setUp();
         try {
-          final srcDir = io.Directory(p.join(emptyDir.path, 'src'))..createSync();
+          final io.Directory srcDir = io.Directory(p.join(emptyDir.path, 'src'))..createSync();
           expect(
             () => Engine.fromSrcPath(srcDir.path),
             throwsA(const TypeMatcher<InvalidEngineException>()),
@@ -61,11 +61,11 @@ void main() {
       test('returns an Engine', () {
         setUp();
         try {
-          final srcDir = io.Directory(p.join(emptyDir.path, 'src'))..createSync();
+          final io.Directory srcDir = io.Directory(p.join(emptyDir.path, 'src'))..createSync();
           io.Directory(p.join(srcDir.path, 'flutter')).createSync();
           io.Directory(p.join(srcDir.path, 'out')).createSync();
 
-          final engine = Engine.fromSrcPath(srcDir.path);
+          final Engine engine = Engine.fromSrcPath(srcDir.path);
 
           expect(engine.srcDir.path, srcDir.path);
           expect(engine.flutterDir.path, p.join(srcDir.path, 'flutter'));
@@ -92,7 +92,10 @@ void main() {
       test('the path does not contain a "src" directory', () {
         setUp();
         try {
-          expect(() => Engine.findWithin(emptyDir.path), throwsStateError);
+          expect(
+            () => Engine.findWithin(emptyDir.path),
+            throwsStateError,
+          );
         } finally {
           tearDown();
         }
@@ -101,8 +104,11 @@ void main() {
       test('the path contains a "src" directory but it is not an engine root', () {
         setUp();
         try {
-          final srcDir = io.Directory(p.join(emptyDir.path, 'src'))..createSync();
-          expect(() => Engine.findWithin(srcDir.path), throwsStateError);
+          final io.Directory srcDir = io.Directory(p.join(emptyDir.path, 'src'))..createSync();
+          expect(
+            () => Engine.findWithin(srcDir.path),
+            throwsStateError,
+          );
         } finally {
           tearDown();
         }
@@ -111,11 +117,11 @@ void main() {
       test('returns an Engine', () {
         setUp();
         try {
-          final srcDir = io.Directory(p.join(emptyDir.path, 'src'))..createSync();
+          final io.Directory srcDir = io.Directory(p.join(emptyDir.path, 'src'))..createSync();
           io.Directory(p.join(srcDir.path, 'flutter')).createSync();
           io.Directory(p.join(srcDir.path, 'out')).createSync();
 
-          final engine = Engine.findWithin(srcDir.path);
+          final Engine engine = Engine.findWithin(srcDir.path);
 
           expect(engine.srcDir.path, srcDir.path);
           expect(engine.flutterDir.path, p.join(srcDir.path, 'flutter'));
@@ -134,14 +140,13 @@ void main() {
         // `/Users/.../engine/src`).
         setUp();
         try {
-          final srcDir = io.Directory(p.join(emptyDir.path, 'src'))..createSync();
+          final io.Directory srcDir = io.Directory(p.join(emptyDir.path, 'src'))..createSync();
           io.Directory(p.join(srcDir.path, 'flutter')).createSync();
           io.Directory(p.join(srcDir.path, 'out')).createSync();
 
-          final nestedSrcDir = io.Directory(p.join(srcDir.path, 'flutter', 'bar', 'src', 'baz'))
-            ..createSync(recursive: true);
+          final io.Directory nestedSrcDir = io.Directory(p.join(srcDir.path, 'flutter', 'bar', 'src', 'baz'))..createSync(recursive: true);
 
-          final engine = Engine.findWithin(nestedSrcDir.path);
+          final Engine engine = Engine.findWithin(nestedSrcDir.path);
 
           expect(engine.srcDir.path, srcDir.path);
           expect(engine.flutterDir.path, p.join(srcDir.path, 'flutter'));
@@ -161,7 +166,7 @@ void main() {
       io.Directory(p.join(emptyDir.path, 'src', 'flutter')).createSync(recursive: true);
       io.Directory(p.join(emptyDir.path, 'src', 'out')).createSync(recursive: true);
 
-      final engine = Engine.fromSrcPath(p.join(emptyDir.path, 'src'));
+      final Engine engine = Engine.fromSrcPath(p.join(emptyDir.path, 'src'));
       expect(engine.outputs(), <Output>[]);
       expect(engine.latestOutput(), isNull);
     } finally {
@@ -179,14 +184,14 @@ void main() {
 
       // Create two targets in out: host_debug and host_debug_unopt_arm64.
       io.Directory(p.join(emptyDir.path, 'src', 'out', 'host_debug')).createSync(recursive: true);
-      io.Directory(
-        p.join(emptyDir.path, 'src', 'out', 'host_debug_unopt_arm64'),
-      ).createSync(recursive: true);
+      io.Directory(p.join(emptyDir.path, 'src', 'out', 'host_debug_unopt_arm64')).createSync(recursive: true);
 
-      final engine = Engine.fromSrcPath(p.join(emptyDir.path, 'src'));
-      final List<String> outputs =
-          engine.outputs().map((Output o) => p.basename(o.path.path)).toList()..sort();
-      expect(outputs, <String>['host_debug', 'host_debug_unopt_arm64']);
+      final Engine engine = Engine.fromSrcPath(p.join(emptyDir.path, 'src'));
+      final List<String> outputs = engine.outputs().map((Output o) => p.basename(o.path.path)).toList()..sort();
+      expect(outputs, <String>[
+        'host_debug',
+        'host_debug_unopt_arm64',
+      ]);
     } finally {
       tearDown();
     }
@@ -197,23 +202,33 @@ void main() {
 
     try {
       // Create a valid engine.
-      final srcDir = io.Directory(p.join(emptyDir.path, 'src'))..createSync(recursive: true);
-      final flutterDir = io.Directory(p.join(srcDir.path, 'flutter'))..createSync(recursive: true);
-      final outDir = io.Directory(p.join(srcDir.path, 'out'))..createSync(recursive: true);
+      final io.Directory srcDir = io.Directory(p.join(emptyDir.path, 'src'))
+        ..createSync(recursive: true);
+      final io.Directory flutterDir = io.Directory(p.join(srcDir.path, 'flutter'))
+        ..createSync(recursive: true);
+      final io.Directory outDir = io.Directory(p.join(srcDir.path, 'out'))
+        ..createSync(recursive: true);
 
       // Create two targets in out: host_debug and host_debug_unopt_arm64.
-      final hostDebug = io.Directory(p.join(outDir.path, 'host_debug'))
+      final io.Directory hostDebug = io.Directory(p.join(outDir.path, 'host_debug'))
         ..createSync(recursive: true);
-      final hostDebugUnoptArm64 = io.Directory(p.join(outDir.path, 'host_debug_unopt_arm64'))
-        ..createSync(recursive: true);
+      final io.Directory hostDebugUnoptArm64 = io.Directory(
+        p.join(outDir.path, 'host_debug_unopt_arm64'),
+      )..createSync(recursive: true);
 
       final Engine engine = TestEngine.withPaths(
         srcDir: srcDir,
         flutterDir: flutterDir,
         outDir: outDir,
         outputs: <TestOutput>[
-          TestOutput(hostDebug, lastModified: DateTime.utc(2023, 9, 23, 21, 16)),
-          TestOutput(hostDebugUnoptArm64, lastModified: DateTime.utc(2023, 9, 23, 22, 16)),
+          TestOutput(
+            hostDebug,
+            lastModified: DateTime.utc(2023, 9, 23, 21, 16),
+          ),
+          TestOutput(
+            hostDebugUnoptArm64,
+            lastModified: DateTime.utc(2023, 9, 23, 22, 16),
+          ),
         ],
       );
 

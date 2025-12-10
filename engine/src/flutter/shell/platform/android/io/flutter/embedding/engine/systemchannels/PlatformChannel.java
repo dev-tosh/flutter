@@ -481,7 +481,7 @@ public class PlatformChannel {
      * application.
      *
      * <p>{@link SystemUiMode#IMMERSIVE} refers to a fullscreen experience that restores system bars
-     * upon swiping from the edge of the viewport. This swipe gesture is not received by the
+     * upon swiping from the edge of the viewport. This swipe gesture is not recived by the
      * application.
      *
      * <p>{@link SystemUiMode#IMMERSIVE_STICKY} refers to a fullscreen experience that restores
@@ -566,7 +566,6 @@ public class PlatformChannel {
   /** Types of sounds the Android OS can play on behalf of an application. */
   public enum SoundType {
     CLICK("SystemSoundType.click"),
-    TICK("SystemSoundType.tick"),
     ALERT("SystemSoundType.alert");
 
     @NonNull
@@ -592,10 +591,7 @@ public class PlatformChannel {
     LIGHT_IMPACT("HapticFeedbackType.lightImpact"),
     MEDIUM_IMPACT("HapticFeedbackType.mediumImpact"),
     HEAVY_IMPACT("HapticFeedbackType.heavyImpact"),
-    SELECTION_CLICK("HapticFeedbackType.selectionClick"),
-    SUCCESS_NOTIFICATION("HapticFeedbackType.successNotification"),
-    WARNING_NOTIFICATION("HapticFeedbackType.warningNotification"),
-    ERROR_NOTIFICATION("HapticFeedbackType.errorNotification");
+    SELECTION_CLICK("HapticFeedbackType.selectionClick");
 
     @NonNull
     static HapticFeedbackType fromValue(@Nullable String encodedName) throws NoSuchFieldException {
@@ -675,7 +671,7 @@ public class PlatformChannel {
     EDGE_TO_EDGE("SystemUiMode.edgeToEdge");
 
     /**
-     * Returns the SystemUiMode for the provided encoded value. @throws NoSuchFieldException if any
+     * Returns the SystemUiMode for the provied encoded value. @throws NoSuchFieldException if any
      * of the given encoded overlay names are invalid.
      */
     @NonNull
@@ -690,7 +686,7 @@ public class PlatformChannel {
 
     @NonNull private String encodedName;
 
-    /** Returns the encoded {@link SystemUiMode} */
+    /** Returens the encoded {@link SystemUiMode} */
     SystemUiMode(@NonNull String encodedName) {
       this.encodedName = encodedName;
     }

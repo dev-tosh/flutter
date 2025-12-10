@@ -16,7 +16,6 @@
 
 FLUTTER_ASSERT_ARC
 
-// NOLINTBEGIN(clang-analyzer-cplusplus.NewDeleteLeaks)
 namespace {
 using namespace flutter;
 fml::RefPtr<fml::TaskRunner> CreateNewThread(const std::string& name) {
@@ -133,4 +132,3 @@ class MockPlatformMessageResponse : public PlatformMessageResponse {
   XCTAssertTrue(response->is_complete());
 }
 @end
-// NOLINTEND(clang-analyzer-cplusplus.NewDeleteLeaks)

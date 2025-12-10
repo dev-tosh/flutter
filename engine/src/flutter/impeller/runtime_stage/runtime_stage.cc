@@ -6,7 +6,6 @@
 
 #include <array>
 #include <memory>
-#include <sstream>
 
 #include "fml/mapping.h"
 #include "impeller/base/validation.h"
@@ -48,16 +47,48 @@ static RuntimeShaderStage ToShaderStage(fb::Stage stage) {
 const char* RuntimeStage::kVulkanUBOName =
     "_RESERVED_IDENTIFIER_FIXUP_gl_DefaultUniformBlock";
 
-absl::StatusOr<RuntimeStage> RuntimeStage::Create(
+std::unique_ptr<RuntimeStage> RuntimeStage::RuntimeStageIfPresent(
     const fb::RuntimeStage* runtime_stage,
     const std::shared_ptr<fml::Mapping>& payload) {
   if (!runtime_stage) {
-    return absl::InvalidArgumentError("Runtime stage is null.");
+    return nullptr;
   }
 
-  RuntimeStage stage(payload);
-  stage.stage_ = ToShaderStage(runtime_stage->stage());
-  stage.entrypoint_ = runtime_stage->entrypoint()->str();
+  return std::unique_ptr<RuntimeStage>(
+      new RuntimeStage(runtime_stage, payload));
+}
+
+RuntimeStage::Map RuntimeStage::DecodeRuntimeStages(
+    const std::shared_ptr<fml::Mapping>& payload) {
+  if (payload == nullptr || !payload->GetMapping()) {
+    return {};
+  }
+  if (!fb::RuntimeStagesBufferHasIdentifier(payload->GetMapping())) {
+    return {};
+  }
+
+  auto raw_stages = fb::GetRuntimeStages(payload->GetMapping());
+  return {
+      {RuntimeStageBackend::kSkSL,
+       RuntimeStageIfPresent(raw_stages->sksl(), payload)},
+      {RuntimeStageBackend::kMetal,
+       RuntimeStageIfPresent(raw_stages->metal(), payload)},
+      {RuntimeStageBackend::kOpenGLES,
+       RuntimeStageIfPresent(raw_stages->opengles(), payload)},
+      {RuntimeStageBackend::kOpenGLES3,
+       RuntimeStageIfPresent(raw_stages->opengles3(), payload)},
+      {RuntimeStageBackend::kVulkan,
+       RuntimeStageIfPresent(raw_stages->vulkan(), payload)},
+  };
+}
+
+RuntimeStage::RuntimeStage(const fb::RuntimeStage* runtime_stage,
+                           const std::shared_ptr<fml::Mapping>& payload)
+    : payload_(payload) {
+  FML_DCHECK(runtime_stage);
+
+  stage_ = ToShaderStage(runtime_stage->stage());
+  entrypoint_ = runtime_stage->entrypoint()->str();
 
   auto* uniforms = runtime_stage->uniforms();
 
@@ -87,21 +118,21 @@ absl::StatusOr<RuntimeStage> RuntimeStage::Create(
         }
       }
       desc.struct_float_count = i->struct_float_count();
-      stage.uniforms_.push_back(std::move(desc));
+      uniforms_.push_back(std::move(desc));
     }
   }
 
-  stage.code_mapping_ = std::make_shared<fml::NonOwnedMapping>(
-      runtime_stage->shader()->data(),           //
-      runtime_stage->shader()->size(),           //
-      [payload = stage.payload_](auto, auto) {}  //
+  code_mapping_ = std::make_shared<fml::NonOwnedMapping>(
+      runtime_stage->shader()->data(),     //
+      runtime_stage->shader()->size(),     //
+      [payload = payload_](auto, auto) {}  //
   );
 
   size_t binding = 64;
   if (ubo_id.has_value() && ubo_id.value() == binding) {
     binding++;
   }
-  for (auto& uniform : stage.uniforms_) {
+  for (auto& uniform : uniforms_) {
     if (uniform.type == kSampledImage) {
       uniform.binding = binding;
       binding++;
@@ -111,80 +142,31 @@ absl::StatusOr<RuntimeStage> RuntimeStage::Create(
     }
   }
 
-  for (const auto& uniform : stage.GetUniforms()) {
+  for (const auto& uniform : GetUniforms()) {
     if (uniform.type == kStruct) {
-      stage.descriptor_set_layouts_.push_back(DescriptorSetLayout{
+      descriptor_set_layouts_.push_back(DescriptorSetLayout{
           static_cast<uint32_t>(uniform.location),
           DescriptorType::kUniformBuffer,
           ShaderStage::kFragment,
       });
     } else if (uniform.type == kSampledImage) {
-      stage.descriptor_set_layouts_.push_back(DescriptorSetLayout{
+      descriptor_set_layouts_.push_back(DescriptorSetLayout{
           static_cast<uint32_t>(uniform.binding),
           DescriptorType::kSampledImage,
           ShaderStage::kFragment,
       });
     }
   }
-
-  return stage;
+  is_valid_ = true;
 }
-
-std::unique_ptr<RuntimeStage> RuntimeStage::RuntimeStageIfPresent(
-    const fb::RuntimeStage* runtime_stage,
-    const std::shared_ptr<fml::Mapping>& payload) {
-  auto stage = Create(runtime_stage, payload);
-  if (!stage.ok()) {
-    return nullptr;
-  }
-  return std::make_unique<RuntimeStage>(std::move(*stage));
-}
-
-absl::StatusOr<RuntimeStage::Map> RuntimeStage::DecodeRuntimeStages(
-    const std::shared_ptr<fml::Mapping>& payload) {
-  if (payload == nullptr || !payload->GetMapping()) {
-    return absl::InvalidArgumentError("Payload is null or empty.");
-  }
-  if (!fb::RuntimeStagesBufferHasIdentifier(payload->GetMapping())) {
-    return absl::InvalidArgumentError(
-        "Payload does not have valid identifier.");
-  }
-
-  auto raw_stages = fb::GetRuntimeStages(payload->GetMapping());
-  if (!raw_stages) {
-    return absl::InvalidArgumentError("Failed to get runtime stages.");
-  }
-
-  const uint32_t version = raw_stages->format_version();
-  const auto expected =
-      static_cast<uint32_t>(fb::RuntimeStagesFormatVersion::kVersion);
-  if (version != expected) {
-    std::stringstream stream;
-    stream << "Unsupported runtime stages format version. Expected " << expected
-           << ", got " << version << ".";
-    return absl::InvalidArgumentError(stream.str());
-  }
-
-  return Map{
-      {RuntimeStageBackend::kSkSL,
-       RuntimeStageIfPresent(raw_stages->sksl(), payload)},
-      {RuntimeStageBackend::kMetal,
-       RuntimeStageIfPresent(raw_stages->metal(), payload)},
-      {RuntimeStageBackend::kOpenGLES,
-       RuntimeStageIfPresent(raw_stages->opengles(), payload)},
-      {RuntimeStageBackend::kOpenGLES3,
-       RuntimeStageIfPresent(raw_stages->opengles3(), payload)},
-      {RuntimeStageBackend::kVulkan,
-       RuntimeStageIfPresent(raw_stages->vulkan(), payload)},
-  };
-}
-
-RuntimeStage::RuntimeStage(std::shared_ptr<fml::Mapping> payload)
-    : payload_(std::move(payload)) {}
 
 RuntimeStage::~RuntimeStage() = default;
 RuntimeStage::RuntimeStage(RuntimeStage&&) = default;
 RuntimeStage& RuntimeStage::operator=(RuntimeStage&&) = default;
+
+bool RuntimeStage::IsValid() const {
+  return is_valid_;
+}
 
 const std::shared_ptr<fml::Mapping>& RuntimeStage::GetCodeMapping() const {
   return code_mapping_;

@@ -13,10 +13,9 @@ import 'dart:ui';
 
 import 'package:path/path.dart' as path;
 import 'package:test/test.dart';
-import 'goldens.dart';
 
 Future<Uint8List> readFile(String fileName) async {
-  final file = File(path.join('flutter', 'testing', 'resources', fileName));
+  final File file = File(path.join('flutter', 'testing', 'resources', fileName));
   return file.readAsBytes();
 }
 
@@ -51,113 +50,70 @@ void testFontWeight() {
 }
 
 void testParagraphStyle() {
-  final ps0 = ParagraphStyle(textDirection: TextDirection.ltr, fontSize: 14.0);
-  final ps1 = ParagraphStyle(textDirection: TextDirection.rtl, fontSize: 14.0);
-  final ps2 = ParagraphStyle(
-    textAlign: TextAlign.center,
-    fontWeight: FontWeight.w800,
-    fontSize: 10.0,
-    height: 100.0,
-  );
-  final ps3 = ParagraphStyle(fontWeight: FontWeight.w700, fontSize: 12.0, height: 123.0);
-  final ps4 = ParagraphStyle(fontWeight: FontWeight.w700, fontSize: 12.0, height: kTextHeightNone);
+  final ParagraphStyle ps0 = ParagraphStyle(textDirection: TextDirection.ltr, fontSize: 14.0);
+  final ParagraphStyle ps1 = ParagraphStyle(textDirection: TextDirection.rtl, fontSize: 14.0);
+  final ParagraphStyle ps2 = ParagraphStyle(textAlign: TextAlign.center, fontWeight: FontWeight.w800, fontSize: 10.0, height: 100.0);
+  final ParagraphStyle ps3 = ParagraphStyle(fontWeight: FontWeight.w700, fontSize: 12.0, height: 123.0);
+  final ParagraphStyle ps4 = ParagraphStyle(fontWeight: FontWeight.w700, fontSize: 12.0, height: kTextHeightNone);
 
   test('ParagraphStyle toString works', () {
-    expect(
-      ps0.toString(),
-      equals(
-        'ParagraphStyle(textAlign: unspecified, textDirection: TextDirection.ltr, fontWeight: unspecified, fontStyle: unspecified, maxLines: unspecified, textHeightBehavior: unspecified, fontFamily: unspecified, fontSize: 14.0, height: unspecified, strutStyle: unspecified, ellipsis: unspecified, locale: unspecified)',
-      ),
-    );
-    expect(
-      ps1.toString(),
-      equals(
-        'ParagraphStyle(textAlign: unspecified, textDirection: TextDirection.rtl, fontWeight: unspecified, fontStyle: unspecified, maxLines: unspecified, textHeightBehavior: unspecified, fontFamily: unspecified, fontSize: 14.0, height: unspecified, strutStyle: unspecified, ellipsis: unspecified, locale: unspecified)',
-      ),
-    );
-    expect(
-      ps2.toString(),
-      equals(
-        'ParagraphStyle(textAlign: TextAlign.center, textDirection: unspecified, fontWeight: FontWeight.w800, fontStyle: unspecified, maxLines: unspecified, textHeightBehavior: unspecified, fontFamily: unspecified, fontSize: 10.0, height: 100.0x, strutStyle: unspecified, ellipsis: unspecified, locale: unspecified)',
-      ),
-    );
-    expect(
-      ps3.toString(),
-      equals(
-        'ParagraphStyle(textAlign: unspecified, textDirection: unspecified, fontWeight: FontWeight.w700, fontStyle: unspecified, maxLines: unspecified, textHeightBehavior: unspecified, fontFamily: unspecified, fontSize: 12.0, height: 123.0x, strutStyle: unspecified, ellipsis: unspecified, locale: unspecified)',
-      ),
-    );
-    expect(
-      ps4.toString(),
-      equals(
-        'ParagraphStyle(textAlign: unspecified, textDirection: unspecified, fontWeight: FontWeight.w700, fontStyle: unspecified, maxLines: unspecified, textHeightBehavior: unspecified, fontFamily: unspecified, fontSize: 12.0, height: unspecified, strutStyle: unspecified, ellipsis: unspecified, locale: unspecified)',
-      ),
-    );
+    expect(ps0.toString(), equals('ParagraphStyle(textAlign: unspecified, textDirection: TextDirection.ltr, fontWeight: unspecified, fontStyle: unspecified, maxLines: unspecified, textHeightBehavior: unspecified, fontFamily: unspecified, fontSize: 14.0, height: unspecified, strutStyle: unspecified, ellipsis: unspecified, locale: unspecified)'));
+    expect(ps1.toString(), equals('ParagraphStyle(textAlign: unspecified, textDirection: TextDirection.rtl, fontWeight: unspecified, fontStyle: unspecified, maxLines: unspecified, textHeightBehavior: unspecified, fontFamily: unspecified, fontSize: 14.0, height: unspecified, strutStyle: unspecified, ellipsis: unspecified, locale: unspecified)'));
+    expect(ps2.toString(), equals('ParagraphStyle(textAlign: TextAlign.center, textDirection: unspecified, fontWeight: FontWeight.w800, fontStyle: unspecified, maxLines: unspecified, textHeightBehavior: unspecified, fontFamily: unspecified, fontSize: 10.0, height: 100.0x, strutStyle: unspecified, ellipsis: unspecified, locale: unspecified)'));
+    expect(ps3.toString(), equals('ParagraphStyle(textAlign: unspecified, textDirection: unspecified, fontWeight: FontWeight.w700, fontStyle: unspecified, maxLines: unspecified, textHeightBehavior: unspecified, fontFamily: unspecified, fontSize: 12.0, height: 123.0x, strutStyle: unspecified, ellipsis: unspecified, locale: unspecified)'));
+    expect(ps4.toString(), equals('ParagraphStyle(textAlign: unspecified, textDirection: unspecified, fontWeight: FontWeight.w700, fontStyle: unspecified, maxLines: unspecified, textHeightBehavior: unspecified, fontFamily: unspecified, fontSize: 12.0, height: unspecified, strutStyle: unspecified, ellipsis: unspecified, locale: unspecified)'));
   });
 }
 
 void testTextStyle() {
-  final ts0 = TextStyle(fontWeight: FontWeight.w700, fontSize: 12.0, height: 123.0);
-  final ts1 = TextStyle(
-    color: const Color(0xFF00FF00),
-    fontWeight: FontWeight.w800,
-    fontSize: 10.0,
-    height: 100.0,
-  );
-  final ts2 = TextStyle(fontFamily: 'test');
-  final ts3 = TextStyle(fontFamily: 'foo', fontFamilyFallback: <String>['Roboto', 'test']);
-  final ts4 = TextStyle(leadingDistribution: TextLeadingDistribution.even);
-  final ts5 = TextStyle(height: kTextHeightNone);
+  final TextStyle ts0 = TextStyle(fontWeight: FontWeight.w700, fontSize: 12.0, height: 123.0);
+  final TextStyle ts1 = TextStyle(color: const Color(0xFF00FF00), fontWeight: FontWeight.w800, fontSize: 10.0, height: 100.0);
+  final TextStyle ts2 = TextStyle(fontFamily: 'test');
+  final TextStyle ts3 = TextStyle(fontFamily: 'foo', fontFamilyFallback: <String>['Roboto', 'test']);
+  final TextStyle ts4 = TextStyle(leadingDistribution: TextLeadingDistribution.even);
+  final TextStyle ts5 = TextStyle(height: kTextHeightNone);
 
   test('TextStyle toString works', () {
     expect(
       ts0.toString(),
-      equals(
-        'TextStyle(color: unspecified, decoration: unspecified, decorationColor: unspecified, decorationStyle: unspecified, decorationThickness: unspecified, fontWeight: FontWeight.w700, fontStyle: unspecified, textBaseline: unspecified, fontFamily: unspecified, fontFamilyFallback: unspecified, fontSize: 12.0, letterSpacing: unspecified, wordSpacing: unspecified, height: 123.0x, leadingDistribution: unspecified, locale: unspecified, background: unspecified, foreground: unspecified, shadows: unspecified, fontFeatures: unspecified, fontVariations: unspecified)',
-      ),
+      equals('TextStyle(color: unspecified, decoration: unspecified, decorationColor: unspecified, decorationStyle: unspecified, decorationThickness: unspecified, fontWeight: FontWeight.w700, fontStyle: unspecified, textBaseline: unspecified, fontFamily: unspecified, fontFamilyFallback: unspecified, fontSize: 12.0, letterSpacing: unspecified, wordSpacing: unspecified, height: 123.0x, leadingDistribution: unspecified, locale: unspecified, background: unspecified, foreground: unspecified, shadows: unspecified, fontFeatures: unspecified, fontVariations: unspecified)'),
     );
     expect(
       ts1.toString(),
-      equals(
-        'TextStyle(color: ${const Color(0xFF00FF00)}, decoration: unspecified, decorationColor: unspecified, decorationStyle: unspecified, decorationThickness: unspecified, fontWeight: FontWeight.w800, fontStyle: unspecified, textBaseline: unspecified, fontFamily: unspecified, fontFamilyFallback: unspecified, fontSize: 10.0, letterSpacing: unspecified, wordSpacing: unspecified, height: 100.0x, leadingDistribution: unspecified, locale: unspecified, background: unspecified, foreground: unspecified, shadows: unspecified, fontFeatures: unspecified, fontVariations: unspecified)',
-      ),
+      equals('TextStyle(color: ${const Color(0xFF00FF00)}, decoration: unspecified, decorationColor: unspecified, decorationStyle: unspecified, decorationThickness: unspecified, fontWeight: FontWeight.w800, fontStyle: unspecified, textBaseline: unspecified, fontFamily: unspecified, fontFamilyFallback: unspecified, fontSize: 10.0, letterSpacing: unspecified, wordSpacing: unspecified, height: 100.0x, leadingDistribution: unspecified, locale: unspecified, background: unspecified, foreground: unspecified, shadows: unspecified, fontFeatures: unspecified, fontVariations: unspecified)'),
     );
     expect(
       ts2.toString(),
-      equals(
-        'TextStyle(color: unspecified, decoration: unspecified, decorationColor: unspecified, decorationStyle: unspecified, decorationThickness: unspecified, fontWeight: unspecified, fontStyle: unspecified, textBaseline: unspecified, fontFamily: test, fontFamilyFallback: unspecified, fontSize: unspecified, letterSpacing: unspecified, wordSpacing: unspecified, height: unspecified, leadingDistribution: unspecified, locale: unspecified, background: unspecified, foreground: unspecified, shadows: unspecified, fontFeatures: unspecified, fontVariations: unspecified)',
-      ),
+      equals('TextStyle(color: unspecified, decoration: unspecified, decorationColor: unspecified, decorationStyle: unspecified, decorationThickness: unspecified, fontWeight: unspecified, fontStyle: unspecified, textBaseline: unspecified, fontFamily: test, fontFamilyFallback: unspecified, fontSize: unspecified, letterSpacing: unspecified, wordSpacing: unspecified, height: unspecified, leadingDistribution: unspecified, locale: unspecified, background: unspecified, foreground: unspecified, shadows: unspecified, fontFeatures: unspecified, fontVariations: unspecified)'),
     );
     expect(
       ts3.toString(),
-      equals(
-        'TextStyle(color: unspecified, decoration: unspecified, decorationColor: unspecified, decorationStyle: unspecified, decorationThickness: unspecified, fontWeight: unspecified, fontStyle: unspecified, textBaseline: unspecified, fontFamily: foo, fontFamilyFallback: [Roboto, test], fontSize: unspecified, letterSpacing: unspecified, wordSpacing: unspecified, height: unspecified, leadingDistribution: unspecified, locale: unspecified, background: unspecified, foreground: unspecified, shadows: unspecified, fontFeatures: unspecified, fontVariations: unspecified)',
-      ),
+      equals('TextStyle(color: unspecified, decoration: unspecified, decorationColor: unspecified, decorationStyle: unspecified, decorationThickness: unspecified, fontWeight: unspecified, fontStyle: unspecified, textBaseline: unspecified, fontFamily: foo, fontFamilyFallback: [Roboto, test], fontSize: unspecified, letterSpacing: unspecified, wordSpacing: unspecified, height: unspecified, leadingDistribution: unspecified, locale: unspecified, background: unspecified, foreground: unspecified, shadows: unspecified, fontFeatures: unspecified, fontVariations: unspecified)'),
     );
     expect(
       ts4.toString(),
-      equals(
-        'TextStyle(color: unspecified, decoration: unspecified, decorationColor: unspecified, decorationStyle: unspecified, decorationThickness: unspecified, fontWeight: unspecified, fontStyle: unspecified, textBaseline: unspecified, fontFamily: unspecified, fontFamilyFallback: unspecified, fontSize: unspecified, letterSpacing: unspecified, wordSpacing: unspecified, height: unspecified, leadingDistribution: TextLeadingDistribution.even, locale: unspecified, background: unspecified, foreground: unspecified, shadows: unspecified, fontFeatures: unspecified, fontVariations: unspecified)',
-      ),
+      equals('TextStyle(color: unspecified, decoration: unspecified, decorationColor: unspecified, decorationStyle: unspecified, decorationThickness: unspecified, fontWeight: unspecified, fontStyle: unspecified, textBaseline: unspecified, fontFamily: unspecified, fontFamilyFallback: unspecified, fontSize: unspecified, letterSpacing: unspecified, wordSpacing: unspecified, height: unspecified, leadingDistribution: TextLeadingDistribution.even, locale: unspecified, background: unspecified, foreground: unspecified, shadows: unspecified, fontFeatures: unspecified, fontVariations: unspecified)'),
     );
     expect(
       ts5.toString(),
-      equals(
-        'TextStyle(color: unspecified, decoration: unspecified, decorationColor: unspecified, decorationStyle: unspecified, decorationThickness: unspecified, fontWeight: unspecified, fontStyle: unspecified, textBaseline: unspecified, fontFamily: unspecified, fontFamilyFallback: unspecified, fontSize: unspecified, letterSpacing: unspecified, wordSpacing: unspecified, height: kTextHeightNone, leadingDistribution: unspecified, locale: unspecified, background: unspecified, foreground: unspecified, shadows: unspecified, fontFeatures: unspecified, fontVariations: unspecified)',
-      ),
+      equals('TextStyle(color: unspecified, decoration: unspecified, decorationColor: unspecified, decorationStyle: unspecified, decorationThickness: unspecified, fontWeight: unspecified, fontStyle: unspecified, textBaseline: unspecified, fontFamily: unspecified, fontFamilyFallback: unspecified, fontSize: unspecified, letterSpacing: unspecified, wordSpacing: unspecified, height: kTextHeightNone, leadingDistribution: unspecified, locale: unspecified, background: unspecified, foreground: unspecified, shadows: unspecified, fontFeatures: unspecified, fontVariations: unspecified)'),
     );
   });
 }
 
 void testTextHeightBehavior() {
-  const behavior0 = TextHeightBehavior();
-  const behavior1 = TextHeightBehavior(
+  const TextHeightBehavior behavior0 = TextHeightBehavior();
+  const TextHeightBehavior behavior1 = TextHeightBehavior(
     applyHeightToFirstAscent: false,
-    applyHeightToLastDescent: false,
+    applyHeightToLastDescent: false
   );
-  const behavior2 = TextHeightBehavior(applyHeightToFirstAscent: false);
-  const behavior3 = TextHeightBehavior(applyHeightToLastDescent: false);
-  const behavior4 = TextHeightBehavior(
+  const TextHeightBehavior behavior2 = TextHeightBehavior(
+    applyHeightToFirstAscent: false,
+  );
+  const TextHeightBehavior behavior3 = TextHeightBehavior(
+    applyHeightToLastDescent: false
+  );
+  const TextHeightBehavior behavior4 = TextHeightBehavior(
     applyHeightToLastDescent: false,
     leadingDistribution: TextLeadingDistribution.even,
   );
@@ -180,42 +136,17 @@ void testTextHeightBehavior() {
   });
 
   test('TextHeightBehavior toString works', () {
-    expect(
-      behavior0.toString(),
-      equals(
-        'TextHeightBehavior(applyHeightToFirstAscent: true, applyHeightToLastDescent: true, leadingDistribution: TextLeadingDistribution.proportional)',
-      ),
-    );
-    expect(
-      behavior1.toString(),
-      equals(
-        'TextHeightBehavior(applyHeightToFirstAscent: false, applyHeightToLastDescent: false, leadingDistribution: TextLeadingDistribution.proportional)',
-      ),
-    );
-    expect(
-      behavior2.toString(),
-      equals(
-        'TextHeightBehavior(applyHeightToFirstAscent: false, applyHeightToLastDescent: true, leadingDistribution: TextLeadingDistribution.proportional)',
-      ),
-    );
-    expect(
-      behavior3.toString(),
-      equals(
-        'TextHeightBehavior(applyHeightToFirstAscent: true, applyHeightToLastDescent: false, leadingDistribution: TextLeadingDistribution.proportional)',
-      ),
-    );
-    expect(
-      behavior4.toString(),
-      equals(
-        'TextHeightBehavior(applyHeightToFirstAscent: true, applyHeightToLastDescent: false, leadingDistribution: TextLeadingDistribution.even)',
-      ),
-    );
+    expect(behavior0.toString(), equals('TextHeightBehavior(applyHeightToFirstAscent: true, applyHeightToLastDescent: true, leadingDistribution: TextLeadingDistribution.proportional)'));
+    expect(behavior1.toString(), equals('TextHeightBehavior(applyHeightToFirstAscent: false, applyHeightToLastDescent: false, leadingDistribution: TextLeadingDistribution.proportional)'));
+    expect(behavior2.toString(), equals('TextHeightBehavior(applyHeightToFirstAscent: false, applyHeightToLastDescent: true, leadingDistribution: TextLeadingDistribution.proportional)'));
+    expect(behavior3.toString(), equals('TextHeightBehavior(applyHeightToFirstAscent: true, applyHeightToLastDescent: false, leadingDistribution: TextLeadingDistribution.proportional)'));
+    expect(behavior4.toString(), equals('TextHeightBehavior(applyHeightToFirstAscent: true, applyHeightToLastDescent: false, leadingDistribution: TextLeadingDistribution.even)'));
   });
 }
 
 void testTextRange() {
   test('TextRange empty ranges are correct', () {
-    const range = TextRange(start: -1, end: -1);
+    const TextRange range = TextRange(start: -1, end: -1);
     expect(range, equals(const TextRange.collapsed(-1)));
     expect(range, equals(TextRange.empty));
   });
@@ -271,10 +202,10 @@ void testTextRange() {
 
 void testGlyphInfo() {
   test('constructor', () {
-    const testRect = Rect.fromLTWH(1, 2, 3, 4);
-    const testRange = TextRange(start: 5, end: 6);
+    const Rect testRect = Rect.fromLTWH(1, 2, 3, 4);
+    const TextRange testRange = TextRange(start: 5, end: 6);
     const TextDirection testDirection = TextDirection.ltr;
-    final info = GlyphInfo(testRect, testRange, testDirection);
+    final GlyphInfo info = GlyphInfo(testRect, testRange, testDirection);
     expect(info.graphemeClusterLayoutBounds, testRect);
     expect(info.graphemeClusterCodeUnitRange, testRange);
     expect(info.writingDirection, testDirection);
@@ -284,15 +215,15 @@ void testGlyphInfo() {
 void testLoadFontFromList() {
   test('loadFontFromList will send platform message after font is loaded', () async {
     late String message;
-    channelBuffers.setListener('flutter/system', (
-      ByteData? data,
-      PlatformMessageResponseCallback? callback,
-    ) {
-      assert(data != null);
-      final Uint8List list = data!.buffer.asUint8List(data.offsetInBytes, data.lengthInBytes);
-      message = utf8.decode(list);
-    });
-    final fontData = Uint8List(0);
+    channelBuffers.setListener(
+      'flutter/system',
+      (ByteData? data, PlatformMessageResponseCallback? callback) {
+        assert(data != null);
+        final Uint8List list = data!.buffer.asUint8List(data.offsetInBytes, data.lengthInBytes);
+        message = utf8.decode(list);
+      },
+    );
+    final Uint8List fontData = Uint8List(0);
     await loadFontFromList(fontData, fontFamily: 'fake');
     expect(message, '{"type":"fontsChange"}');
     channelBuffers.clearListener('flutter/system');
@@ -306,9 +237,9 @@ void testFontFeatureClass() {
     expect(const FontFeature.alternativeFractions(), const FontFeature('afrc'));
     expect(const FontFeature.contextualAlternates(), const FontFeature('calt'));
     expect(const FontFeature.caseSensitiveForms(), const FontFeature('case'));
-    expect(FontFeature.characterVariant(1), const FontFeature('cv01'));
-    expect(FontFeature.characterVariant(18), const FontFeature('cv18'));
-    expect(FontFeature.characterVariant(99), const FontFeature('cv99'));
+    expect(      FontFeature.characterVariant(1), const FontFeature('cv01'));
+    expect(      FontFeature.characterVariant(18), const FontFeature('cv18'));
+    expect(      FontFeature.characterVariant(99), const FontFeature('cv99'));
     expect(const FontFeature.denominator(), const FontFeature('dnom'));
     expect(const FontFeature.fractions(), const FontFeature('frac'));
     expect(const FontFeature.historicalForms(), const FontFeature('hist'));
@@ -326,8 +257,8 @@ void testFontFeatureClass() {
     expect(const FontFeature.randomize(), const FontFeature('rand'));
     expect(const FontFeature.stylisticAlternates(), const FontFeature('salt'));
     expect(const FontFeature.scientificInferiors(), const FontFeature('sinf'));
-    expect(FontFeature.stylisticSet(1), const FontFeature('ss01'));
-    expect(FontFeature.stylisticSet(18), const FontFeature('ss18'));
+    expect(      FontFeature.stylisticSet(1), const FontFeature('ss01'));
+    expect(      FontFeature.stylisticSet(18), const FontFeature('ss18'));
     expect(const FontFeature.subscripts(), const FontFeature('subs'));
     expect(const FontFeature.superscripts(), const FontFeature('sups'));
     expect(const FontFeature.swash(), const FontFeature('swsh'));
@@ -348,20 +279,24 @@ void testFontVariation() {
     final Uint8List fontData = await readFile('RobotoSlab-VariableFont_wght.ttf');
     await loadFontFromList(fontData, fontFamily: 'RobotoSerif');
 
-    final baseBuilder = ParagraphBuilder(ParagraphStyle(fontFamily: 'RobotoSerif', fontSize: 40.0));
+    final ParagraphBuilder baseBuilder = ParagraphBuilder(ParagraphStyle(
+      fontFamily: 'RobotoSerif',
+      fontSize: 40.0,
+    ));
     baseBuilder.addText('Hello');
     final Paragraph baseParagraph = baseBuilder.build();
     baseParagraph.layout(const ParagraphConstraints(width: double.infinity));
     final double baseWidth = baseParagraph.minIntrinsicWidth;
 
-    final wideBuilder = ParagraphBuilder(ParagraphStyle(fontFamily: 'RobotoSerif', fontSize: 40.0));
-    wideBuilder.pushStyle(
-      TextStyle(
-        fontFamily: 'RobotoSerif',
-        fontSize: 40.0,
-        fontVariations: <FontVariation>[const FontVariation('wght', 900.0)],
-      ),
-    );
+    final ParagraphBuilder wideBuilder = ParagraphBuilder(ParagraphStyle(
+      fontFamily: 'RobotoSerif',
+      fontSize: 40.0,
+    ));
+    wideBuilder.pushStyle(TextStyle(
+      fontFamily: 'RobotoSerif',
+      fontSize: 40.0,
+      fontVariations: <FontVariation>[const FontVariation('wght', 900.0)],
+    ));
     wideBuilder.addText('Hello');
     final Paragraph wideParagraph = wideBuilder.build();
     wideParagraph.layout(const ParagraphConstraints(width: double.infinity));
@@ -384,56 +319,10 @@ void testFontVariation() {
   });
 
   test('FontVariation.lerp', () async {
-    expect(
-      FontVariation.lerp(const FontVariation.weight(100.0), const FontVariation.weight(300.0), 0.5),
-      const FontVariation.weight(200.0),
-    );
-    expect(
-      FontVariation.lerp(const FontVariation.slant(0.0), const FontVariation.slant(-80.0), 0.25),
-      const FontVariation.slant(-20.0),
-    );
-    expect(
-      FontVariation.lerp(const FontVariation.width(90.0), const FontVariation.italic(0.2), 0.1),
-      const FontVariation.width(90.0),
-    );
-    expect(
-      FontVariation.lerp(const FontVariation.width(90.0), const FontVariation.italic(0.2), 0.9),
-      const FontVariation.italic(0.2),
-    );
-  });
-
-  test('FontWeight is applied to variable fonts', () async {
-    final Uint8List fontData = await readFile('RobotoSlab-VariableFont_wght.ttf');
-    await loadFontFromList(fontData, fontFamily: 'RobotoSerif');
-
-    final pb = ParagraphBuilder(
-      ParagraphStyle(fontFamily: 'RobotoSerif', fontSize: 40.0, fontWeight: FontWeight.w100),
-    );
-    pb.pushStyle(TextStyle(color: const Color(0xFF000000)));
-    pb.addText('Thin - 100\n');
-    pb.pushStyle(TextStyle(fontWeight: FontWeight.w300));
-    pb.addText('Light - 300\n');
-    pb.pushStyle(TextStyle(fontWeight: FontWeight.normal));
-    pb.addText('Normal - 400\n');
-    pb.pushStyle(TextStyle(fontWeight: FontWeight.w700));
-    pb.addText('Bold - 700\n');
-    pb.pushStyle(TextStyle(fontWeight: FontWeight.w900));
-    pb.addText('Black - 900\n');
-
-    const paragraphConstraints = ParagraphConstraints(width: 300);
-    final Paragraph paragraph = pb.build()..layout(paragraphConstraints);
-
-    final recorder = PictureRecorder();
-    const imageSize = 300;
-    final canvas = Canvas(
-      recorder,
-      Rect.fromLTWH(0.0, 0.0, imageSize.toDouble(), imageSize.toDouble()),
-    );
-    canvas.drawParagraph(paragraph, const Offset(10, 10));
-    final Image image = await recorder.endRecording().toImage(imageSize, imageSize);
-
-    final ImageComparer comparer = await ImageComparer.create();
-    await comparer.addGoldenImage(image, 'text_test_fontWeightVariable.png');
+    expect(FontVariation.lerp(const FontVariation.weight(100.0), const FontVariation.weight(300.0), 0.5), const FontVariation.weight(200.0));
+    expect(FontVariation.lerp(const FontVariation.slant(0.0), const FontVariation.slant(-80.0), 0.25), const FontVariation.slant(-20.0));
+    expect(FontVariation.lerp(const FontVariation.width(90.0), const FontVariation.italic(0.2), 0.1), const FontVariation.width(90.0));
+    expect(FontVariation.lerp(const FontVariation.width(90.0), const FontVariation.italic(0.2), 0.9), const FontVariation.italic(0.2));
   });
 }
 
@@ -442,14 +331,15 @@ void testGetWordBoundary() {
     final Uint8List fontData = await readFile('RobotoSlab-VariableFont_wght.ttf');
     await loadFontFromList(fontData, fontFamily: 'RobotoSerif');
 
-    final builder = ParagraphBuilder(ParagraphStyle(fontFamily: 'RobotoSerif', fontSize: 40.0));
+    final ParagraphBuilder builder = ParagraphBuilder(ParagraphStyle(
+      fontFamily: 'RobotoSerif',
+      fontSize: 40.0,
+    ));
     builder.addText('Hello team');
     final Paragraph paragraph = builder.build();
     paragraph.layout(const ParagraphConstraints(width: double.infinity));
 
-    TextRange range = paragraph.getWordBoundary(
-      const TextPosition(offset: 5, affinity: TextAffinity.upstream),
-    );
+    TextRange range = paragraph.getWordBoundary(const TextPosition(offset: 5, affinity: TextAffinity.upstream));
     expect(range.start, 0);
     expect(range.end, 5);
 

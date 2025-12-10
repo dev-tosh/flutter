@@ -48,7 +48,7 @@ class DlImageImpeller final : public flutter::DlImage {
   bool isUIThreadSafe() const override;
 
   // |DlImage|
-  flutter::DlISize GetSize() const override;
+  SkISize dimensions() const override;
 
   // |DlImage|
   size_t GetApproximateByteSize() const override;

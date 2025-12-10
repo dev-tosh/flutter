@@ -32,35 +32,37 @@ Future<void> main(List<String> args) async {
 }
 
 Future<int> runLint(ArgParser argParser, ArgResults argResults) async {
-  final inArgument = argResults['in'] as String;
-  final androidDir = Directory(path.join(inArgument, 'flutter', 'shell', 'platform', 'android'));
+  final String inArgument = argResults['in'] as String;
+  final Directory androidDir = Directory(path.join(
+    inArgument,
+    'flutter',
+    'shell',
+    'platform',
+    'android',
+  ));
   if (!androidDir.existsSync()) {
-    print(
-      'This command must be run from the engine/src directory, '
-      'or be passed that directory as the --in parameter.\n',
-    );
+    print('This command must be run from the engine/src directory, '
+        'or be passed that directory as the --in parameter.\n');
     print(argParser.usage);
     return -1;
   }
 
-  final androidSdkDir = Directory(
+  final Directory androidSdkDir = Directory(
     path.join(inArgument, 'flutter', 'third_party', 'android_tools', 'sdk'),
   );
 
   if (!androidSdkDir.existsSync()) {
-    print(
-      'The Android SDK for this engine is missing from the '
-      'flutter/third_party/android_tools directory. Have you run gclient '
-      'sync?\n',
-    );
+    print('The Android SDK for this engine is missing from the '
+        'flutter/third_party/android_tools directory. Have you run gclient '
+        'sync?\n');
     print(argParser.usage);
     return -1;
   }
 
-  final rebaseline = argResults['rebaseline'] as bool;
+  final bool rebaseline = argResults['rebaseline'] as bool;
   if (rebaseline) {
     print('Removing previous baseline.xml...');
-    final baselineXml = File(baselineXmlPath);
+    final File baselineXml = File(baselineXmlPath);
     if (baselineXml.existsSync()) {
       await baselineXml.delete();
     }
@@ -91,7 +93,7 @@ Future<int> runLint(ArgParser argParser, ArgResults argResults) async {
 ''');
   await projectXml.close();
   print('Wrote project.xml, starting lint...');
-  final lintArgs = <String>[
+  final List<String> lintArgs = <String>[
     path.join(androidSdkDir.path, 'cmdline-tools', 'latest', 'bin', 'lint'),
     '--project', projectXmlPath,
     '--compile-sdk-version', '34',
@@ -102,7 +104,7 @@ Future<int> runLint(ArgParser argParser, ArgResults argResults) async {
     '--baseline',
     baselineXmlPath,
   ];
-  final html = argResults['html'] as bool;
+  final bool html = argResults['html'] as bool;
   if (html) {
     lintArgs.addAll(<String>['--html', argResults['out'] as String]);
   }
@@ -110,7 +112,9 @@ Future<int> runLint(ArgParser argParser, ArgResults argResults) async {
   print('Using JAVA_HOME=$javahome');
   final Process lintProcess = await processManager.start(
     lintArgs,
-    environment: <String, String>{'JAVA_HOME': javahome},
+    environment: <String, String>{
+      'JAVA_HOME': javahome,
+    },
   );
   lintProcess.stdout.pipe(stdout);
   lintProcess.stderr.pipe(stderr);
@@ -119,32 +123,40 @@ Future<int> runLint(ArgParser argParser, ArgResults argResults) async {
 
 /// Prepares an [ArgParser] for this script.
 ArgParser setupOptions() {
-  final argParser = ArgParser();
+  final ArgParser argParser = ArgParser();
   argParser
     ..addOption(
       'in',
       help: 'The path to `engine/src`.',
-      defaultsTo: path.relative(path.join(projectDir, '..', '..', '..')),
+      defaultsTo: path.relative(
+        path.join(
+          projectDir,
+          '..',
+          '..',
+          '..',
+        ),
+      ),
     )
-    ..addFlag('help', help: 'Print usage of the command.', negatable: false)
+    ..addFlag(
+      'help',
+      help: 'Print usage of the command.',
+      negatable: false,
+    )
     ..addFlag(
       'rebaseline',
-      help:
-          'Recalculates the baseline for errors and warnings '
+      help: 'Recalculates the baseline for errors and warnings '
           'in this project.',
       negatable: false,
     )
     ..addFlag(
       'html',
-      help:
-          'Creates an HTML output for this report instead of printing '
+      help: 'Creates an HTML output for this report instead of printing '
           'command line output.',
       negatable: false,
     )
     ..addOption(
       'out',
-      help:
-          'The path to write the generated HTML report. Ignored if '
+      help: 'The path to write the generated HTML report. Ignored if '
           '--html is not also true.',
       defaultsTo: path.join(projectDir, 'lint_report'),
     );
@@ -160,7 +172,11 @@ String getJavaHome(String src) {
 }
 
 /// The root directory of this project.
-String get projectDir => path.dirname(path.dirname(path.fromUri(Platform.script)));
+String get projectDir => path.dirname(
+      path.dirname(
+        path.fromUri(Platform.script),
+      ),
+    );
 
 /// The path to use for project.xml, which tells the linter where to find source
 /// files.

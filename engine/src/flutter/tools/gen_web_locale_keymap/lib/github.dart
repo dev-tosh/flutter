@@ -22,8 +22,7 @@ const String _githubCacheFileName = 'github-response.json';
 const String _githubTargetFolder = 'src/vs/workbench/services/keybinding/browser/keyboardLayouts';
 
 /// The full query string for GraphQL.
-const String _githubQuery =
-    '''
+const String _githubQuery = '''
 {
   repository(owner: "microsoft", name: "vscode") {
     defaultBranchRef {
@@ -61,8 +60,7 @@ final List<String> _kGoalKeys = kLayoutGoals.keys.toList();
 /// auto-incremental index.
 final Map<String, int> _kGoalToIndex = Map<String, int>.fromEntries(
   _kGoalKeys.asMap().entries.map(
-    (MapEntry<int, String> entry) => MapEntry<String, int>(entry.value, entry.key),
-  ),
+    (MapEntry<int, String> entry) => MapEntry<String, int>(entry.value, entry.key)),
 );
 
 /// Retrieve a string using the procedure defined by `ifNotExist` based on the
@@ -76,12 +74,8 @@ final Map<String, int> _kGoalToIndex = Map<String, int>.fromEntries(
 ///
 /// Exceptions from `ifNotExist` will be thrown, while exceptions related to
 /// caching are only printed.
-Future<String> _tryCached(
-  String cachePath,
-  bool forceRefresh,
-  AsyncGetter<String> ifNotExist,
-) async {
-  final cacheFile = File(cachePath);
+Future<String> _tryCached(String cachePath, bool forceRefresh, AsyncGetter<String> ifNotExist) async {
+  final File cacheFile = File(cachePath);
   if (!forceRefresh && cacheFile.existsSync()) {
     try {
       final String result = cacheFile.readAsStringSync();
@@ -111,11 +105,7 @@ Future<String> _tryCached(
 /// If `forceRefresh` is false, this function tries to read the cache file at
 /// `cachePath`. Regardless of `forceRefresh`, the response is always recorded
 /// in the cache file.
-Future<Map<String, dynamic>> _fetchGithub(
-  String githubToken,
-  bool forceRefresh,
-  String cachePath,
-) async {
+Future<Map<String, dynamic>> _fetchGithub(String githubToken, bool forceRefresh, String cachePath) async {
   final String response = await _tryCached(cachePath, forceRefresh, () async {
     final String condensedQuery = _githubQuery
         .replaceAll(RegExp(r'\{ +'), '{')
@@ -126,12 +116,12 @@ Future<Map<String, dynamic>> _fetchGithub(
         'Content-Type': 'application/json; charset=UTF-8',
         'Authorization': 'bearer $githubToken',
       },
-      body: jsonEncode(<String, String>{'query': condensedQuery}),
+      body: jsonEncode(<String, String>{
+        'query': condensedQuery,
+      }),
     );
     if (response.statusCode != 200) {
-      throw Exception(
-        'Request to GitHub failed with status code ${response.statusCode}: ${response.reasonPhrase}',
-      );
+      throw Exception('Request to GitHub failed with status code ${response.statusCode}: ${response.reasonPhrase}');
     }
     return response.body;
   });
@@ -158,7 +148,7 @@ _GitHubFile _jsonGetGithubFile(JsonContext<JsonArray> files, int index) {
 /// have been escaped or empty.
 String _parsePrintable(String rawString, int isDeadKey) {
   // Parse a char represented in unicode hex, such as \u001b.
-  final hexParser = RegExp(r'^\\u([0-9a-fA-F]+)$');
+  final RegExp hexParser = RegExp(r'^\\u([0-9a-fA-F]+)$');
 
   if (isDeadKey != 0) {
     return LayoutEntry.kDeadKey;
@@ -172,13 +162,12 @@ String _parsePrintable(String rawString, int isDeadKey) {
     return String.fromCharCode(codeUnit);
   }
   return const <String, String>{
-        r'\\': r'\',
-        r'\r': '\r',
-        r'\b': '\b',
-        r'\t': '\t',
-        r"\'": "'",
-      }[rawString] ??
-      rawString;
+    r'\\': r'\',
+    r'\r': '\r',
+    r'\b': '\b',
+    r'\t': '\t',
+    r"\'": "'",
+  }[rawString] ?? rawString;
 }
 
 LayoutPlatform _platformFromGithubString(String origin) {
@@ -196,16 +185,16 @@ LayoutPlatform _platformFromGithubString(String origin) {
 
 /// Parses a single layout file.
 Layout _parseLayoutFromGithubFile(_GitHubFile file) {
-  final entries = <String, LayoutEntry>{};
+  final Map<String, LayoutEntry> entries = <String, LayoutEntry>{};
 
   // Parse a line that looks like the following, and get its key as well as
   // the content within the square bracket.
   //
   //    F19: [],
   //    KeyZ: ['y', 'Y', '', '', 0, 'VK_Y'],
-  final lineParser = RegExp(r'^[ \t]*(.+?): \[(.*)\],$');
+  final RegExp lineParser = RegExp(r'^[ \t]*(.+?): \[(.*)\],$');
   // Parse each child of the content within the square bracket.
-  final listParser = RegExp(r"^'(.*?)', '(.*?)', '(.*?)', '(.*?)', (\d)(?:, '(.+)')?$");
+  final RegExp listParser = RegExp(r"^'(.*?)', '(.*?)', '(.*?)', '(.*?)', (\d)(?:, '(.+)')?$");
   file.content.split('\n').forEach((String line) {
     final RegExpMatch? lineMatch = lineParser.firstMatch(line);
     if (lineMatch == null) {
@@ -229,12 +218,14 @@ Layout _parseLayoutFromGithubFile(_GitHubFile file) {
     assert(listMatch != null, 'Unable to match $definition');
     final int deadMask = int.parse(listMatch!.group(5)!, radix: 10);
 
-    entries[eventCode] = LayoutEntry(<String>[
-      _parsePrintable(listMatch.group(1)!, deadMask & 0x1),
-      _parsePrintable(listMatch.group(2)!, deadMask & 0x2),
-      _parsePrintable(listMatch.group(3)!, deadMask & 0x4),
-      _parsePrintable(listMatch.group(4)!, deadMask & 0x8),
-    ]);
+    entries[eventCode] = LayoutEntry(
+      <String>[
+        _parsePrintable(listMatch.group(1)!, deadMask & 0x1),
+        _parsePrintable(listMatch.group(2)!, deadMask & 0x2),
+        _parsePrintable(listMatch.group(3)!, deadMask & 0x4),
+        _parsePrintable(listMatch.group(4)!, deadMask & 0x8),
+      ],
+    );
   });
 
   for (final String goalKey in _kGoalKeys) {
@@ -242,7 +233,7 @@ Layout _parseLayoutFromGithubFile(_GitHubFile file) {
   }
 
   // Parse the file name, which looks like "en-belgian.win.ts".
-  final fileNameParser = RegExp(r'^([^.]+)\.([^.]+)\.ts$');
+  final RegExp fileNameParser = RegExp(r'^([^.]+)\.([^.]+)\.ts$');
   late final Layout layout;
   try {
     final RegExpMatch? match = fileNameParser.firstMatch(file.name);
@@ -307,22 +298,22 @@ Future<GithubResult> fetchFromGithub({
     commitJson,
     'file.object.entries',
   );
-  final Iterable<_GitHubFile> files =
-      Iterable<_GitHubFile>.generate(
-        fileListJson.current.length,
-        (int index) => _jsonGetGithubFile(fileListJson, index),
-      ).where(
-        // Exclude controlling files, which contain no layout information.
-        (_GitHubFile file) =>
-            !file.name.startsWith('layout.contribution.') &&
-            !file.name.startsWith('_.contribution'),
-      );
+  final Iterable<_GitHubFile> files = Iterable<_GitHubFile>.generate(
+    fileListJson.current.length,
+    (int index) => _jsonGetGithubFile(fileListJson, index),
+  ).where(
+    // Exclude controlling files, which contain no layout information.
+    (_GitHubFile file) => !file.name.startsWith('layout.contribution.')
+                      && !file.name.startsWith('_.contribution'),
+  );
 
   // Layouts must be sorted to ensure that the output file has a fixed order.
-  final List<Layout> layouts = files.map(_parseLayoutFromGithubFile).toList()..sort(_sortLayout);
+  final List<Layout> layouts = files.map(_parseLayoutFromGithubFile)
+    .toList()
+    ..sort(_sortLayout);
 
-  final url = 'https://github.com/microsoft/vscode/tree/$commitId/$_githubTargetFolder';
+  final String url = 'https://github.com/microsoft/vscode/tree/$commitId/$_githubTargetFolder';
   return GithubResult(layouts, url);
 
-  //
+//
 }

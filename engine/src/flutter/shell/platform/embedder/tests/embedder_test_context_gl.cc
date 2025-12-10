@@ -15,6 +15,7 @@
 #include "flutter/testing/testing.h"
 #include "tests/embedder_test.h"
 #include "third_party/dart/runtime/bin/elf_loader.h"
+#include "third_party/skia/include/core/SkSurface.h"
 
 namespace flutter::testing {
 
@@ -195,7 +196,7 @@ uint32_t EmbedderTestContextGL::GetWindowFBOId() const {
   return gl_surface_->GetWindowFBOId();
 }
 
-void EmbedderTestContextGL::SetSurface(DlISize surface_size) {
+void EmbedderTestContextGL::SetSurface(SkISize surface_size) {
   FML_CHECK(!gl_surface_);
   gl_surface_ = std::make_unique<TestGLSurface>(egl_context_, surface_size);
 }

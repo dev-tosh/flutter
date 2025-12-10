@@ -3,7 +3,6 @@
 // found in the LICENSE file.
 
 #include "impeller/playground/backend/metal/playground_impl_mtl.h"
-#include "impeller/renderer/backend/metal/swapchain_transients_mtl.h"
 
 #define GLFW_INCLUDE_NONE
 #import "third_party/glfw/include/GLFW/glfw3.h"
@@ -77,8 +76,8 @@ PlaygroundImplMTL::PlaygroundImplMTL(PlaygroundSwitches switches)
   }
 
   auto context = ContextMTL::Create(
-      switches.flags, ShaderLibraryMappingsForPlayground(),
-      is_gpu_disabled_sync_switch_, "Playground Library",
+      ShaderLibraryMappingsForPlayground(), is_gpu_disabled_sync_switch_,
+      "Playground Library",
       switches.enable_wide_gamut
           ? std::optional<PixelFormat>(PixelFormat::kB10G10R10A10XR)
           : std::nullopt);
@@ -99,8 +98,6 @@ PlaygroundImplMTL::PlaygroundImplMTL(PlaygroundSwitches switches)
 
   handle_.reset(window);
   context_ = std::move(context);
-  swapchain_transients_ = std::make_shared<SwapchainTransientsMTL>(
-      context_->GetResourceAllocator());
 }
 
 PlaygroundImplMTL::~PlaygroundImplMTL() = default;
@@ -128,18 +125,13 @@ std::unique_ptr<Surface> PlaygroundImplMTL::AcquireSurfaceFrame(
 
   auto drawable =
       SurfaceMTL::GetMetalDrawableAndValidate(context, data_->metal_layer);
-  return SurfaceMTL::MakeFromMetalLayerDrawable(context, drawable,
-                                                swapchain_transients_);
+  return SurfaceMTL::MakeFromMetalLayerDrawable(context, drawable);
 }
 
 fml::Status PlaygroundImplMTL::SetCapabilities(
     const std::shared_ptr<Capabilities>& capabilities) {
   context_->SetCapabilities(capabilities);
   return fml::Status();
-}
-
-void PlaygroundImplMTL::SetGPUDisabled(bool disabled) const {
-  is_gpu_disabled_sync_switch_->SetSwitch(disabled);
 }
 
 }  // namespace impeller

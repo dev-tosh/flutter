@@ -7,7 +7,6 @@
 
 #include <cstdint>
 
-#include "flutter/display_list/geometry/dl_geometry_types.h"
 #include "flutter/fml/macros.h"
 #include "flutter/testing/test_gl_context.h"
 #include "third_party/skia/include/core/SkSurface.h"
@@ -17,14 +16,14 @@ namespace flutter::testing {
 
 class TestGLOnscreenOnlySurface {
  public:
-  explicit TestGLOnscreenOnlySurface(DlISize surface_size);
+  explicit TestGLOnscreenOnlySurface(SkISize surface_size);
 
   explicit TestGLOnscreenOnlySurface(std::shared_ptr<TestEGLContext> context,
-                                     DlISize size);
+                                     SkISize size);
 
   ~TestGLOnscreenOnlySurface();
 
-  const DlISize& GetSurfaceSize() const;
+  const SkISize& GetSurfaceSize() const;
 
   bool MakeCurrent();
 
@@ -49,7 +48,7 @@ class TestGLOnscreenOnlySurface {
  protected:
   using EGLSurface = void*;
 
-  const DlISize surface_size_;
+  const SkISize surface_size_;
   std::shared_ptr<TestEGLContext> egl_context_;
   EGLSurface onscreen_surface_;
 
@@ -60,10 +59,10 @@ class TestGLOnscreenOnlySurface {
 
 class TestGLSurface : public TestGLOnscreenOnlySurface {
  public:
-  explicit TestGLSurface(DlISize surface_size);
+  explicit TestGLSurface(SkISize surface_size);
 
   explicit TestGLSurface(std::shared_ptr<TestEGLContext> egl_context,
-                         DlISize surface_size);
+                         SkISize surface_size);
 
   ~TestGLSurface();
 

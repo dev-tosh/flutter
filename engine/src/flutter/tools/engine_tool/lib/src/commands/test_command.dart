@@ -21,7 +21,12 @@ final class TestCommand extends CommandBase {
     super.help = false,
     super.usageLineLength,
   }) {
-    builds = BuildPlan.configureArgParser(argParser, environment, configs: configs, help: help);
+    builds = BuildPlan.configureArgParser(
+      argParser,
+      environment,
+      configs: configs,
+      help: help,
+    );
   }
 
   /// List of compatible builds.
@@ -40,9 +45,17 @@ et test //flutter/fml:fml_benchmarks  # Run a single test target in `//flutter/f
 
   @override
   Future<int> run() async {
-    final plan = BuildPlan.fromArgResults(argResults!, environment, builds: builds);
+    final plan = BuildPlan.fromArgResults(
+      argResults!,
+      environment,
+      builds: builds,
+    );
 
-    if (!await ensureBuildDir(environment, plan.build, enableRbe: plan.useRbe)) {
+    if (!await ensureBuildDir(
+      environment,
+      plan.build,
+      enableRbe: plan.useRbe,
+    )) {
       return 1;
     }
 
@@ -51,9 +64,12 @@ et test //flutter/fml:fml_benchmarks  # Run a single test target in `//flutter/f
 
     // Figure out what targets the user wants to build.
     final buildTargets = <BuildTarget>{};
-    for (final String pattern in argResults!.rest) {
-      final TargetPattern target = TargetPattern.parse(pattern);
-      final List<BuildTarget> found = await gn.desc('out/${plan.build.ninja.config}', target);
+    for (final pattern in argResults!.rest) {
+      final target = TargetPattern.parse(pattern);
+      final found = await gn.desc(
+        'out/${plan.build.ninja.config}',
+        target,
+      );
       buildTargets.addAll(found);
     }
 
@@ -63,7 +79,7 @@ et test //flutter/fml:fml_benchmarks  # Run a single test target in `//flutter/f
     }
 
     // Make sure there is at least one test target.
-    final List<ExecutableBuildTarget> testTargets = buildTargets
+    final testTargets = buildTargets
         .whereType<ExecutableBuildTarget>()
         .where((ExecutableBuildTarget t) => t.testOnly)
         .toList();
@@ -73,7 +89,7 @@ et test //flutter/fml:fml_benchmarks  # Run a single test target in `//flutter/f
       return 1;
     }
 
-    final int buildExitCode = await runBuild(
+    final buildExitCode = await runBuild(
       environment,
       plan.build,
       concurrency: plan.concurrency ?? 0,
@@ -84,13 +100,19 @@ et test //flutter/fml:fml_benchmarks  # Run a single test target in `//flutter/f
     if (buildExitCode != 0) {
       return buildExitCode;
     }
-    final workerPool = WorkerPool(environment, ProcessTaskProgressReporter(environment));
+    final workerPool = WorkerPool(
+      environment,
+      ProcessTaskProgressReporter(environment),
+    );
     final tasks = <ProcessTask>{};
     for (final target in testTargets) {
       final commandLine = <String>[target.executable];
-      tasks.add(
-        ProcessTask(target.label.toString(), environment, environment.engine.srcDir, commandLine),
-      );
+      tasks.add(ProcessTask(
+        target.label.toString(),
+        environment,
+        environment.engine.srcDir,
+        commandLine,
+      ));
     }
     return await workerPool.run(tasks) ? 0 : 1;
   }

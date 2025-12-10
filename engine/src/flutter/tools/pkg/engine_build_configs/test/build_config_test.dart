@@ -12,7 +12,7 @@ import 'fixtures.dart' as fixtures;
 
 int main() {
   test('BuildConfig parser works', () {
-    final buildConfig = BuilderConfig.fromJson(
+    final BuilderConfig buildConfig = BuilderConfig.fromJson(
       path: 'linux_test_config',
       map: convert.jsonDecode(fixtures.buildConfigJson) as Map<String, Object?>,
     );
@@ -27,8 +27,14 @@ int main() {
     expect(globalBuild.gn[0], equals('--gn-arg'));
     expect(globalBuild.droneDimensions.length, equals(1));
     expect(globalBuild.droneDimensions[0], equals('os=Linux'));
-    expect(globalBuild.canRunOn(FakePlatform(operatingSystem: Platform.linux)), isTrue);
-    expect(globalBuild.canRunOn(FakePlatform(operatingSystem: Platform.macOS)), isFalse);
+    expect(
+      globalBuild.canRunOn(FakePlatform(operatingSystem: Platform.linux)),
+      isTrue,
+    );
+    expect(
+      globalBuild.canRunOn(FakePlatform(operatingSystem: Platform.macOS)),
+      isFalse,
+    );
 
     final BuildNinja ninja = globalBuild.ninja;
     expect(ninja.config, equals('build_name'));
@@ -75,8 +81,14 @@ int main() {
     expect(globalTest.recipe, equals('engine_v2/tester_engine'));
     expect(globalTest.droneDimensions.length, equals(1));
     expect(globalTest.droneDimensions[0], equals('os=Linux'));
-    expect(globalTest.canRunOn(FakePlatform(operatingSystem: Platform.linux)), isTrue);
-    expect(globalTest.canRunOn(FakePlatform(operatingSystem: Platform.macOS)), isFalse);
+    expect(
+      globalTest.canRunOn(FakePlatform(operatingSystem: Platform.linux)),
+      isTrue,
+    );
+    expect(
+      globalTest.canRunOn(FakePlatform(operatingSystem: Platform.macOS)),
+      isFalse,
+    );
     expect(globalTest.dependencies.length, equals(1));
     expect(globalTest.dependencies[0], equals('dependency'));
 
@@ -88,26 +100,27 @@ int main() {
   });
 
   test('BuildConfig flags invalid input', () {
-    const invalidInput = '''
+    const String invalidInput = '''
 {
   "builds": 5,
   "generators": {},
   "tests": []
 }
 ''';
-    final buildConfig = BuilderConfig.fromJson(
+    final BuilderConfig buildConfig = BuilderConfig.fromJson(
       path: 'linux_test_config',
       map: convert.jsonDecode(invalidInput) as Map<String, Object?>,
     );
     expect(buildConfig.valid, isFalse);
     expect(
-      buildConfig.errors![0],
-      equals('For field "builds", expected type: list, actual type: int.'),
-    );
+        buildConfig.errors![0],
+        equals(
+          'For field "builds", expected type: list, actual type: int.',
+        ));
   });
 
   test('GlobalBuild flags invalid input', () {
-    const invalidInput = '''
+    const String invalidInput = '''
 {
   "builds": [
     {
@@ -118,7 +131,7 @@ int main() {
   "tests": []
 }
 ''';
-    final buildConfig = BuilderConfig.fromJson(
+    final BuilderConfig buildConfig = BuilderConfig.fromJson(
       path: 'linux_test_config',
       map: convert.jsonDecode(invalidInput) as Map<String, Object?>,
     );
@@ -126,13 +139,14 @@ int main() {
     expect(buildConfig.builds.length, equals(1));
     expect(buildConfig.builds[0].valid, isFalse);
     expect(
-      buildConfig.builds[0].errors![0],
-      equals('For field "name", expected type: string, actual type: int.'),
-    );
+        buildConfig.builds[0].errors![0],
+        equals(
+          'For field "name", expected type: string, actual type: int.',
+        ));
   });
 
   test('BuildNinja flags invalid input', () {
-    const invalidInput = '''
+    const String invalidInput = '''
 {
   "builds": [
     {
@@ -145,7 +159,7 @@ int main() {
   "tests": []
 }
 ''';
-    final buildConfig = BuilderConfig.fromJson(
+    final BuilderConfig buildConfig = BuilderConfig.fromJson(
       path: 'linux_test_config',
       map: convert.jsonDecode(invalidInput) as Map<String, Object?>,
     );
@@ -154,13 +168,14 @@ int main() {
     expect(buildConfig.builds[0].valid, isTrue);
     expect(buildConfig.builds[0].ninja.valid, isFalse);
     expect(
-      buildConfig.builds[0].ninja.errors![0],
-      equals('For field "config", expected type: string, actual type: int.'),
-    );
+        buildConfig.builds[0].ninja.errors![0],
+        equals(
+          'For field "config", expected type: string, actual type: int.',
+        ));
   });
 
   test('BuildTest flags invalid input', () {
-    const invalidInput = '''
+    const String invalidInput = '''
 {
   "builds": [
     {
@@ -175,7 +190,7 @@ int main() {
   "tests": []
 }
 ''';
-    final buildConfig = BuilderConfig.fromJson(
+    final BuilderConfig buildConfig = BuilderConfig.fromJson(
       path: 'linux_test_config',
       map: convert.jsonDecode(invalidInput) as Map<String, Object?>,
     );
@@ -184,13 +199,14 @@ int main() {
     expect(buildConfig.builds[0].valid, isTrue);
     expect(buildConfig.builds[0].tests[0].valid, isFalse);
     expect(
-      buildConfig.builds[0].tests[0].errors![0],
-      equals('For field "language", expected type: string, actual type: int.'),
-    );
+        buildConfig.builds[0].tests[0].errors![0],
+        equals(
+          'For field "language", expected type: string, actual type: int.',
+        ));
   });
 
   test('BuildTask flags invalid input', () {
-    const invalidInput = '''
+    const String invalidInput = '''
 {
   "builds": [
     {
@@ -207,7 +223,7 @@ int main() {
   "tests": []
 }
 ''';
-    final buildConfig = BuilderConfig.fromJson(
+    final BuilderConfig buildConfig = BuilderConfig.fromJson(
       path: 'linux_test_config',
       map: convert.jsonDecode(invalidInput) as Map<String, Object?>,
     );
@@ -216,13 +232,14 @@ int main() {
     expect(buildConfig.builds[0].valid, isTrue);
     expect(buildConfig.builds[0].generators[0].valid, isFalse);
     expect(
-      buildConfig.builds[0].generators[0].errors![0],
-      equals('For field "name", expected type: string, actual type: int.'),
-    );
+        buildConfig.builds[0].generators[0].errors![0],
+        equals(
+          'For field "name", expected type: string, actual type: int.',
+        ));
   });
 
   test('BuildArchive flags invalid input', () {
-    const invalidInput = '''
+    const String invalidInput = '''
 {
   "builds": [
     {
@@ -237,7 +254,7 @@ int main() {
   "tests": []
 }
 ''';
-    final buildConfig = BuilderConfig.fromJson(
+    final BuilderConfig buildConfig = BuilderConfig.fromJson(
       path: 'linux_test_config',
       map: convert.jsonDecode(invalidInput) as Map<String, Object?>,
     );
@@ -246,13 +263,14 @@ int main() {
     expect(buildConfig.builds[0].valid, isTrue);
     expect(buildConfig.builds[0].archives[0].valid, isFalse);
     expect(
-      buildConfig.builds[0].archives[0].errors![0],
-      equals('For field "name", expected type: string, actual type: int.'),
-    );
+        buildConfig.builds[0].archives[0].errors![0],
+        equals(
+          'For field "name", expected type: string, actual type: int.',
+        ));
   });
 
   test('GlobalTest flags invalid input', () {
-    const invalidInput = '''
+    const String invalidInput = '''
 {
   "tests": [
     {
@@ -261,7 +279,7 @@ int main() {
   ]
 }
 ''';
-    final buildConfig = BuilderConfig.fromJson(
+    final BuilderConfig buildConfig = BuilderConfig.fromJson(
       path: 'linux_test_config',
       map: convert.jsonDecode(invalidInput) as Map<String, Object?>,
     );
@@ -269,13 +287,14 @@ int main() {
     expect(buildConfig.tests.length, equals(1));
     expect(buildConfig.tests[0].valid, isFalse);
     expect(
-      buildConfig.tests[0].errors![0],
-      equals('For field "name", expected type: string, actual type: int.'),
-    );
+        buildConfig.tests[0].errors![0],
+        equals(
+          'For field "name", expected type: string, actual type: int.',
+        ));
   });
 
   test('TestTask flags invalid input', () {
-    const invalidInput = '''
+    const String invalidInput = '''
 {
   "tests": [
     {
@@ -288,7 +307,7 @@ int main() {
   ]
 }
 ''';
-    final buildConfig = BuilderConfig.fromJson(
+    final BuilderConfig buildConfig = BuilderConfig.fromJson(
       path: 'linux_test_config',
       map: convert.jsonDecode(invalidInput) as Map<String, Object?>,
     );
@@ -296,9 +315,10 @@ int main() {
     expect(buildConfig.tests.length, equals(1));
     expect(buildConfig.tests[0].tasks[0].valid, isFalse);
     expect(
-      buildConfig.tests[0].tasks[0].errors![0],
-      contains('For field "name", expected type: string, actual type: int.'),
-    );
+        buildConfig.tests[0].tasks[0].errors![0],
+        contains(
+          'For field "name", expected type: string, actual type: int.',
+        ));
   });
   return 0;
 }

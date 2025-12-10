@@ -17,38 +17,30 @@ import 'worker_pool.dart';
 /// Artifacts from an exited sub-process.
 final class ProcessArtifacts {
   /// Constructs an instance of ProcessArtifacts from raw values.
-  ProcessArtifacts(this.cwd, this.commandLine, this.exitCode, this.stdout, this.stderr, {this.pid});
+  ProcessArtifacts(
+      this.cwd, this.commandLine, this.exitCode, this.stdout, this.stderr,
+      {this.pid});
 
   /// Constructs an instance of ProcessArtifacts from a ProcessRunnerResult
   /// and the spawning context.
   factory ProcessArtifacts.fromResult(
-    Directory cwd,
-    List<String> commandLine,
-    ProcessRunnerResult result,
-  ) {
+      Directory cwd, List<String> commandLine, ProcessRunnerResult result) {
     return ProcessArtifacts(
-      cwd,
-      commandLine,
-      result.exitCode,
-      result.stdout,
-      result.stderr,
-      pid: result.pid,
-    );
+        cwd, commandLine, result.exitCode, result.stdout, result.stderr,
+        pid: result.pid);
   }
 
   /// Constructs an instance of ProcessArtifacts from serialized JSON text.
   factory ProcessArtifacts.fromJson(String serialized) {
     final JsonObject artifact = JsonObject.parse(serialized);
-    return artifact.map(
-      (JsonObject json) => ProcessArtifacts(
+    return artifact.map((JsonObject json) => ProcessArtifacts(
         Directory(json.string('cwd')),
         json.stringList('commandLine'),
         json.integer('exitCode'),
         json.string('stdout'),
         json.string('stderr'),
         pid: json.integer('pid'),
-      ),
-      onError: (JsonObject source, JsonMapException e) {
+      ), onError: (JsonObject source, JsonMapException e) {
         throw FormatException('Failed to parse ProcessArtifacts: $e', source.toPrettyString());
       },
     );
@@ -61,25 +53,24 @@ final class ProcessArtifacts {
 
   /// Saves ProcessArtifacts into file.
   void save(File file) {
-    file.writeAsStringSync(
-      JsonObject(<String, Object?>{
-        'pid': ?pid,
-        'exitCode': exitCode,
-        'stdout': stdout,
-        'stderr': stderr,
-        'cwd': cwd.absolute.path,
-        'commandLine': commandLine,
-      }).toPrettyString(),
-    );
+    file.writeAsStringSync(JsonObject(<String, Object?>{
+      if (pid != null) 'pid': pid,
+      'exitCode': exitCode,
+      'stdout': stdout,
+      'stderr': stderr,
+      'cwd': cwd.absolute.path,
+      'commandLine': commandLine,
+    }).toPrettyString());
   }
 
   /// Creates a temporary file and saves the artifacts into it.
   /// Returns the File.
   File saveTemp() {
     final Directory systemTemp = Directory.systemTemp;
-    final prefix = pid != null ? 'et$pid' : 'et';
+    final String prefix = pid != null ? 'et$pid' : 'et';
     final Directory artifacts = systemTemp.createTempSync(prefix);
-    final resultFile = File(p.join(artifacts.path, 'process_artifacts.json'));
+    final File resultFile =
+        File(p.join(artifacts.path, 'process_artifacts.json'));
     save(resultFile);
     return resultFile;
   }
@@ -116,19 +107,11 @@ class ProcessTask extends WorkerTask {
 
   @override
   Future<bool> run() async {
-    final ProcessRunnerResult result = await _environment.processRunner.runProcess(
-      _commandLine,
-      failOk: true,
-      workingDirectory: _cwd,
-    );
+    final ProcessRunnerResult result = await _environment.processRunner
+        .runProcess(_commandLine, failOk: true, workingDirectory: _cwd);
     _processArtifacts = ProcessArtifacts(
-      _cwd,
-      _commandLine,
-      result.exitCode,
-      result.stdout,
-      result.stderr,
-      pid: result.pid,
-    );
+        _cwd, _commandLine, result.exitCode, result.stdout, result.stderr,
+        pid: result.pid);
     _processArtifactsPath = _processArtifacts!.saveTemp().path;
     return result.exitCode == 0;
   }
@@ -159,7 +142,7 @@ class ProcessTaskProgressReporter implements WorkerPoolProgressReporter {
   @override
   void onRun(Set<WorkerTask> tasks) {
     _totalCount = tasks.length;
-    for (final task in tasks) {
+    for (final WorkerTask task in tasks) {
       assert(task is ProcessTask);
       _longestName = max(_longestName, task.name.length);
     }
@@ -203,14 +186,16 @@ class ProcessTaskProgressReporter implements WorkerPoolProgressReporter {
     }
     _environment.logger.clearLine();
     final String taskName = tasks.isEmpty ? '' : tasks.first.name;
-    final etc = tasks.length > 1 ? '... [${tasks.length}]' : '';
-    _environment.logger.status('Running $_doneCount/$_totalCount $taskName$etc ', newline: false);
+    final String etc = tasks.length > 1 ? '... [${tasks.length}]' : '';
+    _environment.logger.status(
+        'Running $_doneCount/$_totalCount $taskName$etc ',
+        newline: false);
     _spinner = _environment.logger.startSpinner();
   }
 
   String _formatDurationShort(Duration dur) {
     int micros = dur.inMicroseconds;
-    var r = '';
+    String r = '';
     if (micros >= Duration.microsecondsPerMinute) {
       final int minutes = micros ~/ Duration.microsecondsPerMinute;
       micros -= minutes * Duration.microsecondsPerMinute;
@@ -238,20 +223,20 @@ class ProcessTaskProgressReporter implements WorkerPoolProgressReporter {
 
 /// If result.exitCode != 0, will call logger.fatal with relevant information
 /// and terminate the program.
-void fatalIfFailed(Environment environment, List<String> commandLine, ProcessRunnerResult result) {
+void fatalIfFailed(Environment environment, List<String> commandLine,
+    ProcessRunnerResult result) {
   if (result.exitCode == 0) {
     return;
   }
   environment.logger.fatal(
-    'Process "${commandLine.join(' ')}" failed exitCode=${result.exitCode}\n'
-    'STDOUT:\n${result.stdout}'
-    'STDERR:\n${result.stderr}',
-  );
+      'Process "${commandLine.join(' ')}" failed exitCode=${result.exitCode}\n'
+      'STDOUT:\n${result.stdout}'
+      'STDERR:\n${result.stderr}');
 }
 
 /// Ensures that pathToBinary includes a '.exe' suffix on relevant platforms.
 String exePath(Environment environment, String pathToBinary) {
-  var suffix = '';
+  String suffix = '';
   if (environment.platform.isWindows) {
     suffix = '.exe';
   }
@@ -261,7 +246,7 @@ String exePath(Environment environment, String pathToBinary) {
 /// Returns the path to the gn binary.
 String gnBinPath(Environment environment) {
   return exePath(
-    environment,
-    p.join(environment.engine.srcDir.path, 'flutter', 'third_party', 'gn', 'gn'),
-  );
+      environment,
+      p.join(environment.engine.srcDir.path, 'flutter', 'third_party', 'gn',
+          'gn'));
 }

@@ -29,9 +29,7 @@
   return self;
 }
 
-- (void)onPresent:(CGSize)frameSize
-        withBlock:(nonnull dispatch_block_t)block
-            delay:(NSTimeInterval)delay {
+- (void)onPresent:(CGSize)frameSize withBlock:(nonnull dispatch_block_t)block {
   self.presentedFrameSize = frameSize;
   block();
 }

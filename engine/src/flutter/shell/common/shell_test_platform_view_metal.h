@@ -60,13 +60,13 @@ class ShellTestPlatformViewMetal final : public ShellTestPlatformView,
 
   // |GPUSurfaceMetalDelegate|
   GPUCAMetalLayerHandle GetCAMetalLayer(
-      const DlISize& frame_info) const override;
+      const SkISize& frame_info) const override;
 
   // |GPUSurfaceMetalDelegate|
   bool PresentDrawable(GrMTLHandle drawable) const override;
 
   // |GPUSurfaceMetalDelegate|
-  GPUMTLTextureInfo GetMTLTexture(const DlISize& frame_info) const override;
+  GPUMTLTextureInfo GetMTLTexture(const SkISize& frame_info) const override;
 
   // |GPUSurfaceMetalDelegate|
   bool PresentTexture(GPUMTLTextureInfo texture) const override;

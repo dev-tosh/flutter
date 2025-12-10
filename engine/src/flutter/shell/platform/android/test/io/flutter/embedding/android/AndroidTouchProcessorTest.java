@@ -6,7 +6,6 @@ package io.flutter.embedding.android;
 
 import static io.flutter.Build.API_LEVELS;
 import static junit.framework.TestCase.assertEquals;
-import static org.junit.Assert.assertNotEquals;
 import static org.mockito.Mockito.inOrder;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
@@ -33,6 +32,7 @@ import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
 import org.robolectric.annotation.Config;
 
+@Config(manifest = Config.NONE)
 @RunWith(AndroidJUnit4.class)
 @TargetApi(API_LEVELS.API_28)
 public class AndroidTouchProcessorTest {
@@ -538,34 +538,23 @@ public class AndroidTouchProcessorTest {
   }
 
   @Test
-  public void samePointerIdWithDifferentToolTypes_mapsToUniqueDevice() {
+  public void device() {
     final int pointerId = 2;
-    MotionEventMocker mouseMocker =
+    MotionEventMocker mocker =
         new MotionEventMocker(
             pointerId, InputDevice.SOURCE_CLASS_POINTER, MotionEvent.TOOL_TYPE_MOUSE);
-    MotionEventMocker fingerMocker =
-        new MotionEventMocker(
-            pointerId, InputDevice.SOURCE_CLASS_POINTER, MotionEvent.TOOL_TYPE_FINGER);
+
+    final MotionEvent event = mocker.mockEvent(MotionEvent.ACTION_SCROLL, 1f, 1f, 1);
+    boolean handled = touchProcessor.onTouchEvent(event);
 
     InOrder inOrder = inOrder(mockRenderer);
-
-    final MotionEvent mouseEvent = mouseMocker.mockEvent(MotionEvent.ACTION_HOVER_MOVE, 1f, 1f, 1);
-    touchProcessor.onTouchEvent(mouseEvent);
-
     inOrder
         .verify(mockRenderer)
         .dispatchPointerDataPacket(packetCaptor.capture(), packetSizeCaptor.capture());
-    ByteBuffer mousePacket = packetCaptor.getValue();
+    ByteBuffer packet = packetCaptor.getValue();
 
-    final MotionEvent fingerEvent = fingerMocker.mockEvent(MotionEvent.ACTION_DOWN, 1f, 1f, 1);
-    touchProcessor.onTouchEvent(fingerEvent);
-
-    inOrder
-        .verify(mockRenderer)
-        .dispatchPointerDataPacket(packetCaptor.capture(), packetSizeCaptor.capture());
-    ByteBuffer fingerPacket = packetCaptor.getValue();
-
-    assertNotEquals(readDevice(mousePacket), readDevice(fingerPacket));
+    assertEquals(pointerId, readDevice(packet));
+    verify(event).getPointerId(0);
 
     inOrder.verifyNoMoreInteractions();
   }

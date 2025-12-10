@@ -53,14 +53,17 @@ class MockAllocator : public Allocator {
               (override));
   MOCK_METHOD(std::shared_ptr<Texture>,
               OnCreateTexture,
-              (const TextureDescriptor& desc, bool threadsafe),
+              (const TextureDescriptor& desc),
               (override));
 };
 
 class MockBlitPass : public BlitPass {
  public:
   MOCK_METHOD(bool, IsValid, (), (const, override));
-  MOCK_METHOD(bool, EncodeCommands, (), (const, override));
+  MOCK_METHOD(bool,
+              EncodeCommands,
+              (const std::shared_ptr<Allocator>& transients_allocator),
+              (const, override));
   MOCK_METHOD(void, OnSetLabel, (std::string_view label), (override));
 
   MOCK_METHOD(bool,
@@ -124,7 +127,7 @@ class MockCommandBuffer : public CommandBuffer {
   MOCK_METHOD(std::shared_ptr<BlitPass>, OnCreateBlitPass, (), (override));
   MOCK_METHOD(bool,
               OnSubmitCommands,
-              (bool block_on_schedule, CompletionCallback callback),
+              (CompletionCallback callback),
               (override));
   MOCK_METHOD(void, OnWaitUntilCompleted, (), (override));
   MOCK_METHOD(void, OnWaitUntilScheduled, (), (override));
@@ -140,8 +143,6 @@ class MockCommandBuffer : public CommandBuffer {
 
 class MockImpellerContext : public Context {
  public:
-  MockImpellerContext() : Context(Flags{}) {}
-
   MOCK_METHOD(Context::BackendType, GetBackendType, (), (const, override));
 
   MOCK_METHOD(std::string, DescribeGpuModel, (), (const, override));
@@ -225,15 +226,11 @@ class MockCapabilities : public Capabilities {
   MOCK_METHOD(bool, SupportsDeviceTransientTextures, (), (const, override));
   MOCK_METHOD(bool, SupportsTriangleFan, (), (const override));
   MOCK_METHOD(bool, SupportsPrimitiveRestart, (), (const override));
-  MOCK_METHOD(bool, Supports32BitPrimitiveIndices, (), (const override));
-  MOCK_METHOD(bool, SupportsExtendedRangeFormats, (), (const override));
   MOCK_METHOD(PixelFormat, GetDefaultColorFormat, (), (const, override));
   MOCK_METHOD(PixelFormat, GetDefaultStencilFormat, (), (const, override));
   MOCK_METHOD(PixelFormat, GetDefaultDepthStencilFormat, (), (const, override));
   MOCK_METHOD(PixelFormat, GetDefaultGlyphAtlasFormat, (), (const, override));
   MOCK_METHOD(ISize, GetMaximumRenderPassAttachmentSize, (), (const override));
-  MOCK_METHOD(size_t, GetMinimumUniformAlignment, (), (const override));
-  MOCK_METHOD(bool, NeedsPartitionedHostBuffer, (), (const, override));
 };
 
 class MockCommandQueue : public CommandQueue {
@@ -241,8 +238,7 @@ class MockCommandQueue : public CommandQueue {
   MOCK_METHOD(fml::Status,
               Submit,
               (const std::vector<std::shared_ptr<CommandBuffer>>& buffers,
-               const CompletionCallback& cb,
-               bool block_on_schedule),
+               const CompletionCallback& cb),
               (override));
 };
 

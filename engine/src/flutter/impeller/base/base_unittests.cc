@@ -81,6 +81,13 @@ TEST(ThreadTest, CanCreateRWMutexLock) {
   // f.mtx.UnlockReader(); <--- Static analysis error.
 }
 
+TEST(StringsTest, CanSPrintF) {
+  ASSERT_EQ(SPrintF("%sx%d", "Hello", 12), "Hellox12");
+  ASSERT_EQ(SPrintF(""), "");
+  ASSERT_EQ(SPrintF("Hello"), "Hello");
+  ASSERT_EQ(SPrintF("%sx%.2f", "Hello", 12.122222), "Hellox12.12");
+}
+
 struct CVTest {
   Mutex mutex;
   ConditionVariable cv;
@@ -174,7 +181,6 @@ TEST(ConditionVariableTest, TestsCriticalSectionAfterWaitForUntil) {
     mtx.Unlock();
   };
   // Launch all threads. They will wait for the start CV to be signaled.
-  threads.reserve(kThreadCount);
   for (size_t i = 0; i < kThreadCount; i++) {
     threads.emplace_back(thread_main);
   }
@@ -220,7 +226,6 @@ TEST(ConditionVariableTest, TestsCriticalSectionAfterWait) {
     mtx.Unlock();
   };
   // Launch all threads. They will wait for the start CV to be signaled.
-  threads.reserve(kThreadCount);
   for (size_t i = 0; i < kThreadCount; i++) {
     threads.emplace_back(thread_main);
   }

@@ -21,11 +21,8 @@ void main() {
     final String host = await getLocalHostIP();
     await bindServerAndTest(host, (HttpClient httpClient, Uri uri) async {
       asyncExpectThrows<UnsupportedError>(
-        () async => runZoned(
-          () => httpClient.getUrl(uri),
-          zoneValues: <dynamic, dynamic>{#flutter.io.allow_http: false},
-        ),
-      );
+          () async => runZoned(() => httpClient.getUrl(uri),
+            zoneValues: <dynamic, dynamic>{#flutter.io.allow_http: false}));
     });
   });
 }

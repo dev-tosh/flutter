@@ -21,15 +21,15 @@ DlImage::DlImage() = default;
 DlImage::~DlImage() = default;
 
 int DlImage::width() const {
-  return GetSize().width;
+  return dimensions().fWidth;
 };
 
 int DlImage::height() const {
-  return GetSize().height;
+  return dimensions().fHeight;
 };
 
-DlIRect DlImage::GetBounds() const {
-  return DlIRect::MakeSize(GetSize());
+SkIRect DlImage::bounds() const {
+  return SkIRect::MakeSize(dimensions());
 }
 
 std::optional<std::string> DlImage::get_error() const {

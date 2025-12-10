@@ -45,7 +45,9 @@ class TestApp {
 
   Color _backgroundColor = _blue;
 
-  TestApp(this.childView, {this.showOverlay = false, this.focusable = true}) {}
+  TestApp(this.childView,
+      {this.showOverlay = false,
+      this.focusable = true}) {}
 
   void run() {
     childView.create(focusable, (ByteData? reply) {
@@ -92,21 +94,15 @@ class TestApp {
     // Alignment.center
     final windowCenter = windowSize.center(Offset.zero);
     final windowPhysicalCenter = window.physicalSize.center(Offset.zero);
-    final childPhysicalOffset = windowPhysicalCenter - childPhysicalSize.center(Offset.zero);
+    final childPhysicalOffset =
+        windowPhysicalCenter - childPhysicalSize.center(Offset.zero);
 
     sceneBuilder
-      ..pushTransform(
-        vector_math_64.Matrix4.translationValues(
-          childPhysicalOffset.dx,
-          childPhysicalOffset.dy,
-          0.0,
-        ).storage,
-      )
-      ..addPlatformView(
-        childView.viewId,
-        width: childPhysicalSize.width,
-        height: childPhysicalSize.height,
-      )
+      ..pushTransform(vector_math_64.Matrix4.translationValues(
+              childPhysicalOffset.dx, childPhysicalOffset.dy, 0.0)
+          .storage)
+      ..addPlatformView(childView.viewId,
+          width: childPhysicalSize.width, height: childPhysicalSize.height)
       ..pop();
 
     if (showOverlay) {
@@ -117,16 +113,16 @@ class TestApp {
       final overlaySize = containerSize * 0.5;
       // Alignment.topRight
       final overlayOffset = Offset(
-        containerOffset.dx + containerSize.width - overlaySize.width,
-        containerOffset.dy,
-      );
+          containerOffset.dx + containerSize.width - overlaySize.width,
+          containerOffset.dy);
 
       final overlayPhysicalSize = overlaySize * pixelRatio;
       final overlayPhysicalOffset = overlayOffset * pixelRatio;
       final overlayPhysicalBounds = overlayPhysicalOffset & overlayPhysicalSize;
 
       final recorder = PictureRecorder();
-      final overlayCullRect = Offset.zero & overlayPhysicalSize; // in canvas physical coordinates
+      final overlayCullRect =
+          Offset.zero & overlayPhysicalSize; // in canvas physical coordinates
       final canvas = Canvas(recorder, overlayCullRect);
       canvas.scale(pixelRatio);
       final paint = Paint()..color = Color.fromARGB(255, 0, 255, 0);
@@ -148,7 +144,8 @@ class ChildView {
 
   ChildView(this.viewId);
 
-  void create(bool focusable, PlatformMessageResponseCallback callback) {
+  void create(bool focusable,
+      PlatformMessageResponseCallback callback) {
     // Construct the dart:ui platform message to create the view, and when the
     // return callback is invoked, build the scene. At that point, it is safe
     // to embed the child-view2 in the scene.
@@ -163,21 +160,20 @@ class ChildView {
         viewOcclusionHint.left,
         viewOcclusionHint.top,
         viewOcclusionHint.right,
-        viewOcclusionHint.bottom,
+        viewOcclusionHint.bottom
       ],
     };
 
-    final ByteData createViewMessage = ByteData.sublistView(
-      utf8.encode(json.encode(<String, Object>{'method': 'View.create', 'args': args})),
-    );
+    final ByteData createViewMessage =
+        ByteData.sublistView(utf8.encode(json.encode(<String, Object>{
+      'method': 'View.create',
+      'args': args,
+    })));
 
     final platformViewsChannel = 'flutter/platform_views';
 
-    PlatformDispatcher.instance.sendPlatformMessage(
-      platformViewsChannel,
-      createViewMessage,
-      callback,
-    );
+    PlatformDispatcher.instance
+        .sendPlatformMessage(platformViewsChannel, createViewMessage, callback);
   }
 }
 
@@ -185,14 +181,12 @@ Future<int> _launchChildView() async {
   final message = Int8List.fromList([0x31]);
   final completer = new Completer<ByteData>();
   PlatformDispatcher.instance.sendPlatformMessage(
-    'fuchsia/child_view',
-    ByteData.sublistView(message),
-    (ByteData? reply) {
-      completer.complete(reply!);
-    },
-  );
+      'fuchsia/child_view', ByteData.sublistView(message), (ByteData? reply) {
+    completer.complete(reply!);
+  });
 
-  return int.parse(ascii.decode(((await completer.future).buffer.asUint8List())));
+  return int.parse(
+      ascii.decode(((await completer.future).buffer.asUint8List())));
 }
 
 List<String> _GetArgsFromConfigFile() {

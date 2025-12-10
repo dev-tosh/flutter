@@ -337,7 +337,7 @@ fml::StatusOr<RenderTarget> MakeDownsampleSubpass(
        input_texture->GetTextureDescriptor().mip_count > 1)) {
     ContentContext::SubpassCallback subpass_callback =
         [&](const ContentContext& renderer, RenderPass& pass) {
-          HostBuffer& data_host_buffer = renderer.GetTransientsDataBuffer();
+          HostBuffer& host_buffer = renderer.GetTransientsBuffer();
 
           pass.SetCommandLabel("Gaussian blur downsample");
           auto pipeline_options = OptionsFromPass(pass);
@@ -359,16 +359,16 @@ fml::StatusOr<RenderTarget> MakeDownsampleSubpass(
               VS::PerVertexData{Point(0, 1), uvs[2]},
               VS::PerVertexData{Point(1, 1), uvs[3]},
           };
-          pass.SetVertexBuffer(CreateVertexBuffer(vertices, data_host_buffer));
+          pass.SetVertexBuffer(CreateVertexBuffer(vertices, host_buffer));
 
           SamplerDescriptor linear_sampler_descriptor = sampler_descriptor;
           SetTileMode(&linear_sampler_descriptor, renderer, tile_mode);
           linear_sampler_descriptor.mag_filter = MinMagFilter::kLinear;
           linear_sampler_descriptor.min_filter = MinMagFilter::kLinear;
           TextureFillVertexShader::BindFrameInfo(
-              pass, data_host_buffer.EmplaceUniform(frame_info));
+              pass, host_buffer.EmplaceUniform(frame_info));
           TextureFillFragmentShader::BindFragInfo(
-              pass, data_host_buffer.EmplaceUniform(frag_info));
+              pass, host_buffer.EmplaceUniform(frag_info));
           TextureFillFragmentShader::BindTextureSampler(
               pass, input_texture,
               renderer.GetContext()->GetSamplerLibrary()->GetSampler(
@@ -377,9 +377,7 @@ fml::StatusOr<RenderTarget> MakeDownsampleSubpass(
           return pass.Draw().ok();
         };
     return renderer.MakeSubpass("Gaussian Blur Filter", pass_args.subpass_size,
-                                command_buffer, subpass_callback,
-                                /*msaa_enabled=*/false,
-                                /*depth_stencil_enabled=*/false);
+                                command_buffer, subpass_callback);
   } else {
     // This assumes we don't scale below 1/16.
     Scalar edge = 1.0;
@@ -393,7 +391,7 @@ fml::StatusOr<RenderTarget> MakeDownsampleSubpass(
     }
     ContentContext::SubpassCallback subpass_callback =
         [&](const ContentContext& renderer, RenderPass& pass) {
-          HostBuffer& data_host_buffer = renderer.GetTransientsDataBuffer();
+          HostBuffer& host_buffer = renderer.GetTransientsBuffer();
 
           pass.SetCommandLabel("Gaussian blur downsample");
           auto pipeline_options = OptionsFromPass(pass);
@@ -430,16 +428,16 @@ fml::StatusOr<RenderTarget> MakeDownsampleSubpass(
               VS::PerVertexData{Point(0, 1), uvs[2]},
               VS::PerVertexData{Point(1, 1), uvs[3]},
           };
-          pass.SetVertexBuffer(CreateVertexBuffer(vertices, data_host_buffer));
+          pass.SetVertexBuffer(CreateVertexBuffer(vertices, host_buffer));
 
           SamplerDescriptor linear_sampler_descriptor = sampler_descriptor;
           SetTileMode(&linear_sampler_descriptor, renderer, tile_mode);
           linear_sampler_descriptor.mag_filter = MinMagFilter::kLinear;
           linear_sampler_descriptor.min_filter = MinMagFilter::kLinear;
           TextureFillVertexShader::BindFrameInfo(
-              pass, data_host_buffer.EmplaceUniform(frame_info));
+              pass, host_buffer.EmplaceUniform(frame_info));
           TextureDownsampleFragmentShader::BindFragInfo(
-              pass, data_host_buffer.EmplaceUniform(frag_info));
+              pass, host_buffer.EmplaceUniform(frag_info));
           TextureDownsampleFragmentShader::BindTextureSampler(
               pass, input_texture,
               renderer.GetContext()->GetSamplerLibrary()->GetSampler(
@@ -448,9 +446,7 @@ fml::StatusOr<RenderTarget> MakeDownsampleSubpass(
           return pass.Draw().ok();
         };
     return renderer.MakeSubpass("Gaussian Blur Filter", pass_args.subpass_size,
-                                command_buffer, subpass_callback,
-                                /*msaa_enabled=*/false,
-                                /*depth_stencil_enabled=*/false);
+                                command_buffer, subpass_callback);
   }
 }
 
@@ -482,7 +478,7 @@ fml::StatusOr<RenderTarget> MakeBlurSubpass(
         frame_info.texture_sampler_y_coord_scale =
             input_texture->GetYCoordScale();
 
-        HostBuffer& data_host_buffer = renderer.GetTransientsDataBuffer();
+        HostBuffer& host_buffer = renderer.GetTransientsBuffer();
 
         ContentContextOptions options = OptionsFromPass(pass);
         options.primitive_type = PrimitiveType::kTriangleStrip;
@@ -494,7 +490,7 @@ fml::StatusOr<RenderTarget> MakeBlurSubpass(
             VS::PerVertexData{blur_uvs[2], blur_uvs[2]},
             VS::PerVertexData{blur_uvs[3], blur_uvs[3]},
         };
-        pass.SetVertexBuffer(CreateVertexBuffer(vertices, data_host_buffer));
+        pass.SetVertexBuffer(CreateVertexBuffer(vertices, host_buffer));
 
         SamplerDescriptor linear_sampler_descriptor = sampler_descriptor;
         linear_sampler_descriptor.mag_filter = MinMagFilter::kLinear;
@@ -504,9 +500,9 @@ fml::StatusOr<RenderTarget> MakeBlurSubpass(
             renderer.GetContext()->GetSamplerLibrary()->GetSampler(
                 linear_sampler_descriptor));
         GaussianBlurVertexShader::BindFrameInfo(
-            pass, data_host_buffer.EmplaceUniform(frame_info));
+            pass, host_buffer.EmplaceUniform(frame_info));
         GaussianBlurFragmentShader::BindKernelSamples(
-            pass, data_host_buffer.EmplaceUniform(
+            pass, host_buffer.EmplaceUniform(
                       LerpHackKernelSamples(GenerateBlurInfo(blur_info))));
         return pass.Draw().ok();
       };
@@ -515,9 +511,8 @@ fml::StatusOr<RenderTarget> MakeBlurSubpass(
                                 destination_target.value(), command_buffer,
                                 subpass_callback);
   } else {
-    return renderer.MakeSubpass(
-        "Gaussian Blur Filter", subpass_size, command_buffer, subpass_callback,
-        /*msaa_enabled=*/false, /*depth_stencil_enabled=*/false);
+    return renderer.MakeSubpass("Gaussian Blur Filter", subpass_size,
+                                command_buffer, subpass_callback);
   }
 }
 
@@ -870,8 +865,7 @@ std::optional<Entity> GaussianBlurFilterContents::RenderFilter(
                    downsample_pass_args.transform *  //
                    Matrix::MakeScale(1 / downsample_pass_args.effective_scalar),
                .sampler_descriptor = sampler_desc,
-               .opacity = input_snapshot->opacity,
-               .needs_rasterization_for_runtime_effects = true},
+               .opacity = input_snapshot->opacity},
       entity.GetBlendMode());
 
   return ApplyBlurStyle(mask_blur_style_, entity, inputs[0],
@@ -915,10 +909,10 @@ KernelSamples GenerateBlurInfo(BlurParameters parameters) {
   result.sample_count =
       ((2 * parameters.blur_radius) / parameters.step_size) + 1;
 
-  // Chop off the last samples if the radius >= 16 where they can account for
-  // < 1.56% of the result.
+  // Chop off the last samples if the radius >= 3 where they account for < 1.56%
+  // of the result.
   int x_offset = 0;
-  if (parameters.blur_radius >= 16) {
+  if (parameters.blur_radius >= 3) {
     result.sample_count -= 2;
     x_offset = 1;
   }

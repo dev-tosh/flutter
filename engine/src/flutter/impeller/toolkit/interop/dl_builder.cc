@@ -20,8 +20,9 @@ void DisplayListBuilder::Save() {
 void DisplayListBuilder::SaveLayer(const Rect& bounds,
                                    const Paint* paint,
                                    const ImageFilter* backdrop) {
+  const auto sk_bounds = ToSkiaType(bounds);
   builder_.SaveLayer(
-      bounds,                                           //
+      &sk_bounds,                                       //
       paint == nullptr ? nullptr : &paint->GetPaint(),  //
       backdrop == nullptr ? nullptr : backdrop->GetImageFilter().get());
 }
@@ -43,15 +44,19 @@ void DisplayListBuilder::Translate(Point translation) {
 }
 
 Matrix DisplayListBuilder::GetTransform() const {
-  return builder_.GetMatrix();
+  Matrix matrix;
+  builder_.GetTransformFullPerspective().getColMajor(matrix.m);
+  return matrix;
 }
 
 void DisplayListBuilder::SetTransform(const Matrix& matrix) {
-  builder_.SetTransform(matrix);
+  const auto sk_matrix = SkM44::ColMajor(matrix.m);
+  builder_.SetTransform(&sk_matrix);
 }
 
 void DisplayListBuilder::Transform(const Matrix& matrix) {
-  builder_.Transform(matrix);
+  const auto sk_matrix = SkM44::ColMajor(matrix.m);
+  builder_.Transform(&sk_matrix);
 }
 
 void DisplayListBuilder::ResetTransform() {
@@ -66,37 +71,39 @@ void DisplayListBuilder::RestoreToCount(uint32_t count) {
   builder_.RestoreToCount(count);
 }
 
-void DisplayListBuilder::ClipRect(const Rect& rect, flutter::DlClipOp op) {
-  builder_.ClipRect(rect, op);
+void DisplayListBuilder::ClipRect(const Rect& rect,
+                                  flutter::DlCanvas::ClipOp op) {
+  builder_.ClipRect(ToSkiaType(rect), op);
 }
 
-void DisplayListBuilder::ClipOval(const Rect& rect, flutter::DlClipOp op) {
-  builder_.ClipOval(rect, op);
+void DisplayListBuilder::ClipOval(const Rect& rect,
+                                  flutter::DlCanvas::ClipOp op) {
+  builder_.ClipOval(ToSkiaType(rect), op);
 }
 
 void DisplayListBuilder::ClipRoundedRect(const Rect& rect,
                                          const RoundingRadii& radii,
-                                         flutter::DlClipOp op) {
-  builder_.ClipRoundRect(RoundRect::MakeRectRadii(rect, radii), op);
+                                         flutter::DlCanvas::ClipOp op) {
+  builder_.ClipRRect(ToSkiaType(rect, radii), op);
 }
 
-void DisplayListBuilder::ClipPath(const Path& path, flutter::DlClipOp op) {
-  builder_.ClipPath(flutter::DlPath(path.GetPath()), op);
+void DisplayListBuilder::ClipPath(const Path& path,
+                                  flutter::DlCanvas::ClipOp op) {
+  builder_.ClipPath(path.GetPath(), op);
 }
 
 void DisplayListBuilder::DrawRect(const Rect& rect, const Paint& paint) {
-  builder_.DrawRect(rect, paint.GetPaint());
+  builder_.DrawRect(ToSkiaType(rect), paint.GetPaint());
 }
 
 void DisplayListBuilder::DrawOval(const Rect& oval_bounds, const Paint& paint) {
-  builder_.DrawOval(oval_bounds, paint.GetPaint());
+  builder_.DrawOval(ToSkiaType(oval_bounds), paint.GetPaint());
 }
 
 void DisplayListBuilder::DrawRoundedRect(const Rect& rect,
                                          const RoundingRadii& radii,
                                          const Paint& paint) {
-  builder_.DrawRoundRect(RoundRect::MakeRectRadii(rect, radii),
-                         paint.GetPaint());
+  builder_.DrawRRect(ToSkiaType(rect, radii), paint.GetPaint());
 }
 
 void DisplayListBuilder::DrawRoundedRectDifference(
@@ -105,15 +112,14 @@ void DisplayListBuilder::DrawRoundedRectDifference(
     const Rect& inner_rect,
     const RoundingRadii& inner_radii,
     const Paint& paint) {
-  builder_.DrawDiffRoundRect(
-      RoundRect::MakeRectRadii(outer_rect, outer_radii),  //
-      RoundRect::MakeRectRadii(inner_rect, inner_radii),  //
-      paint.GetPaint()                                    //
+  builder_.DrawDRRect(ToSkiaType(outer_rect, outer_radii),  //
+                      ToSkiaType(inner_rect, inner_radii),  //
+                      paint.GetPaint()                      //
   );
 }
 
 void DisplayListBuilder::DrawPath(const Path& path, const Paint& paint) {
-  builder_.DrawPath(flutter::DlPath(path.GetPath()), paint.GetPaint());
+  builder_.DrawPath(path.GetPath(), paint.GetPaint());
 }
 
 void DisplayListBuilder::DrawPaint(const Paint& paint) {
@@ -123,7 +129,7 @@ void DisplayListBuilder::DrawPaint(const Paint& paint) {
 void DisplayListBuilder::DrawLine(const Point& from,
                                   const Point& to,
                                   const Paint& paint) {
-  builder_.DrawLine(from, to, paint.GetPaint());
+  builder_.DrawLine(ToSkiaType(from), ToSkiaType(to), paint.GetPaint());
 }
 
 void DisplayListBuilder::DrawDashedLine(const Point& from,
@@ -153,7 +159,7 @@ void DisplayListBuilder::DrawTexture(const Texture& texture,
                                      flutter::DlImageSampling sampling,
                                      const Paint* paint) {
   builder_.DrawImage(texture.MakeImage(),                             //
-                     point,                                           //
+                     ToSkiaType(point),                               //
                      sampling,                                        //
                      paint == nullptr ? nullptr : &paint->GetPaint()  //
   );
@@ -165,8 +171,8 @@ void DisplayListBuilder::DrawTextureRect(const Texture& texture,
                                          flutter::DlImageSampling sampling,
                                          const Paint* paint) {
   builder_.DrawImageRect(texture.MakeImage(),                             //
-                         src_rect,                                        //
-                         dst_rect,                                        //
+                         ToSkiaType(src_rect),                            //
+                         ToSkiaType(dst_rect),                            //
                          sampling,                                        //
                          paint == nullptr ? nullptr : &paint->GetPaint()  //
   );
@@ -179,19 +185,6 @@ void DisplayListBuilder::DrawParagraph(const Paragraph& paragraph,
     return;
   }
   handle->Paint(&builder_, point.x, point.y);
-}
-
-void DisplayListBuilder::DrawShadow(const Path& path,
-                                    const flutter::DlColor& color,
-                                    float elevation,
-                                    bool occluder_is_transparent,
-                                    float device_pixel_ratio) {
-  builder_.DrawShadow(flutter::DlPath(path.GetPath()),  // path
-                      color,                            // shadow color
-                      elevation,                        // elevation
-                      occluder_is_transparent,          // occluder transparency
-                      device_pixel_ratio                // dpr
-  );
 }
 
 }  // namespace impeller::interop

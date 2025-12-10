@@ -6,6 +6,7 @@ package io.flutter.plugin.editing;
 
 import static io.flutter.Build.API_LEVELS;
 
+import android.annotation.TargetApi;
 import android.os.Build;
 import android.view.View;
 import android.view.inputmethod.InputMethodManager;
@@ -69,6 +70,7 @@ public class ScribePlugin implements ScribeChannel.ScribeMethodHandler {
    * <p>Call this or isFeatureAvailable before calling startStylusHandwriting to make sure it's
    * available.
    */
+  @TargetApi(API_LEVELS.API_34)
   @RequiresApi(API_LEVELS.API_34)
   @Override
   public boolean isStylusHandwritingAvailable() {
@@ -81,6 +83,7 @@ public class ScribePlugin implements ScribeChannel.ScribeMethodHandler {
    * <p>Typically isStylusHandwritingAvailable should be called first to determine whether this is
    * supported by the IME.
    */
+  @TargetApi(API_LEVELS.API_33)
   @RequiresApi(API_LEVELS.API_33)
   @Override
   public void startStylusHandwriting() {

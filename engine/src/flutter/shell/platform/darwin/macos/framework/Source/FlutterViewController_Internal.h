@@ -10,17 +10,21 @@
 #include <memory>
 
 #import "flutter/shell/platform/darwin/macos/framework/Source/AccessibilityBridgeMac.h"
+#import "flutter/shell/platform/darwin/macos/framework/Source/FlutterKeyboardViewDelegate.h"
 #import "flutter/shell/platform/darwin/macos/framework/Source/FlutterTextInputPlugin.h"
 #import "flutter/shell/platform/darwin/macos/framework/Source/FlutterView.h"
 
-@interface FlutterViewController ()
+@interface FlutterViewController () <FlutterKeyboardViewDelegate>
 
 // The FlutterView for this view controller.
 @property(nonatomic, readonly, nullable) FlutterView* flutterView;
 
-@property(nonatomic, readonly) std::weak_ptr<flutter::AccessibilityBridgeMac> accessibilityBridge;
+/**
+ * The text input plugin that handles text editing state for text fields.
+ */
+@property(nonatomic, readonly, nonnull) FlutterTextInputPlugin* textInputPlugin;
 
-@property(nonatomic, nullable) NSString* applicationLocale;
+@property(nonatomic, readonly) std::weak_ptr<flutter::AccessibilityBridgeMac> accessibilityBridge;
 
 /**
  * Returns YES if provided event is being currently redispatched by keyboard manager.
@@ -34,7 +38,8 @@
  * before being used, and must be set up only once until detachFromEngine:.
  */
 - (void)setUpWithEngine:(nonnull FlutterEngine*)engine
-         viewIdentifier:(FlutterViewIdentifier)viewIdentifier;
+         viewIdentifier:(FlutterViewIdentifier)viewIdentifier
+     threadSynchronizer:(nonnull FlutterThreadSynchronizer*)threadSynchronizer;
 
 /**
  * Reset the `engine` and `id` of this controller.
@@ -54,14 +59,6 @@
  * updated.
  */
 - (void)updateSemantics:(nonnull const FlutterSemanticsUpdate2*)update;
-
-/**
- * Removes this controller from the engine. The controller is removed from the engine
- * on dealloc, however in multi-window scenario the controller needs to be unregistered
- * from the engine eagerly - because the FlutterView needs to be removed from the
- * Flutter isolate before destroying the controller and window.
- */
-- (void)dispose;
 
 @end
 

@@ -41,15 +41,18 @@ class IgnoreAttributeDispatchHelper : public virtual DlOpReceiver {
 // A utility class that will ignore all DlOpReceiver methods relating
 // to setting a clip.
 class IgnoreClipDispatchHelper : public virtual DlOpReceiver {
-  void clipRect(const DlRect& rect, DlClipOp clip_op, bool is_aa) override {}
-  void clipOval(const DlRect& bounds, DlClipOp clip_op, bool is_aa) override {}
+  void clipRect(const DlRect& rect,
+                DlCanvas::ClipOp clip_op,
+                bool is_aa) override {}
+  void clipOval(const DlRect& bounds,
+                DlCanvas::ClipOp clip_op,
+                bool is_aa) override {}
   void clipRoundRect(const DlRoundRect& rrect,
-                     DlClipOp clip_op,
+                     DlCanvas::ClipOp clip_op,
                      bool is_aa) override {}
-  void clipPath(const DlPath& path, DlClipOp clip_op, bool is_aa) override {}
-  void clipRoundSuperellipse(const DlRoundSuperellipse& rse,
-                             DlClipOp clip_op,
-                             bool is_aa) override {}
+  void clipPath(const DlPath& path,
+                DlCanvas::ClipOp clip_op,
+                bool is_aa) override {}
 };
 
 // A utility class that will ignore all DlOpReceiver methods relating
@@ -95,13 +98,12 @@ class IgnoreDrawDispatchHelper : public virtual DlOpReceiver {
   void drawRoundRect(const DlRoundRect& rrect) override {}
   void drawDiffRoundRect(const DlRoundRect& outer,
                          const DlRoundRect& inner) override {}
-  void drawRoundSuperellipse(const DlRoundSuperellipse& rse) override {}
   void drawPath(const DlPath& path) override {}
   void drawArc(const DlRect& oval_bounds,
                DlScalar start_degrees,
                DlScalar sweep_degrees,
                bool use_center) override {}
-  void drawPoints(DlPointMode mode,
+  void drawPoints(DlCanvas::PointMode mode,
                   uint32_t count,
                   const DlPoint points[]) override {}
   void drawVertices(const std::shared_ptr<DlVertices>& vertices,
@@ -115,14 +117,14 @@ class IgnoreDrawDispatchHelper : public virtual DlOpReceiver {
                      const DlRect& dst,
                      DlImageSampling sampling,
                      bool render_with_attributes,
-                     DlSrcRectConstraint constraint) override {}
+                     SrcRectConstraint constraint) override {}
   void drawImageNine(const sk_sp<DlImage> image,
                      const DlIRect& center,
                      const DlRect& dst,
                      DlFilterMode filter,
                      bool render_with_attributes) override {}
   void drawAtlas(const sk_sp<DlImage> atlas,
-                 const DlRSTransform xform[],
+                 const SkRSXform xform[],
                  const DlRect tex[],
                  const DlColor colors[],
                  int count,
@@ -132,9 +134,12 @@ class IgnoreDrawDispatchHelper : public virtual DlOpReceiver {
                  bool render_with_attributes) override {}
   void drawDisplayList(const sk_sp<DisplayList> display_list,
                        DlScalar opacity) override {}
-  void drawText(const std::shared_ptr<DlText>& text,
-                DlScalar x,
-                DlScalar y) override {}
+  void drawTextBlob(const sk_sp<SkTextBlob> blob,
+                    DlScalar x,
+                    DlScalar y) override {}
+  void drawTextFrame(const std::shared_ptr<impeller::TextFrame>& text_frame,
+                     DlScalar x,
+                     DlScalar y) override {}
   void drawShadow(const DlPath& path,
                   const DlColor color,
                   const DlScalar elevation,

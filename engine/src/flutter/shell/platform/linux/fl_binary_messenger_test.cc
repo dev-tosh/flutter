@@ -21,6 +21,7 @@ TEST(FlBinaryMessengerTest, Send) {
 
   g_autoptr(FlDartProject) project = fl_dart_project_new();
   g_autoptr(FlEngine) engine = fl_engine_new(project);
+  FlutterEngineProcTable* embedder_api = fl_engine_get_embedder_api(engine);
 
   g_autoptr(GError) error = nullptr;
   EXPECT_TRUE(fl_engine_start(engine, &error));
@@ -28,17 +29,16 @@ TEST(FlBinaryMessengerTest, Send) {
 
   FlutterDataCallback response_callback;
   void* response_callback_user_data;
-  fl_engine_get_embedder_api(engine)->PlatformMessageCreateResponseHandle =
-      MOCK_ENGINE_PROC(
-          PlatformMessageCreateResponseHandle,
-          ([&response_callback, &response_callback_user_data](
-               auto engine, FlutterDataCallback data_callback, void* user_data,
-               FlutterPlatformMessageResponseHandle** response_out) {
-            response_callback = data_callback;
-            response_callback_user_data = user_data;
-            return kSuccess;
-          }));
-  fl_engine_get_embedder_api(engine)->SendPlatformMessage = MOCK_ENGINE_PROC(
+  embedder_api->PlatformMessageCreateResponseHandle = MOCK_ENGINE_PROC(
+      PlatformMessageCreateResponseHandle,
+      ([&response_callback, &response_callback_user_data](
+           auto engine, FlutterDataCallback data_callback, void* user_data,
+           FlutterPlatformMessageResponseHandle** response_out) {
+        response_callback = data_callback;
+        response_callback_user_data = user_data;
+        return kSuccess;
+      }));
+  embedder_api->SendPlatformMessage = MOCK_ENGINE_PROC(
       SendPlatformMessage,
       ([&response_callback, &response_callback_user_data](
            auto engine, const FlutterPlatformMessage* message) {
@@ -83,13 +83,14 @@ TEST(FlBinaryMessengerTest, Send) {
 TEST(FlBinaryMessengerTest, SendNullptr) {
   g_autoptr(FlDartProject) project = fl_dart_project_new();
   g_autoptr(FlEngine) engine = fl_engine_new(project);
+  FlutterEngineProcTable* embedder_api = fl_engine_get_embedder_api(engine);
 
   g_autoptr(GError) error = nullptr;
   EXPECT_TRUE(fl_engine_start(engine, &error));
   EXPECT_EQ(error, nullptr);
 
   bool called = false;
-  fl_engine_get_embedder_api(engine)->SendPlatformMessage = MOCK_ENGINE_PROC(
+  embedder_api->SendPlatformMessage = MOCK_ENGINE_PROC(
       SendPlatformMessage,
       ([&called](auto engine, const FlutterPlatformMessage* message) {
         called = true;
@@ -112,13 +113,14 @@ TEST(FlBinaryMessengerTest, SendNullptr) {
 TEST(FlBinaryMessengerTest, SendEmpty) {
   g_autoptr(FlDartProject) project = fl_dart_project_new();
   g_autoptr(FlEngine) engine = fl_engine_new(project);
+  FlutterEngineProcTable* embedder_api = fl_engine_get_embedder_api(engine);
 
   g_autoptr(GError) error = nullptr;
   EXPECT_TRUE(fl_engine_start(engine, &error));
   EXPECT_EQ(error, nullptr);
 
   bool called = false;
-  fl_engine_get_embedder_api(engine)->SendPlatformMessage = MOCK_ENGINE_PROC(
+  embedder_api->SendPlatformMessage = MOCK_ENGINE_PROC(
       SendPlatformMessage,
       ([&called](auto engine, const FlutterPlatformMessage* message) {
         called = true;
@@ -141,6 +143,7 @@ TEST(FlBinaryMessengerTest, NullptrResponse) {
 
   g_autoptr(FlDartProject) project = fl_dart_project_new();
   g_autoptr(FlEngine) engine = fl_engine_new(project);
+  FlutterEngineProcTable* embedder_api = fl_engine_get_embedder_api(engine);
 
   g_autoptr(GError) error = nullptr;
   EXPECT_TRUE(fl_engine_start(engine, &error));
@@ -148,17 +151,16 @@ TEST(FlBinaryMessengerTest, NullptrResponse) {
 
   FlutterDataCallback response_callback;
   void* response_callback_user_data;
-  fl_engine_get_embedder_api(engine)->PlatformMessageCreateResponseHandle =
-      MOCK_ENGINE_PROC(
-          PlatformMessageCreateResponseHandle,
-          ([&response_callback, &response_callback_user_data](
-               auto engine, FlutterDataCallback data_callback, void* user_data,
-               FlutterPlatformMessageResponseHandle** response_out) {
-            response_callback = data_callback;
-            response_callback_user_data = user_data;
-            return kSuccess;
-          }));
-  fl_engine_get_embedder_api(engine)->SendPlatformMessage = MOCK_ENGINE_PROC(
+  embedder_api->PlatformMessageCreateResponseHandle = MOCK_ENGINE_PROC(
+      PlatformMessageCreateResponseHandle,
+      ([&response_callback, &response_callback_user_data](
+           auto engine, FlutterDataCallback data_callback, void* user_data,
+           FlutterPlatformMessageResponseHandle** response_out) {
+        response_callback = data_callback;
+        response_callback_user_data = user_data;
+        return kSuccess;
+      }));
+  embedder_api->SendPlatformMessage = MOCK_ENGINE_PROC(
       SendPlatformMessage,
       ([&response_callback, &response_callback_user_data](
            auto engine, const FlutterPlatformMessage* message) {
@@ -200,12 +202,13 @@ TEST(FlBinaryMessengerTest, SendFailure) {
 
   g_autoptr(FlDartProject) project = fl_dart_project_new();
   g_autoptr(FlEngine) engine = fl_engine_new(project);
+  FlutterEngineProcTable* embedder_api = fl_engine_get_embedder_api(engine);
 
   g_autoptr(GError) error = nullptr;
   EXPECT_TRUE(fl_engine_start(engine, &error));
   EXPECT_EQ(error, nullptr);
 
-  fl_engine_get_embedder_api(engine)->SendPlatformMessage =
+  embedder_api->SendPlatformMessage =
       MOCK_ENGINE_PROC(SendPlatformMessage,
                        ([](auto engine, const FlutterPlatformMessage* message) {
                          EXPECT_STREQ(message->channel, "test");
@@ -234,29 +237,29 @@ TEST(FlBinaryMessengerTest, SendFailure) {
 TEST(FlBinaryMessengerTest, Receive) {
   g_autoptr(FlDartProject) project = fl_dart_project_new();
   g_autoptr(FlEngine) engine = fl_engine_new(project);
+  FlutterEngineProcTable* embedder_api = fl_engine_get_embedder_api(engine);
 
   g_autoptr(GError) error = nullptr;
   EXPECT_TRUE(fl_engine_start(engine, &error));
   EXPECT_EQ(error, nullptr);
 
   bool called = false;
-  fl_engine_get_embedder_api(engine)->SendPlatformMessageResponse =
-      MOCK_ENGINE_PROC(
-          SendPlatformMessageResponse,
-          ([&called](auto engine,
-                     const FlutterPlatformMessageResponseHandle* handle,
-                     const uint8_t* data, size_t data_length) {
-            called = true;
+  embedder_api->SendPlatformMessageResponse = MOCK_ENGINE_PROC(
+      SendPlatformMessageResponse,
+      ([&called](auto engine,
+                 const FlutterPlatformMessageResponseHandle* handle,
+                 const uint8_t* data, size_t data_length) {
+        called = true;
 
-            int fake_handle = *reinterpret_cast<const int*>(handle);
-            EXPECT_EQ(fake_handle, 42);
+        int fake_handle = *reinterpret_cast<const int*>(handle);
+        EXPECT_EQ(fake_handle, 42);
 
-            g_autofree gchar* text =
-                g_strndup(reinterpret_cast<const gchar*>(data), data_length);
-            EXPECT_STREQ(text, "Polo!");
+        g_autofree gchar* text =
+            g_strndup(reinterpret_cast<const gchar*>(data), data_length);
+        EXPECT_STREQ(text, "Polo!");
 
-            return kSuccess;
-          }));
+        return kSuccess;
+      }));
 
   FlBinaryMessenger* messenger = fl_engine_get_binary_messenger(engine);
 
@@ -298,28 +301,27 @@ TEST(FlBinaryMessengerTest, ReceiveRespondThread) {
 
   g_autoptr(FlDartProject) project = fl_dart_project_new();
   g_autoptr(FlEngine) engine = fl_engine_new(project);
+  FlutterEngineProcTable* embedder_api = fl_engine_get_embedder_api(engine);
 
   g_autoptr(GError) error = nullptr;
   EXPECT_TRUE(fl_engine_start(engine, &error));
   EXPECT_EQ(error, nullptr);
 
-  fl_engine_get_embedder_api(engine)->SendPlatformMessageResponse =
-      MOCK_ENGINE_PROC(
-          SendPlatformMessageResponse,
-          ([&loop](auto engine,
-                   const FlutterPlatformMessageResponseHandle* handle,
-                   const uint8_t* data, size_t data_length) {
-            int fake_handle = *reinterpret_cast<const int*>(handle);
-            EXPECT_EQ(fake_handle, 42);
+  embedder_api->SendPlatformMessageResponse = MOCK_ENGINE_PROC(
+      SendPlatformMessageResponse,
+      ([&loop](auto engine, const FlutterPlatformMessageResponseHandle* handle,
+               const uint8_t* data, size_t data_length) {
+        int fake_handle = *reinterpret_cast<const int*>(handle);
+        EXPECT_EQ(fake_handle, 42);
 
-            g_autofree gchar* text =
-                g_strndup(reinterpret_cast<const gchar*>(data), data_length);
-            EXPECT_STREQ(text, "Polo!");
+        g_autofree gchar* text =
+            g_strndup(reinterpret_cast<const gchar*>(data), data_length);
+        EXPECT_STREQ(text, "Polo!");
 
-            g_main_loop_quit(loop);
+        g_main_loop_quit(loop);
 
-            return kSuccess;
-          }));
+        return kSuccess;
+      }));
 
   FlBinaryMessenger* messenger = fl_engine_get_binary_messenger(engine);
 
@@ -384,12 +386,13 @@ TEST(FlBinaryMessengerTest, ReceiveRespondThread) {
 TEST(FlBinaryMessengerTest, ResizeChannel) {
   g_autoptr(FlDartProject) project = fl_dart_project_new();
   g_autoptr(FlEngine) engine = fl_engine_new(project);
+  FlutterEngineProcTable* embedder_api = fl_engine_get_embedder_api(engine);
 
   bool called = false;
 
   FlutterEngineSendPlatformMessageFnPtr old_handler =
-      fl_engine_get_embedder_api(engine)->SendPlatformMessage;
-  fl_engine_get_embedder_api(engine)->SendPlatformMessage = MOCK_ENGINE_PROC(
+      embedder_api->SendPlatformMessage;
+  embedder_api->SendPlatformMessage = MOCK_ENGINE_PROC(
       SendPlatformMessage,
       ([&called, old_handler](auto engine,
                               const FlutterPlatformMessage* message) {
@@ -431,12 +434,13 @@ TEST(FlBinaryMessengerTest, ResizeChannel) {
 TEST(FlBinaryMessengerTest, WarnsOnOverflowChannel) {
   g_autoptr(FlDartProject) project = fl_dart_project_new();
   g_autoptr(FlEngine) engine = fl_engine_new(project);
+  FlutterEngineProcTable* embedder_api = fl_engine_get_embedder_api(engine);
 
   bool called = false;
 
   FlutterEngineSendPlatformMessageFnPtr old_handler =
-      fl_engine_get_embedder_api(engine)->SendPlatformMessage;
-  fl_engine_get_embedder_api(engine)->SendPlatformMessage = MOCK_ENGINE_PROC(
+      embedder_api->SendPlatformMessage;
+  embedder_api->SendPlatformMessage = MOCK_ENGINE_PROC(
       SendPlatformMessage,
       ([&called, old_handler](auto engine,
                               const FlutterPlatformMessage* message) {
@@ -481,6 +485,7 @@ TEST(FlBinaryMessengerTest, ControlChannelErrorResponse) {
 
   g_autoptr(FlDartProject) project = fl_dart_project_new();
   g_autoptr(FlEngine) engine = fl_engine_new(project);
+  FlutterEngineProcTable* embedder_api = fl_engine_get_embedder_api(engine);
 
   g_autoptr(GError) error = nullptr;
   EXPECT_TRUE(fl_engine_start(engine, &error));
@@ -489,8 +494,8 @@ TEST(FlBinaryMessengerTest, ControlChannelErrorResponse) {
   g_autoptr(FlBinaryMessenger) messenger = fl_binary_messenger_new(engine);
   bool called = false;
   FlutterEngineSendPlatformMessageFnPtr old_handler =
-      fl_engine_get_embedder_api(engine)->SendPlatformMessage;
-  fl_engine_get_embedder_api(engine)->SendPlatformMessage = MOCK_ENGINE_PROC(
+      embedder_api->SendPlatformMessage;
+  embedder_api->SendPlatformMessage = MOCK_ENGINE_PROC(
       SendPlatformMessage,
       ([&called, old_handler, loop](auto engine,
                                     const FlutterPlatformMessage* message) {

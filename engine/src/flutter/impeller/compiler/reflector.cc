@@ -7,7 +7,6 @@
 #include "impeller/compiler/reflector.h"
 
 #include <atomic>
-#include <format>
 #include <optional>
 #include <set>
 #include <sstream>
@@ -190,20 +189,6 @@ std::optional<nlohmann::json> Reflector::GenerateTemplateArguments() const {
       for (auto uniform_buffer : storage_buffers_json.value()) {
         uniform_buffer["descriptor_type"] = "DescriptorType::kStorageBuffer";
         buffers.emplace_back(std::move(uniform_buffer));
-      }
-    } else {
-      return std::nullopt;
-    }
-  }
-
-  {
-    auto& uniforms = root["uniforms"] = nlohmann::json::array_t{};
-    if (auto uniforms_json =
-            ReflectResources(shader_resources.gl_plain_uniforms);
-        uniforms_json.has_value()) {
-      for (auto uniform : uniforms_json.value()) {
-        uniform["descriptor_type"] = "DescriptorType::kUniform";
-        uniforms.emplace_back(std::move(uniform));
       }
     } else {
       return std::nullopt;
@@ -413,25 +398,11 @@ std::shared_ptr<RuntimeStageData::Shader> Reflector::GenerateRuntimeStageData()
           break;
         }
         case StructMember::UnderlyingType::kFloat: {
-          if (member.array_elements > 1) {
-            // For each array element member, insert 1 layout property per byte
-            // and 0 layout property per byte of padding
-            for (auto i = 0; i < member.array_elements; i++) {
-              for (auto j = 0u; j < member.size / sizeof(float); j++) {
-                struct_layout.push_back(1);
-              }
-              for (auto j = 0u; j < member.element_padding / sizeof(float);
-                   j++) {
-                struct_layout.push_back(0);
-              }
-            }
-          } else {
-            size_t member_float_count = member.byte_length / sizeof(float);
-            float_count += member_float_count;
-            while (member_float_count > 0) {
-              struct_layout.push_back(1);
-              member_float_count--;
-            }
+          size_t member_float_count = member.byte_length / sizeof(float);
+          float_count += member_float_count;
+          while (member_float_count > 0) {
+            struct_layout.push_back(1);
+            member_float_count--;
           }
           break;
         }
@@ -842,13 +813,13 @@ std::vector<StructMember> Reflector::ReadStructMembers(
       result.emplace_back(StructMember{
           TypeNameWithPaddingOfSize(alignment_pad),  // type
           spirv_cross::SPIRType::BaseType::Void,     // basetype
-          std::format("_PADDING_{}_",
-                      GetMemberNameAtIndex(struct_type, i)),  // name
-          current_byte_offset,                                // offset
-          alignment_pad,                                      // size
-          alignment_pad,                                      // byte_length
-          std::nullopt,                                       // array_elements
-          0,                                                  // element_padding
+          SPrintF("_PADDING_%s_",
+                  GetMemberNameAtIndex(struct_type, i).c_str()),  // name
+          current_byte_offset,                                    // offset
+          alignment_pad,                                          // size
+          alignment_pad,                                          // byte_length
+          std::nullopt,  // array_elements
+          0,             // element_padding
       });
       current_byte_offset += alignment_pad;
     }

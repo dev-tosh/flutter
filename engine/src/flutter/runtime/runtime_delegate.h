@@ -14,7 +14,6 @@
 #include "flutter/lib/ui/semantics/semantics_node.h"
 #include "flutter/lib/ui/text/font_collection.h"
 #include "flutter/lib/ui/window/platform_message.h"
-#include "flutter/lib/ui/window/view_focus.h"
 #include "flutter/shell/common/platform_message_handler.h"
 #include "third_party/dart/runtime/include/dart_api.h"
 
@@ -32,13 +31,8 @@ class RuntimeDelegate {
                       std::unique_ptr<flutter::LayerTree> layer_tree,
                       float device_pixel_ratio) = 0;
 
-  virtual void UpdateSemantics(int64_t view_id,
-                               SemanticsNodeUpdates update,
+  virtual void UpdateSemantics(SemanticsNodeUpdates update,
                                CustomAccessibilityActionUpdates actions) = 0;
-
-  virtual void SetApplicationLocale(std::string locale) = 0;
-
-  virtual void SetSemanticsTreeEnabled(bool enabled) = 0;
 
   virtual void HandlePlatformMessage(
       std::unique_ptr<PlatformMessage> message) = 0;
@@ -67,9 +61,6 @@ class RuntimeDelegate {
 
   virtual double GetScaledFontSize(double unscaled_font_size,
                                    int configuration_id) const = 0;
-
-  virtual void RequestViewFocusChange(
-      const ViewFocusChangeRequest& request) = 0;
 
  protected:
   virtual ~RuntimeDelegate();

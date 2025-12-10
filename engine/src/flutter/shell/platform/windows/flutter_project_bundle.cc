@@ -29,12 +29,6 @@ FlutterProjectBundle::FlutterProjectBundle(
         std::string(properties.dart_entrypoint_argv[i]));
   }
 
-  gpu_preference_ =
-      static_cast<FlutterGpuPreference>(properties.gpu_preference);
-
-  ui_thread_policy_ =
-      static_cast<FlutterUIThreadPolicy>(properties.ui_thread_policy);
-
   // Resolve any relative paths.
   if (assets_path_.is_relative() || icu_path_.is_relative() ||
       (!aot_library_path_.empty() && aot_library_path_.is_relative())) {
@@ -69,11 +63,11 @@ UniqueAotDataPtr FlutterProjectBundle::LoadAotData(
     return UniqueAotDataPtr(nullptr, nullptr);
   }
   if (!std::filesystem::exists(aot_library_path_)) {
-    FML_LOG(ERROR) << "Can't load AOT data from " << aot_library_path_
-                   << "; no such file.";
+    FML_LOG(ERROR) << "Can't load AOT data from "
+                   << aot_library_path_.u8string() << "; no such file.";
     return UniqueAotDataPtr(nullptr, nullptr);
   }
-  std::string path_string = aot_library_path_.string();
+  std::string path_string = aot_library_path_.u8string();
   FlutterEngineAOTDataSource source = {};
   source.type = kFlutterEngineAOTDataSourceTypeElfPath;
   source.elf_path = path_string.c_str();

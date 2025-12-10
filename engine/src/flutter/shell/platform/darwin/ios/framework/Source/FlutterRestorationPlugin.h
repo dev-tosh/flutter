@@ -17,12 +17,6 @@
 
 @property(nonatomic, copy) NSData* restorationData;
 - (void)markRestorationComplete;
-
-/**
- * Reset the state restoration plugin to prepare for a hot restart.
- *
- * This clears the restoration data and drops any pending requests.
- */
 - (void)reset;
 @end
 #endif  // FLUTTER_SHELL_PLATFORM_DARWIN_IOS_FRAMEWORK_SOURCE_FLUTTERRESTORATIONPLUGIN_H_

@@ -10,7 +10,6 @@
 #include "flutter/shell/platform/embedder/tests/embedder_test_backingstore_producer.h"
 #include "flutter/shell/platform/embedder/tests/embedder_unittests_util.h"
 
-#include "third_party/skia/include/core/SkCPURecorder.h"
 #include "third_party/skia/include/core/SkImage.h"
 #include "third_party/skia/include/core/SkSurface.h"
 #include "third_party/skia/include/encode/SkPngEncoder.h"
@@ -161,7 +160,7 @@ bool ImageMatchesFixture(const std::string& fixture_file_name,
       fixture_image_mapping.GetMapping(), fixture_image_mapping.GetSize());
   auto fixture_image =
       SkImages::DeferredFromEncodedData(std::move(encoded_image))
-          ->makeRasterImage(nullptr);
+          ->makeRasterImage();
 
   FML_CHECK(fixture_image) << "Could not create image from fixture: "
                            << fixture_file_name;
@@ -169,8 +168,8 @@ bool ImageMatchesFixture(const std::string& fixture_file_name,
   FML_CHECK(scene_image) << "Invalid scene image.";
 
   auto scene_image_subset = scene_image->makeSubset(
-      skcpu::Recorder::TODO(),
-      SkIRect::MakeWH(fixture_image->width(), fixture_image->height()), {});
+      nullptr,
+      SkIRect::MakeWH(fixture_image->width(), fixture_image->height()));
 
   FML_CHECK(scene_image_subset)
       << "Could not create image subset for fixture comparison: "
@@ -289,21 +288,21 @@ void FilterMutationsByType(
                                handler);
 }
 
-DlMatrix GetTotalMutationTransformationMatrix(
+SkMatrix GetTotalMutationTransformationMatrix(
     const FlutterPlatformViewMutation** mutations,
     size_t count) {
-  DlMatrix collected;
+  SkMatrix collected;
 
   FilterMutationsByType(
       mutations, count, kFlutterPlatformViewMutationTypeTransformation,
       [&](const auto& mutation) {
-        collected = collected * DlMatrixMake(mutation.transformation);
+        collected.preConcat(SkMatrixMake(mutation.transformation));
       });
 
   return collected;
 }
 
-DlMatrix GetTotalMutationTransformationMatrix(const FlutterPlatformView* view) {
+SkMatrix GetTotalMutationTransformationMatrix(const FlutterPlatformView* view) {
   return GetTotalMutationTransformationMatrix(view->mutations,
                                               view->mutations_count);
 }

@@ -26,76 +26,76 @@ static constexpr char kTreeDumpInspectRootName[] = "semantic_tree_root";
 // Converts flutter semantic node flags to a string representation.
 std::string NodeFlagsToString(const flutter::SemanticsNode& node) {
   std::string output;
-  if (node.flags.isChecked != flutter::SemanticsCheckState::kNone) {
+  if (node.HasFlag(flutter::SemanticsFlags::kHasCheckedState)) {
     output += "kHasCheckedState|";
   }
-  if (node.flags.isEnabled != flutter::SemanticsTristate::kNone) {
+  if (node.HasFlag(flutter::SemanticsFlags::kHasEnabledState)) {
     output += "kHasEnabledState|";
   }
-  if (node.flags.hasImplicitScrolling) {
+  if (node.HasFlag(flutter::SemanticsFlags::kHasImplicitScrolling)) {
     output += "kHasImplicitScrolling|";
   }
-  if (node.flags.isToggled != flutter::SemanticsTristate::kNone) {
+  if (node.HasFlag(flutter::SemanticsFlags::kHasToggledState)) {
     output += "kHasToggledState|";
   }
-  if (node.flags.isButton) {
+  if (node.HasFlag(flutter::SemanticsFlags::kIsButton)) {
     output += "kIsButton|";
   }
-  if (node.flags.isChecked == flutter::SemanticsCheckState::kTrue) {
+  if (node.HasFlag(flutter::SemanticsFlags::kIsChecked)) {
     output += "kIsChecked|";
   }
-  if (node.flags.isEnabled == flutter::SemanticsTristate::kTrue) {
+  if (node.HasFlag(flutter::SemanticsFlags::kIsEnabled)) {
     output += "kIsEnabled|";
   }
-  if (node.flags.isFocused != flutter::SemanticsTristate::kNone) {
+  if (node.HasFlag(flutter::SemanticsFlags::kIsFocusable)) {
     output += "kIsFocusable|";
   }
-  if (node.flags.isFocused == flutter::SemanticsTristate::kTrue) {
+  if (node.HasFlag(flutter::SemanticsFlags::kIsFocused)) {
     output += "kIsFocused|";
   }
-  if (node.flags.isHeader) {
+  if (node.HasFlag(flutter::SemanticsFlags::kIsHeader)) {
     output += "kIsHeader|";
   }
-  if (node.flags.isHidden) {
+  if (node.HasFlag(flutter::SemanticsFlags::kIsHidden)) {
     output += "kIsHidden|";
   }
-  if (node.flags.isImage) {
+  if (node.HasFlag(flutter::SemanticsFlags::kIsImage)) {
     output += "kIsImage|";
   }
-  if (node.flags.isInMutuallyExclusiveGroup) {
+  if (node.HasFlag(flutter::SemanticsFlags::kIsInMutuallyExclusiveGroup)) {
     output += "kIsInMutuallyExclusiveGroup|";
   }
-  if (node.flags.isKeyboardKey) {
+  if (node.HasFlag(flutter::SemanticsFlags::kIsKeyboardKey)) {
     output += "kIsKeyboardKey|";
   }
-  if (node.flags.isLink) {
+  if (node.HasFlag(flutter::SemanticsFlags::kIsLink)) {
     output += "kIsLink|";
   }
-  if (node.flags.isLiveRegion) {
+  if (node.HasFlag(flutter::SemanticsFlags::kIsLiveRegion)) {
     output += "kIsLiveRegion|";
   }
-  if (node.flags.isObscured) {
+  if (node.HasFlag(flutter::SemanticsFlags::kIsObscured)) {
     output += "kIsObscured|";
   }
-  if (node.flags.isReadOnly) {
+  if (node.HasFlag(flutter::SemanticsFlags::kIsReadOnly)) {
     output += "kIsReadOnly|";
   }
-  if (node.flags.isSelected == flutter::SemanticsTristate::kTrue) {
+  if (node.HasFlag(flutter::SemanticsFlags::kIsSelected)) {
     output += "kIsSelected|";
   }
-  if (node.flags.isSlider) {
+  if (node.HasFlag(flutter::SemanticsFlags::kIsSlider)) {
     output += "kIsSlider|";
   }
-  if (node.flags.isTextField) {
+  if (node.HasFlag(flutter::SemanticsFlags::kIsTextField)) {
     output += "kIsTextField|";
   }
-  if (node.flags.isToggled == flutter::SemanticsTristate::kTrue) {
+  if (node.HasFlag(flutter::SemanticsFlags::kIsToggled)) {
     output += "kIsToggled|";
   }
-  if (node.flags.namesRoute) {
+  if (node.HasFlag(flutter::SemanticsFlags::kNamesRoute)) {
     output += "kNamesRoute|";
   }
-  if (node.flags.scopesRoute) {
+  if (node.HasFlag(flutter::SemanticsFlags::kScopesRoute)) {
     output += "kScopesRoute|";
   }
 
@@ -178,12 +178,6 @@ std::string NodeActionsToString(const flutter::SemanticsNode& node) {
   }
   if (node.HasAction(flutter::SemanticsAction::kFocus)) {
     output += "kFocus|";
-  }
-  if (node.HasAction(flutter::SemanticsAction::kExpand)) {
-    output += "kExpand|";
-  }
-  if (node.HasAction(flutter::SemanticsAction::kCollapse)) {
-    output += "kCollapse|";
   }
 
   return output;
@@ -285,8 +279,10 @@ fuchsia::ui::gfx::BoundingBox AccessibilityBridge::GetNodeLocation(
   fuchsia::ui::gfx::BoundingBox box;
   box.min.x = node.rect.fLeft;
   box.min.y = node.rect.fTop;
+  box.min.z = static_cast<float>(node.elevation);
   box.max.x = node.rect.fRight;
   box.max.y = node.rect.fBottom;
+  box.max.z = static_cast<float>(node.thickness);
   return box;
 }
 
@@ -326,7 +322,7 @@ AccessibilityBridge::GetNodeAttributes(const flutter::SemanticsNode& node,
     *added_size += node.tooltip.size();
   }
 
-  if (node.flags.isKeyboardKey) {
+  if (node.HasFlag(flutter::SemanticsFlags::kIsKeyboardKey)) {
     attributes.set_is_keyboard_key(true);
   }
 
@@ -340,27 +336,26 @@ fuchsia::accessibility::semantics::States AccessibilityBridge::GetNodeStates(
   (*additional_size) += sizeof(fuchsia::accessibility::semantics::States);
 
   // Set checked state.
-  if (node.flags.isChecked == flutter::SemanticsCheckState::kNone) {
+  if (!node.HasFlag(flutter::SemanticsFlags::kHasCheckedState)) {
     states.set_checked_state(
         fuchsia::accessibility::semantics::CheckedState::NONE);
   } else {
     states.set_checked_state(
-        node.flags.isChecked == flutter::SemanticsCheckState::kTrue
+        node.HasFlag(flutter::SemanticsFlags::kIsChecked)
             ? fuchsia::accessibility::semantics::CheckedState::CHECKED
             : fuchsia::accessibility::semantics::CheckedState::UNCHECKED);
   }
 
   // Set enabled state.
-  if (node.flags.isEnabled != flutter::SemanticsTristate::kNone) {
+  if (node.HasFlag(flutter::SemanticsFlags::kHasEnabledState)) {
     states.set_enabled_state(
-        node.flags.isEnabled == flutter::SemanticsTristate::kTrue
+        node.HasFlag(flutter::SemanticsFlags::kIsEnabled)
             ? fuchsia::accessibility::semantics::EnabledState::ENABLED
             : fuchsia::accessibility::semantics::EnabledState::DISABLED);
   }
 
   // Set selected state.
-  states.set_selected(node.flags.isSelected ==
-                      flutter::SemanticsTristate::kTrue);
+  states.set_selected(node.HasFlag(flutter::SemanticsFlags::kIsSelected));
 
   // Flutter's definition of a hidden node is different from Fuchsia, so it must
   // not be set here.
@@ -376,9 +371,9 @@ fuchsia::accessibility::semantics::States AccessibilityBridge::GetNodeStates(
   }
 
   // Set toggled state.
-  if (node.flags.isToggled != flutter::SemanticsTristate::kNone) {
+  if (node.HasFlag(flutter::SemanticsFlags::kHasToggledState)) {
     states.set_toggled_state(
-        node.flags.isToggled == flutter::SemanticsTristate::kTrue
+        node.HasFlag(flutter::SemanticsFlags::kIsToggled)
             ? fuchsia::accessibility::semantics::ToggledState::ON
             : fuchsia::accessibility::semantics::ToggledState::OFF);
   }
@@ -418,26 +413,26 @@ AccessibilityBridge::GetNodeActions(const flutter::SemanticsNode& node,
 
 fuchsia::accessibility::semantics::Role AccessibilityBridge::GetNodeRole(
     const flutter::SemanticsNode& node) const {
-  if (node.flags.isButton) {
+  if (node.HasFlag(flutter::SemanticsFlags::kIsButton)) {
     return fuchsia::accessibility::semantics::Role::BUTTON;
   }
 
-  if (node.flags.isTextField) {
+  if (node.HasFlag(flutter::SemanticsFlags::kIsTextField)) {
     return fuchsia::accessibility::semantics::Role::TEXT_FIELD;
   }
 
-  if (node.flags.isLink) {
+  if (node.HasFlag(flutter::SemanticsFlags::kIsLink)) {
     return fuchsia::accessibility::semantics::Role::LINK;
   }
 
-  if (node.flags.isSlider) {
+  if (node.HasFlag(flutter::SemanticsFlags::kIsSlider)) {
     return fuchsia::accessibility::semantics::Role::SLIDER;
   }
 
-  if (node.flags.isHeader) {
+  if (node.HasFlag(flutter::SemanticsFlags::kIsHeader)) {
     return fuchsia::accessibility::semantics::Role::HEADER;
   }
-  if (node.flags.isImage) {
+  if (node.HasFlag(flutter::SemanticsFlags::kIsImage)) {
     return fuchsia::accessibility::semantics::Role::IMAGE;
   }
 
@@ -453,15 +448,15 @@ fuchsia::accessibility::semantics::Role AccessibilityBridge::GetNodeRole(
   // If a flutter node has a checked state, then we assume it is either a
   // checkbox or a radio button. We distinguish between checkboxes and
   // radio buttons based on membership in a mutually exclusive group.
-  if (node.flags.isChecked != flutter::SemanticsCheckState::kNone) {
-    if (node.flags.isInMutuallyExclusiveGroup) {
+  if (node.HasFlag(flutter::SemanticsFlags::kHasCheckedState)) {
+    if (node.HasFlag(flutter::SemanticsFlags::kIsInMutuallyExclusiveGroup)) {
       return fuchsia::accessibility::semantics::Role::RADIO_BUTTON;
     } else {
       return fuchsia::accessibility::semantics::Role::CHECK_BOX;
     }
   }
 
-  if (node.flags.isToggled != flutter::SemanticsTristate::kNone) {
+  if (node.HasFlag(flutter::SemanticsFlags::kHasToggledState)) {
     return fuchsia::accessibility::semantics::Role::TOGGLE_SWITCH;
   }
   return fuchsia::accessibility::semantics::Role::UNKNOWN;
@@ -786,7 +781,9 @@ std::optional<int32_t> AccessibilityBridge::GetHitNode(int32_t node_id,
     return {};
   }
   auto const& node = it->second;
-  if (node.data.flags.isHidden || !node.screen_rect.contains(x, y)) {
+  if (node.data.flags &
+          static_cast<int32_t>(flutter::SemanticsFlags::kIsHidden) ||  //
+      !node.screen_rect.contains(x, y)) {
     return {};
   }
   for (int32_t child_id : node.data.childrenInHitTestOrder) {
@@ -805,11 +802,11 @@ std::optional<int32_t> AccessibilityBridge::GetHitNode(int32_t node_id,
 
 bool AccessibilityBridge::IsFocusable(
     const flutter::SemanticsNode& node) const {
-  if (node.flags.scopesRoute) {
+  if (node.HasFlag(flutter::SemanticsFlags::kScopesRoute)) {
     return false;
   }
 
-  if (node.flags.isFocused != flutter::SemanticsTristate::kNone) {
+  if (node.HasFlag(flutter::SemanticsFlags::kIsFocusable)) {
     return true;
   }
 
@@ -876,8 +873,7 @@ void AccessibilityBridge::FillInspectTree(int32_t flutter_node_id,
         "text_direction", data.textDirection == 1 ? "RTL" : "LTR", inspector);
   }
 
-  std::string flags = NodeFlagsToString(data);
-  if (!flags.empty()) {
+  if (data.flags) {
     inspect_node.CreateString("flags", NodeFlagsToString(data), inspector);
   }
   if (data.actions) {

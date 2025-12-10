@@ -4,8 +4,6 @@
 
 import 'dart:convert';
 
-import 'package:process_runner/process_runner.dart';
-
 import '../environment.dart';
 import '../logger.dart';
 import 'device.dart';
@@ -26,11 +24,14 @@ interface class FlutterTool {
 
   /// Returns a list of devices available via the `flutter devices` command.
   Future<List<Device>> devices() async {
-    final ProcessRunnerResult result = await _environment.processRunner.runProcess([
-      _toolPath,
-      'devices',
-      '--machine',
-    ], failOk: true);
+    final result = await _environment.processRunner.runProcess(
+      [
+        _toolPath,
+        'devices',
+        '--machine',
+      ],
+      failOk: true,
+    );
     if (result.exitCode != 0) {
       throw FatalError(
         'Failed to run `flutter devices --machine`.\n\n'
@@ -51,13 +52,17 @@ interface class FlutterTool {
     final parsedDevices = <Device>[];
     for (final device in jsonDevices) {
       if (device is! Map<String, Object?>) {
-        _environment.logger.error('Skipping device: Expected a JSON Object, but got:\n$device');
+        _environment.logger.error(
+          'Skipping device: Expected a JSON Object, but got:\n$device',
+        );
         continue;
       }
       try {
         parsedDevices.add(Device.fromJson(device));
       } on FormatException catch (e) {
-        _environment.logger.error('Skipping device: Failed to parse JSON Object:\n$device\n\n$e');
+        _environment.logger.error(
+          'Skipping device: Failed to parse JSON Object:\n$device\n\n$e',
+        );
       }
     }
     return parsedDevices;

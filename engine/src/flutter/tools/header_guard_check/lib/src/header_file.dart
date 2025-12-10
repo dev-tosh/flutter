@@ -12,19 +12,23 @@ import 'package:source_span/source_span.dart';
 @immutable
 final class HeaderFile {
   /// Creates a new header file from the given [path].
-  const HeaderFile.from(this.path, {required this.guard, required this.pragmaOnce});
+  const HeaderFile.from(
+    this.path, {
+    required this.guard,
+    required this.pragmaOnce,
+  });
 
   /// Parses the given [path] as a header file.
   ///
   /// Throws an [ArgumentError] if the file does not exist.
   factory HeaderFile.parse(String path) {
-    final file = io.File(path);
+    final io.File file = io.File(path);
     if (!file.existsSync()) {
       throw ArgumentError.value(path, 'path', 'File does not exist.');
     }
 
     final String contents = file.readAsStringSync();
-    final sourceFile = SourceFile.fromString(contents, url: p.toUri(path));
+    final SourceFile sourceFile = SourceFile.fromString(contents, url: p.toUri(path));
     return HeaderFile.from(
       path,
       guard: _parseGuard(sourceFile),
@@ -32,7 +36,11 @@ final class HeaderFile {
     );
   }
 
-  static ({int start, int end, String line}) _getLine(SourceFile sourceFile, int index) {
+  static ({
+    int start,
+    int end,
+    String line,
+  }) _getLine(SourceFile sourceFile, int index) {
     final int start = sourceFile.getOffset(index);
     int end = index == sourceFile.lines - 1
         ? sourceFile.length
@@ -51,7 +59,11 @@ final class HeaderFile {
       line = line.substring(0, line.length - 1);
     }
 
-    return (start: start, end: end, line: line);
+    return (
+      start: start,
+      end: end,
+      line: line,
+    );
   }
 
   /// Parses the header guard of the given [sourceFile].
@@ -61,7 +73,7 @@ final class HeaderFile {
     SourceSpan? endifSpan;
 
     // Iterate over the lines in the file.
-    for (var i = 0; i < sourceFile.lines; i++) {
+    for (int i = 0; i < sourceFile.lines; i++) {
       final (:int start, :int end, :String line) = _getLine(sourceFile, i);
 
       // Check if the line is a header guard directive.
@@ -93,13 +105,17 @@ final class HeaderFile {
       }
     }
 
-    return HeaderGuardSpans(ifndefSpan: ifndefSpan, defineSpan: defineSpan, endifSpan: endifSpan);
+    return HeaderGuardSpans(
+      ifndefSpan: ifndefSpan,
+      defineSpan: defineSpan,
+      endifSpan: endifSpan,
+    );
   }
 
   /// Parses the `#pragma once` directive of the given [sourceFile].
   static SourceSpan? _parsePragmaOnce(SourceFile sourceFile) {
     // Iterate over the lines in the file.
-    for (var i = 0; i < sourceFile.lines; i++) {
+    for (int i = 0; i < sourceFile.lines; i++) {
       final (:int start, :int end, :String line) = _getLine(sourceFile, i);
 
       // Check if the line is a header guard directive.
@@ -131,9 +147,7 @@ final class HeaderFile {
   /// For example, if the file is `foo/bar/baz.h`, this will return `FLUTTER_FOO_BAR_BAZ_H_`.
   String computeExpectedName({required String engineRoot}) {
     final String relativePath = p.relative(path, from: engineRoot);
-    final String underscoredRelativePath = p
-        .withoutExtension(relativePath)
-        .replaceAll(_nonAlphaNumeric, '_');
+    final String underscoredRelativePath = p.withoutExtension(relativePath).replaceAll(_nonAlphaNumeric, '_');
     return 'FLUTTER_${underscoredRelativePath.toUpperCase()}_H_';
   }
 
@@ -159,14 +173,14 @@ final class HeaderFile {
     // append an endif and a newline at the end of the file.
     if (pragmaOnce != null) {
       // Append the endif and newline.
-      var newContents = '$oldContents\n#endif  // $expectedGuard\n';
+      String newContents = '$oldContents\n#endif  // $expectedGuard\n';
 
       // Replace the span with the ifndef/define.
       newContents = newContents.replaceRange(
         pragmaOnce!.start.offset,
         pragmaOnce!.end.offset,
         '#ifndef $expectedGuard\n'
-        '#define $expectedGuard',
+        '#define $expectedGuard'
       );
 
       // Write the new contents to the file.
@@ -177,25 +191,26 @@ final class HeaderFile {
     // If we're not using pragma once, replace the header guard with the
     // expected header guard.
     if (guard != null) {
+
       // Replace endif:
       String newContents = oldContents.replaceRange(
         guard!.endifSpan!.start.offset,
         guard!.endifSpan!.end.offset,
-        '#endif  // $expectedGuard',
+        '#endif  // $expectedGuard'
       );
 
       // Replace define:
       newContents = newContents.replaceRange(
         guard!.defineSpan!.start.offset,
         guard!.defineSpan!.end.offset,
-        '#define $expectedGuard',
+        '#define $expectedGuard'
       );
 
       // Replace ifndef:
       newContents = newContents.replaceRange(
         guard!.ifndefSpan!.start.offset,
         guard!.ifndefSpan!.end.offset,
-        '#ifndef $expectedGuard',
+        '#ifndef $expectedGuard'
       );
 
       // Write the new contents to the file.
@@ -206,12 +221,12 @@ final class HeaderFile {
     // If we're missing a guard entirely, add one. The rules are:
     // 1. Add a newline, #endif at the end of the file.
     // 2. Add a newline, #ifndef, #define after the first non-comment line.
-    var newContents = oldContents;
+    String newContents = oldContents;
     newContents += '\n#endif  // $expectedGuard\n';
     newContents = newContents.replaceFirst(
       RegExp(r'^(?!//)', multiLine: true),
       '\n#ifndef $expectedGuard\n'
-      '#define $expectedGuard\n',
+      '#define $expectedGuard\n'
     );
 
     // Write the new contents to the file.

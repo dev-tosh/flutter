@@ -16,18 +16,15 @@ import android.view.ViewTreeObserver.OnWindowFocusChangeListener;
 import androidx.activity.OnBackPressedCallback;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
-import androidx.annotation.RequiresApi;
 import androidx.annotation.VisibleForTesting;
 import androidx.fragment.app.Fragment;
 import androidx.fragment.app.FragmentActivity;
 import androidx.lifecycle.Lifecycle;
-import io.flutter.Build;
 import io.flutter.Log;
 import io.flutter.embedding.engine.FlutterEngine;
 import io.flutter.embedding.engine.FlutterShellArgs;
 import io.flutter.embedding.engine.renderer.FlutterUiDisplayListener;
 import io.flutter.plugin.platform.PlatformPlugin;
-import io.flutter.plugin.view.SensitiveContentPlugin;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -1086,7 +1083,6 @@ public class FlutterFragment extends Fragment
 
   @Nullable
   @Override
-  @RequiresApi(Build.API_LEVELS.API_24)
   public View onCreateView(
       LayoutInflater inflater, @Nullable ViewGroup container, @Nullable Bundle savedInstanceState) {
     return delegate.onCreateView(
@@ -1145,7 +1141,6 @@ public class FlutterFragment extends Fragment
   }
 
   @Override
-  @RequiresApi(Build.API_LEVELS.API_24)
   public void onDestroyView() {
     super.onDestroyView();
     requireView()
@@ -1165,7 +1160,6 @@ public class FlutterFragment extends Fragment
   }
 
   @Override
-  @RequiresApi(Build.API_LEVELS.API_24)
   public void detachFromFlutterEngine() {
     Log.w(
         TAG,
@@ -1509,18 +1503,6 @@ public class FlutterFragment extends Fragment
       @Nullable Activity activity, @NonNull FlutterEngine flutterEngine) {
     if (activity != null) {
       return new PlatformPlugin(getActivity(), flutterEngine.getPlatformChannel(), this);
-    } else {
-      return null;
-    }
-  }
-
-  @Nullable
-  @Override
-  public SensitiveContentPlugin provideSensitiveContentPlugin(
-      @Nullable Activity activity, @NonNull FlutterEngine flutterEngine) {
-    if (activity != null) {
-      return new SensitiveContentPlugin(
-          FLUTTER_VIEW_ID, activity, flutterEngine.getSensitiveContentChannel());
     } else {
       return null;
     }

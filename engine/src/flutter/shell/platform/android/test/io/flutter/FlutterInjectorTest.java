@@ -25,7 +25,9 @@ import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
+import org.robolectric.annotation.Config;
 
+@Config(manifest = Config.NONE)
 @RunWith(AndroidJUnit4.class)
 public class FlutterInjectorTest {
   @Mock FlutterLoader mockFlutterLoader;
@@ -61,12 +63,17 @@ public class FlutterInjectorTest {
 
     List<Callable<String>> callables =
         Arrays.asList(
-            () -> Thread.currentThread().getName(), () -> Thread.currentThread().getName());
+            () -> {
+              return Thread.currentThread().getName();
+            },
+            () -> {
+              return Thread.currentThread().getName();
+            });
 
     List<Future<String>> threadNames;
     threadNames = injector.executorService().invokeAll(callables);
 
-    assertEquals(2, threadNames.size());
+    assertEquals(threadNames.size(), 2);
     for (Future<String> name : threadNames) {
       assertTrue(name.get().startsWith("flutter-worker-"));
     }
@@ -104,8 +111,9 @@ public class FlutterInjectorTest {
 
     assertThrows(
         IllegalStateException.class,
-        () ->
-            FlutterInjector.setInstance(
-                new FlutterInjector.Builder().setFlutterLoader(mockFlutterLoader).build()));
+        () -> {
+          FlutterInjector.setInstance(
+              new FlutterInjector.Builder().setFlutterLoader(mockFlutterLoader).build());
+        });
   }
 }

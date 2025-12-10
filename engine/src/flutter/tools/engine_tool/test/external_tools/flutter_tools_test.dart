@@ -48,7 +48,10 @@ void main() {
   test('devices handles unparseable data', () async {
     final testEnv = TestEnvironment.withTestEngine(
       cannedProcesses: [
-        CannedProcess((List<String> command) => command.contains('devices'), stdout: 'not json'),
+        CannedProcess(
+          (List<String> command) => command.contains('devices'),
+          stdout: 'not json',
+        ),
       ],
     );
     addTearDown(testEnv.cleanup);
@@ -60,7 +63,10 @@ void main() {
         isA<FatalError>().having(
           (a) => a.toString(),
           'toString()',
-          allOf([contains('Failed to parse'), contains('STDOUT:\nnot json')]),
+          allOf([
+            contains('Failed to parse'),
+            contains('STDOUT:\nnot json'),
+          ]),
         ),
       ),
     );
@@ -84,7 +90,7 @@ void main() {
     addTearDown(testEnv.cleanup);
 
     final flutterTool = FlutterTool.fromEnvironment(testEnv.environment);
-    final List<Device> devices = await flutterTool.devices();
+    final devices = await flutterTool.devices();
     expect(devices, equals([testAndroidArm64Device]));
   });
 
@@ -111,7 +117,7 @@ void main() {
     addTearDown(testEnv.cleanup);
 
     final flutterTool = FlutterTool.fromEnvironment(testEnv.environment);
-    final List<Device> devices = await flutterTool.devices();
+    final devices = await flutterTool.devices();
     expect(devices, equals([testAndroidArm64Device, testIosArm64Device]));
   });
 
@@ -120,21 +126,24 @@ void main() {
       cannedProcesses: [
         CannedProcess(
           (List<String> command) => command.contains('devices'),
-          stdout: jsonEncode(['not a map']),
+          stdout: jsonEncode([
+            'not a map',
+          ]),
         ),
       ],
     );
     addTearDown(testEnv.cleanup);
 
     final flutterTool = FlutterTool.fromEnvironment(testEnv.environment);
-    final List<Device> devices = await flutterTool.devices();
+    final devices = await flutterTool.devices();
     expect(devices, isEmpty);
 
     expect(
       testEnv.testLogs,
-      contains(
-        logRecord(contains('Skipping device: Expected a JSON Object'), level: Logger.errorLevel),
-      ),
+      contains(logRecord(
+        contains('Skipping device: Expected a JSON Object'),
+        level: Logger.errorLevel,
+      )),
     );
   });
 
@@ -144,7 +153,10 @@ void main() {
         CannedProcess(
           (List<String> command) => command.contains('devices'),
           stdout: jsonEncode([
-            <String, Object?>{'name': 'test_device', 'id': 'test_id'},
+            <String, Object?>{
+              'name': 'test_device',
+              'id': 'test_id',
+            },
           ]),
         ),
       ],
@@ -152,17 +164,15 @@ void main() {
     addTearDown(testEnv.cleanup);
 
     final flutterTool = FlutterTool.fromEnvironment(testEnv.environment);
-    final List<Device> devices = await flutterTool.devices();
+    final devices = await flutterTool.devices();
     expect(devices, isEmpty);
 
     expect(
       testEnv.testLogs,
-      contains(
-        logRecord(
-          contains('Skipping device: Failed to parse JSON Object'),
-          level: Logger.errorLevel,
-        ),
-      ),
+      contains(logRecord(
+        contains('Skipping device: Failed to parse JSON Object'),
+        level: Logger.errorLevel,
+      )),
     );
   });
 
@@ -172,7 +182,11 @@ void main() {
         CannedProcess(
           (List<String> command) => command.contains('devices'),
           stdout: jsonEncode([
-            <String, Object?>{'name': 'test_device', 'id': 'test_id', 'targetPlatform': 'unknown'},
+            <String, Object?>{
+              'name': 'test_device',
+              'id': 'test_id',
+              'targetPlatform': 'unknown',
+            },
           ]),
         ),
       ],
@@ -180,12 +194,15 @@ void main() {
     addTearDown(testEnv.cleanup);
 
     final flutterTool = FlutterTool.fromEnvironment(testEnv.environment);
-    final List<Device> devices = await flutterTool.devices();
+    final devices = await flutterTool.devices();
     expect(devices, isEmpty);
 
     expect(
       testEnv.testLogs,
-      contains(logRecord(contains('Unrecognized TargetPlatform'), level: Logger.errorLevel)),
+      contains(logRecord(
+        contains('Unrecognized TargetPlatform'),
+        level: Logger.errorLevel,
+      )),
     );
   });
 }

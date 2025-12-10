@@ -27,43 +27,42 @@ bool Equals(const T* a, const U* b) {
 }
 
 template <class T, class U>
-bool Equals(const std::shared_ptr<const T>& a, const U* b) {
+bool Equals(std::shared_ptr<const T> a, const U* b) {
   return Equals(a.get(), b);
 }
 
 template <class T, class U>
-bool Equals(const std::shared_ptr<T>& a, const U* b) {
+bool Equals(std::shared_ptr<T> a, const U* b) {
   return Equals(a.get(), b);
 }
 
 template <class T, class U>
-bool Equals(const T* a, const std::shared_ptr<const U>& b) {
+bool Equals(const T* a, std::shared_ptr<const U> b) {
   return Equals(a, b.get());
 }
 
 template <class T, class U>
-bool Equals(const T* a, const std::shared_ptr<U>& b) {
+bool Equals(const T* a, std::shared_ptr<U> b) {
   return Equals(a, b.get());
 }
 
 template <class T, class U>
-bool Equals(const std::shared_ptr<const T>& a,
-            const std::shared_ptr<const U>& b) {
+bool Equals(std::shared_ptr<const T> a, std::shared_ptr<const U> b) {
   return Equals(a.get(), b.get());
 }
 
 template <class T, class U>
-bool Equals(const std::shared_ptr<T>& a, const std::shared_ptr<const U>& b) {
+bool Equals(std::shared_ptr<T> a, std::shared_ptr<const U> b) {
   return Equals(a.get(), b.get());
 }
 
 template <class T, class U>
-bool Equals(const std::shared_ptr<const T>& a, const std::shared_ptr<U>& b) {
+bool Equals(std::shared_ptr<const T> a, std::shared_ptr<U> b) {
   return Equals(a.get(), b.get());
 }
 
 template <class T, class U>
-bool Equals(const std::shared_ptr<T>& a, const std::shared_ptr<U>& b) {
+bool Equals(std::shared_ptr<T> a, std::shared_ptr<U> b) {
   return Equals(a.get(), b.get());
 }
 
@@ -73,43 +72,42 @@ bool NotEquals(const T* a, const U* b) {
 }
 
 template <class T, class U>
-bool NotEquals(const std::shared_ptr<const T>& a, const U* b) {
+bool NotEquals(std::shared_ptr<const T> a, const U* b) {
   return !Equals(a.get(), b);
 }
 
 template <class T, class U>
-bool NotEquals(const std::shared_ptr<T>& a, const U* b) {
+bool NotEquals(std::shared_ptr<T> a, const U* b) {
   return !Equals(a.get(), b);
 }
 
 template <class T, class U>
-bool NotEquals(const T* a, const std::shared_ptr<const U>& b) {
+bool NotEquals(const T* a, std::shared_ptr<const U> b) {
   return !Equals(a, b.get());
 }
 
 template <class T, class U>
-bool NotEquals(const T* a, const std::shared_ptr<U>& b) {
+bool NotEquals(const T* a, std::shared_ptr<U> b) {
   return !Equals(a, b.get());
 }
 
 template <class T, class U>
-bool NotEquals(const std::shared_ptr<const T>& a,
-               const std::shared_ptr<const U>& b) {
+bool NotEquals(std::shared_ptr<const T> a, std::shared_ptr<const U> b) {
   return !Equals(a.get(), b.get());
 }
 
 template <class T, class U>
-bool NotEquals(const std::shared_ptr<T>& a, const std::shared_ptr<const U>& b) {
+bool NotEquals(std::shared_ptr<T> a, std::shared_ptr<const U> b) {
   return !Equals(a.get(), b.get());
 }
 
 template <class T, class U>
-bool NotEquals(const std::shared_ptr<const T>& a, const std::shared_ptr<U>& b) {
+bool NotEquals(std::shared_ptr<const T> a, std::shared_ptr<U> b) {
   return !Equals(a.get(), b.get());
 }
 
 template <class T, class U>
-bool NotEquals(const std::shared_ptr<T>& a, const std::shared_ptr<U>& b) {
+bool NotEquals(std::shared_ptr<T> a, std::shared_ptr<U> b) {
   return !Equals(a.get(), b.get());
 }
 

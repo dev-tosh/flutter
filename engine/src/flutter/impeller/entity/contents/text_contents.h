@@ -7,11 +7,8 @@
 
 #include <memory>
 
-#include "impeller/entity/contents/content_context.h"
 #include "impeller/entity/contents/contents.h"
-#include "impeller/entity/contents/pipelines.h"
 #include "impeller/geometry/color.h"
-#include "impeller/geometry/stroke_parameters.h"
 #include "impeller/typographer/font_glyph_pair.h"
 #include "impeller/typographer/text_frame.h"
 
@@ -38,7 +35,11 @@ class TextContents final : public Contents {
 
   /// Must be set after text frame.
   void SetTextProperties(Color color,
-                         const std::optional<StrokeParameters>& stroke);
+                         bool stroke,
+                         Scalar stroke_width,
+                         Cap stroke_cap,
+                         Join stroke_join,
+                         Scalar stroke_miter);
 
   Color GetColor() const;
 
@@ -59,15 +60,6 @@ class TextContents final : public Contents {
   bool Render(const ContentContext& renderer,
               const Entity& entity,
               RenderPass& pass) const override;
-
-  static void ComputeVertexData(
-      GlyphAtlasPipeline::VertexShader::PerVertexData* vtx_contents,
-      const std::shared_ptr<TextFrame>& frame,
-      Scalar scale,
-      const Matrix& entity_transform,
-      Vector2 offset,
-      std::optional<GlyphProperties> glyph_properties,
-      const std::shared_ptr<GlyphAtlas>& atlas);
 
  private:
   std::optional<GlyphProperties> GetGlyphProperties() const;

@@ -51,13 +51,12 @@ class DisplayListMetalComplexityCalculator
     void drawRoundRect(const DlRoundRect& rrect) override;
     void drawDiffRoundRect(const DlRoundRect& outer,
                            const DlRoundRect& inner) override;
-    void drawRoundSuperellipse(const DlRoundSuperellipse& rse) override;
     void drawPath(const DlPath& path) override;
     void drawArc(const DlRect& oval_bounds,
                  DlScalar start_degrees,
                  DlScalar sweep_degrees,
                  bool use_center) override;
-    void drawPoints(DlPointMode mode,
+    void drawPoints(DlCanvas::PointMode mode,
                     uint32_t count,
                     const DlPoint points[]) override;
     void drawVertices(const std::shared_ptr<DlVertices>& vertices,
@@ -73,9 +72,12 @@ class DisplayListMetalComplexityCalculator
                        bool render_with_attributes) override;
     void drawDisplayList(const sk_sp<DisplayList> display_list,
                          DlScalar opacity) override;
-    void drawText(const std::shared_ptr<DlText>& text,
-                  DlScalar x,
-                  DlScalar y) override;
+    void drawTextBlob(const sk_sp<SkTextBlob> blob,
+                      DlScalar x,
+                      DlScalar y) override;
+    void drawTextFrame(const std::shared_ptr<impeller::TextFrame>& text_frame,
+                       DlScalar x,
+                       DlScalar y) override;
     void drawShadow(const DlPath& path,
                     const DlColor color,
                     const DlScalar elevation,
@@ -83,7 +85,7 @@ class DisplayListMetalComplexityCalculator
                     DlScalar dpr) override;
 
    protected:
-    void ImageRect(const DlISize& size,
+    void ImageRect(const SkISize& size,
                    bool texture_backed,
                    bool render_with_attributes,
                    bool enforce_src_edges) override;
@@ -92,7 +94,7 @@ class DisplayListMetalComplexityCalculator
 
    private:
     unsigned int save_layer_count_ = 0;
-    unsigned int draw_text_count_ = 0;
+    unsigned int draw_text_blob_count_ = 0;
   };
 
   DisplayListMetalComplexityCalculator()

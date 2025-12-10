@@ -44,7 +44,10 @@ void main() {
   test('gn.desc handles unparseable stdout', () async {
     final testEnv = TestEnvironment.withTestEngine(
       cannedProcesses: [
-        CannedProcess((List<String> command) => command.contains('desc'), stdout: 'not json'),
+        CannedProcess(
+          (List<String> command) => command.contains('desc'),
+          stdout: 'not json',
+        ),
       ],
     );
     addTearDown(testEnv.cleanup);
@@ -56,7 +59,10 @@ void main() {
         isA<FatalError>().having(
           (a) => a.toString(),
           'toString()',
-          allOf([contains('Failed to parse JSON'), contains('not json')]),
+          allOf([
+            contains('Failed to parse JSON'),
+            contains('not json'),
+          ]),
         ),
       ),
     );
@@ -90,34 +96,33 @@ void main() {
     addTearDown(testEnv.cleanup);
 
     final gn = Gn.fromEnvironment(testEnv.environment);
-    final List<BuildTarget> targets = await gn.desc('out/Release', TargetPattern('//foo', 'bar'));
+    final targets = await gn.desc('out/Release', TargetPattern('//foo', 'bar'));
     expect(targets, hasLength(3));
 
     // There should be exactly one binary test target and two library targets.
-    final ExecutableBuildTarget testTarget = targets.whereType<ExecutableBuildTarget>().single;
+    final testTarget = targets.whereType<ExecutableBuildTarget>().single;
     expect(
-      testTarget,
-      ExecutableBuildTarget(
-        label: Label('//foo/bar', 'baz_test'),
-        testOnly: true,
-        executable: 'out/host_debug/foo/bar/baz_test',
-      ),
-    );
+        testTarget,
+        ExecutableBuildTarget(
+          label: Label('//foo/bar', 'baz_test'),
+          testOnly: true,
+          executable: 'out/host_debug/foo/bar/baz_test',
+        ));
 
-    final List<LibraryBuildTarget> libraryTargets = targets
-        .whereType<LibraryBuildTarget>()
-        .toList();
+    final libraryTargets = targets.whereType<LibraryBuildTarget>().toList();
     expect(libraryTargets, hasLength(2));
     expect(
-      libraryTargets.contains(
-        LibraryBuildTarget(label: Label('//foo/bar', 'baz_shared_library'), testOnly: false),
-      ),
+      libraryTargets.contains(LibraryBuildTarget(
+        label: Label('//foo/bar', 'baz_shared_library'),
+        testOnly: false,
+      )),
       isTrue,
     );
     expect(
-      libraryTargets.contains(
-        LibraryBuildTarget(label: Label('//foo/bar', 'baz_static_library'), testOnly: false),
-      ),
+      libraryTargets.contains(LibraryBuildTarget(
+        label: Label('//foo/bar', 'baz_static_library'),
+        testOnly: false,
+      )),
       isTrue,
     );
   });
@@ -142,10 +147,10 @@ void main() {
     addTearDown(testEnv.cleanup);
 
     final gn = Gn.fromEnvironment(testEnv.environment);
-    final List<BuildTarget> targets = await gn.desc('out/Release', TargetPattern('//foo', 'bar'));
+    final targets = await gn.desc('out/Release', TargetPattern('//foo', 'bar'));
     expect(targets, hasLength(1));
 
-    final BuildTarget groupTarget = targets.single;
+    final groupTarget = targets.single;
     expect(
       groupTarget,
       GroupBuildTarget(
@@ -179,10 +184,10 @@ void main() {
     addTearDown(testEnv.cleanup);
 
     final gn = Gn.fromEnvironment(testEnv.environment);
-    final List<BuildTarget> targets = await gn.desc('out/Release', TargetPattern('//foo', 'bar'));
+    final targets = await gn.desc('out/Release', TargetPattern('//foo', 'bar'));
     expect(targets, hasLength(1));
 
-    final BuildTarget testTarget = targets.single;
+    final testTarget = targets.single;
     expect(
       testTarget,
       ExecutableBuildTarget(

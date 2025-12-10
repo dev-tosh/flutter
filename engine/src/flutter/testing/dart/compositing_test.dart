@@ -9,12 +9,12 @@ import 'package:test/test.dart';
 
 void main() {
   test('Scene.toImageSync succeeds', () async {
-    final recorder = PictureRecorder();
-    final canvas = Canvas(recorder);
-    const color = Color(0xFF123456);
+    final PictureRecorder recorder = PictureRecorder();
+    final Canvas canvas = Canvas(recorder);
+    const Color color = Color(0xFF123456);
     canvas.drawPaint(Paint()..color = color);
     final Picture picture = recorder.endRecording();
-    final builder = SceneBuilder();
+    final SceneBuilder builder = SceneBuilder();
     builder.pushOffset(10, 10);
     builder.addPicture(const Offset(5, 5), picture);
     final Scene scene = builder.build();
@@ -37,7 +37,7 @@ void main() {
   });
 
   test('Scene.toImageSync succeeds with texture layer', () async {
-    final builder = SceneBuilder();
+    final SceneBuilder builder = SceneBuilder();
     builder.pushOffset(10, 10);
     builder.addTexture(0, width: 10, height: 10);
 
@@ -59,15 +59,15 @@ void main() {
   });
 
   test('addPicture with disposed picture does not crash', () {
-    final recorder = PictureRecorder();
-    final canvas = Canvas(recorder);
+    final PictureRecorder recorder = PictureRecorder();
+    final Canvas canvas = Canvas(recorder);
     canvas.drawPaint(Paint());
     final Picture picture = recorder.endRecording();
     picture.dispose();
 
     expect(picture.debugDisposed, isTrue);
 
-    final builder = SceneBuilder();
+    final SceneBuilder builder = SceneBuilder();
     expect(
       () => builder.addPicture(Offset.zero, picture),
       throwsA(const isInstanceOf<AssertionError>()),
@@ -78,77 +78,57 @@ void main() {
   });
 
   test('pushTransform validates the matrix', () {
-    final builder = SceneBuilder();
-    final matrix4 = Float64List.fromList(<double>[1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1]);
+    final SceneBuilder builder = SceneBuilder();
+    final Float64List matrix4 = Float64List.fromList(<double>[
+      1, 0, 0, 0,
+      0, 1, 0, 0,
+      0, 0, 1, 0,
+      0, 0, 0, 1,
+    ]);
     expect(builder.pushTransform(matrix4), isNotNull);
 
-    final matrix4WrongLength = Float64List.fromList(<double>[
-      1,
-      0,
-      0,
-      0,
-      0,
-      1,
-      0,
-      0,
-      0,
-      1,
-      0,
-      0,
-      0,
-      0,
+    final Float64List matrix4WrongLength = Float64List.fromList(<double>[
+      1, 0, 0, 0,
+      0, 1, 0,
+      0, 0, 1, 0,
+      0, 0, 0,
     ]);
-    expect(() => builder.pushTransform(matrix4WrongLength), throwsA(isA<AssertionError>()));
+    expect(
+      () => builder.pushTransform(matrix4WrongLength),
+      throwsA(isA<AssertionError>()),
+    );
 
-    final matrix4NaN = Float64List.fromList(<double>[
-      1,
-      0,
-      0,
-      0,
-      0,
-      1,
-      0,
-      0,
-      0,
-      0,
-      1,
-      0,
-      0,
-      0,
-      0,
-      double.nan,
+    final Float64List matrix4NaN = Float64List.fromList(<double>[
+      1, 0, 0, 0,
+      0, 1, 0, 0,
+      0, 0, 1, 0,
+      0, 0, 0, double.nan,
     ]);
-    expect(() => builder.pushTransform(matrix4NaN), throwsA(isA<AssertionError>()));
+    expect(
+      () => builder.pushTransform(matrix4NaN),
+      throwsA(isA<AssertionError>()),
+    );
 
-    final matrix4Infinity = Float64List.fromList(<double>[
-      1,
-      0,
-      0,
-      0,
-      0,
-      1,
-      0,
-      0,
-      0,
-      0,
-      1,
-      0,
-      0,
-      0,
-      0,
-      double.infinity,
+    final Float64List matrix4Infinity = Float64List.fromList(<double>[
+      1, 0, 0, 0,
+      0, 1, 0, 0,
+      0, 0, 1, 0,
+      0, 0, 0, double.infinity,
     ]);
-    expect(() => builder.pushTransform(matrix4Infinity), throwsA(isA<AssertionError>()));
+    expect(
+      () => builder.pushTransform(matrix4Infinity),
+      throwsA(isA<AssertionError>()),
+    );
   });
 
   test('SceneBuilder accepts typed layers', () {
-    final builder1 = SceneBuilder();
+    final SceneBuilder builder1 = SceneBuilder();
     final OpacityEngineLayer opacity1 = builder1.pushOpacity(100);
     expect(opacity1, isNotNull);
     builder1.pop();
     builder1.build();
 
-    final builder2 = SceneBuilder();
+    final SceneBuilder builder2 = SceneBuilder();
     final OpacityEngineLayer opacity2 = builder2.pushOpacity(200, oldLayer: opacity1);
     expect(opacity2, isNotNull);
     builder2.pop();
@@ -157,233 +137,170 @@ void main() {
 
   // Attempts to use the same layer first as `oldLayer` then in `addRetained`.
   void testPushThenIllegalRetain(_TestNoSharingFunction pushFunction) {
-    final builder1 = SceneBuilder();
+    final SceneBuilder builder1 = SceneBuilder();
     final EngineLayer layer = pushFunction(builder1, null);
     builder1.pop();
     builder1.build();
 
-    final builder2 = SceneBuilder();
+    final SceneBuilder builder2 = SceneBuilder();
     pushFunction(builder2, layer);
     builder2.pop();
 
-    expect(
-      () {
-        builder2.addRetained(layer);
-      },
-      throwsA(
-        isA<AssertionError>().having(
-          (AssertionError e) => e.toString(),
-          'toString',
-          contains('The layer is already being used'),
-        ),
-      ),
-    );
+    expect(() {
+      builder2.addRetained(layer);
+    }, throwsA(isA<AssertionError>()
+      .having((AssertionError e) => e.toString(), 'toString',
+          contains('The layer is already being used'))));
     builder2.build();
   }
 
   // Attempts to use the same layer first in `addRetained` then as `oldLayer`.
   void testAddRetainedThenIllegalPush(_TestNoSharingFunction pushFunction) {
-    final builder1 = SceneBuilder();
+    final SceneBuilder builder1 = SceneBuilder();
     final EngineLayer layer = pushFunction(builder1, null);
     builder1.pop();
     builder1.build();
 
-    final builder2 = SceneBuilder();
+    final SceneBuilder builder2 = SceneBuilder();
     builder2.addRetained(layer);
 
-    expect(
-      () {
-        pushFunction(builder2, layer);
-      },
-      throwsA(
-        isA<AssertionError>().having(
-          (AssertionError e) => e.toString(),
-          'toString',
-          contains('The layer is already being used'),
-        ),
-      ),
-    );
+    expect(() {
+      pushFunction(builder2, layer);
+    }, throwsA(isA<AssertionError>()
+      .having((AssertionError e) => e.toString(), 'toString',
+          contains('The layer is already being used'))));
     builder2.build();
   }
 
   // Attempts to retain the same layer twice in the same scene.
   void testDoubleAddRetained(_TestNoSharingFunction pushFunction) {
-    final builder1 = SceneBuilder();
+    final SceneBuilder builder1 = SceneBuilder();
     final EngineLayer layer = pushFunction(builder1, null);
     builder1.pop();
     builder1.build();
 
-    final builder2 = SceneBuilder();
+    final SceneBuilder builder2 = SceneBuilder();
     builder2.addRetained(layer);
-    expect(
-      () {
-        builder2.addRetained(layer);
-      },
-      throwsA(
-        isA<AssertionError>().having(
-          (AssertionError e) => e.toString(),
-          'toString',
-          contains('The layer is already being used'),
-        ),
-      ),
-    );
+    expect(() {
+      builder2.addRetained(layer);
+    }, throwsA(isA<AssertionError>()
+      .having((AssertionError e) => e.toString(), 'toString',
+          contains('The layer is already being used'))));
     builder2.build();
   }
 
   // Attempts to use the same layer as `oldLayer` twice in the same scene.
   void testPushOldLayerTwice(_TestNoSharingFunction pushFunction) {
-    final builder1 = SceneBuilder();
+    final SceneBuilder builder1 = SceneBuilder();
     final EngineLayer layer = pushFunction(builder1, null);
     builder1.pop();
     builder1.build();
 
-    final builder2 = SceneBuilder();
+    final SceneBuilder builder2 = SceneBuilder();
     pushFunction(builder2, layer);
-    expect(
-      () {
-        pushFunction(builder2, layer);
-      },
-      throwsA(
-        isA<AssertionError>().having(
-          (AssertionError e) => e.toString(),
-          'toString',
-          contains('was previously used as oldLayer'),
-        ),
-      ),
-    );
+    expect(() {
+      pushFunction(builder2, layer);
+    }, throwsA(isA<AssertionError>()
+      .having((AssertionError e) => e.toString(), 'toString',
+          contains('was previously used as oldLayer'))));
     builder2.build();
   }
 
   // Attempts to use a child of a retained layer as an `oldLayer`.
   void testPushChildLayerOfRetainedLayer(_TestNoSharingFunction pushFunction) {
-    final builder1 = SceneBuilder();
+    final SceneBuilder builder1 = SceneBuilder();
     final EngineLayer layer = pushFunction(builder1, null);
     final OpacityEngineLayer childLayer = builder1.pushOpacity(123);
     builder1.pop();
     builder1.pop();
     builder1.build();
 
-    final builder2 = SceneBuilder();
+    final SceneBuilder builder2 = SceneBuilder();
     builder2.addRetained(layer);
-    expect(
-      () {
-        builder2.pushOpacity(321, oldLayer: childLayer);
-      },
-      throwsA(
-        isA<AssertionError>().having(
-          (AssertionError e) => e.toString(),
-          'toString',
-          contains('The layer is already being used'),
-        ),
-      ),
-    );
+    expect(() {
+      builder2.pushOpacity(321, oldLayer: childLayer);
+    }, throwsA(isA<AssertionError>()
+      .having((AssertionError e) => e.toString(), 'toString',
+          contains('The layer is already being used'))));
     builder2.build();
   }
 
   // Attempts to retain a layer whose child is already used as `oldLayer` elsewhere in the scene.
   void testRetainParentLayerOfPushedChild(_TestNoSharingFunction pushFunction) {
-    final builder1 = SceneBuilder();
+    final SceneBuilder builder1 = SceneBuilder();
     final EngineLayer layer = pushFunction(builder1, null);
     final OpacityEngineLayer childLayer = builder1.pushOpacity(123);
     builder1.pop();
     builder1.pop();
     builder1.build();
 
-    final builder2 = SceneBuilder();
+    final SceneBuilder builder2 = SceneBuilder();
     builder2.pushOpacity(234, oldLayer: childLayer);
     builder2.pop();
-    expect(
-      () {
-        builder2.addRetained(layer);
-      },
-      throwsA(
-        isA<AssertionError>().having(
-          (AssertionError e) => e.toString(),
-          'toString',
-          contains('The layer is already being used'),
-        ),
-      ),
-    );
+    expect(() {
+      builder2.addRetained(layer);
+    }, throwsA(isA<AssertionError>()
+      .having((AssertionError e) => e.toString(), 'toString',
+          contains('The layer is already being used'))));
     builder2.build();
   }
 
   // Attempts to retain a layer that has been used as `oldLayer` in a previous frame.
   void testRetainOldLayer(_TestNoSharingFunction pushFunction) {
-    final builder1 = SceneBuilder();
+    final SceneBuilder builder1 = SceneBuilder();
     final EngineLayer layer = pushFunction(builder1, null);
     builder1.pop();
     builder1.build();
 
-    final builder2 = SceneBuilder();
+    final SceneBuilder builder2 = SceneBuilder();
     pushFunction(builder2, layer);
     builder2.pop();
-    expect(
-      () {
-        final builder3 = SceneBuilder();
-        builder3.addRetained(layer);
-      },
-      throwsA(
-        isA<AssertionError>().having(
-          (AssertionError e) => e.toString(),
-          'toString',
-          contains('was previously used as oldLayer'),
-        ),
-      ),
-    );
+    expect(() {
+      final SceneBuilder builder3 = SceneBuilder();
+      builder3.addRetained(layer);
+    }, throwsA(isA<AssertionError>()
+      .having((AssertionError e) => e.toString(), 'toString',
+          contains('was previously used as oldLayer'))));
     builder2.build();
   }
 
   // Attempts to pass layer as `oldLayer` that has been used as `oldLayer` in a previous frame.
   void testPushOldLayer(_TestNoSharingFunction pushFunction) {
-    final builder1 = SceneBuilder();
+    final SceneBuilder builder1 = SceneBuilder();
     final EngineLayer layer = pushFunction(builder1, null);
     builder1.pop();
     builder1.build();
 
-    final builder2 = SceneBuilder();
+    final SceneBuilder builder2 = SceneBuilder();
     pushFunction(builder2, layer);
     builder2.pop();
-    expect(
-      () {
-        final builder3 = SceneBuilder();
-        pushFunction(builder3, layer);
-      },
-      throwsA(
-        isA<AssertionError>().having(
-          (AssertionError e) => e.toString(),
-          'toString',
-          contains('was previously used as oldLayer'),
-        ),
-      ),
-    );
+    expect(() {
+      final SceneBuilder builder3 = SceneBuilder();
+      pushFunction(builder3, layer);
+    }, throwsA(isA<AssertionError>()
+      .having((AssertionError e) => e.toString(), 'toString',
+          contains('was previously used as oldLayer'))));
     builder2.build();
   }
 
   // Attempts to retain a parent of a layer used as `oldLayer` in a previous frame.
   void testRetainsParentOfOldLayer(_TestNoSharingFunction pushFunction) {
-    final builder1 = SceneBuilder();
+    final SceneBuilder builder1 = SceneBuilder();
     final EngineLayer parentLayer = pushFunction(builder1, null);
     final OpacityEngineLayer childLayer = builder1.pushOpacity(123);
     builder1.pop();
     builder1.pop();
     builder1.build();
 
-    final builder2 = SceneBuilder();
+    final SceneBuilder builder2 = SceneBuilder();
     builder2.pushOpacity(321, oldLayer: childLayer);
     builder2.pop();
-    expect(
-      () {
-        final builder3 = SceneBuilder();
-        builder3.addRetained(parentLayer);
-      },
-      throwsA(
-        isA<AssertionError>().having(
-          (AssertionError e) => e.toString(),
-          'toString',
-          contains('was previously used as oldLayer'),
-        ),
-      ),
-    );
+    expect(() {
+      final SceneBuilder builder3 = SceneBuilder();
+      builder3.addRetained(parentLayer);
+    }, throwsA(isA<AssertionError>()
+      .having((AssertionError e) => e.toString(), 'toString',
+          contains('was previously used as oldLayer'))));
     builder2.build();
   }
 
@@ -419,17 +336,15 @@ void main() {
       return builder.pushOpacity(100, oldLayer: oldLayer as OpacityEngineLayer?);
     });
     testNoSharing((SceneBuilder builder, EngineLayer? oldLayer) {
-      return builder.pushBackdropFilter(
-        ImageFilter.blur(sigmaX: 1.0),
-        oldLayer: oldLayer as BackdropFilterEngineLayer?,
-      );
+      return builder.pushBackdropFilter(ImageFilter.blur(sigmaX: 1.0), oldLayer: oldLayer as BackdropFilterEngineLayer?);
     });
     testNoSharing((SceneBuilder builder, EngineLayer? oldLayer) {
       return builder.pushShaderMask(
-        Gradient.radial(Offset.zero, 10, const <Color>[
-          Color.fromARGB(0, 0, 0, 0),
-          Color.fromARGB(0, 255, 255, 255),
-        ]),
+        Gradient.radial(
+          Offset.zero,
+          10,
+          const <Color>[Color.fromARGB(0, 0, 0, 0), Color.fromARGB(0, 255, 255, 255)],
+        ),
         Rect.zero,
         BlendMode.color,
         oldLayer: oldLayer as ShaderMaskEngineLayer?,
@@ -437,33 +352,20 @@ void main() {
     });
     testNoSharing((SceneBuilder builder, EngineLayer? oldLayer) {
       return builder.pushColorFilter(
-        const ColorFilter.mode(Color.fromARGB(0, 0, 0, 0), BlendMode.color),
+        const ColorFilter.mode(
+          Color.fromARGB(0, 0, 0, 0),
+          BlendMode.color,
+        ),
         oldLayer: oldLayer as ColorFilterEngineLayer?,
       );
     });
     testNoSharing((SceneBuilder builder, EngineLayer? oldLayer) {
       return builder.pushColorFilter(
         const ColorFilter.matrix(<double>[
-          1,
-          0,
-          0,
-          0,
-          0,
-          0,
-          1,
-          0,
-          0,
-          0,
-          0,
-          0,
-          1,
-          0,
-          0,
-          0,
-          0,
-          0,
-          1,
-          0,
+          1, 0, 0, 0, 0,
+          0, 1, 0, 0, 0,
+          0, 0, 1, 0, 0,
+          0, 0, 0, 1, 0,
         ]),
         oldLayer: oldLayer as ColorFilterEngineLayer?,
       );
@@ -500,9 +402,12 @@ void main() {
     });
     testNoSharing((SceneBuilder builder, EngineLayer? oldLayer) {
       return builder.pushImageFilter(
-        ImageFilter.matrix(
-          Float64List.fromList(<double>[1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1]),
-        ),
+        ImageFilter.matrix(Float64List.fromList(<double>[
+          1, 0, 0, 0,
+          0, 1, 0, 0,
+          0, 0, 1, 0,
+          0, 0, 0, 1,
+        ])),
         oldLayer: oldLayer as ImageFilterEngineLayer?,
       );
     });

@@ -8,7 +8,7 @@
 #include <memory>
 
 #include "display_list/effects/dl_color_filter.h"
-#include "display_list/effects/dl_color_sources.h"
+#include "display_list/effects/dl_color_source.h"
 #include "display_list/effects/dl_image_filter.h"
 #include "impeller/display_list/color_filter.h"
 #include "impeller/display_list/image_filter.h"
@@ -20,7 +20,6 @@
 #include "impeller/entity/entity.h"
 #include "impeller/entity/geometry/geometry.h"
 #include "impeller/geometry/color.h"
-#include "impeller/geometry/stroke_parameters.h"
 
 namespace impeller {
 
@@ -38,7 +37,7 @@ struct Paint {
   /// @brief Whether or not a save layer with the provided paint can perform the
   ///        opacity peephole optimization.
   static bool CanApplyOpacityPeephole(const Paint& paint) {
-    return paint.blend_mode == BlendMode::kSrcOver &&
+    return paint.blend_mode == BlendMode::kSourceOver &&
            paint.invert_colors == false &&
            !paint.mask_blur_descriptor.has_value() &&
            paint.image_filter == nullptr && paint.color_filter == nullptr;
@@ -60,11 +59,11 @@ struct Paint {
         std::shared_ptr<ColorSourceContents> color_source_contents,
         const flutter::DlColorFilter* color_filter,
         bool invert_colors,
-        FillRectGeometry* rect_geom) const;
+        RectGeometry* rect_geom) const;
 
     std::shared_ptr<FilterContents> CreateMaskBlur(
         std::shared_ptr<TextureContents> texture_contents,
-        FillRectGeometry* rect_geom) const;
+        RectGeometry* rect_geom) const;
 
     std::shared_ptr<FilterContents> CreateMaskBlur(
         const FilterInput::Ref& input,
@@ -77,9 +76,12 @@ struct Paint {
   const flutter::DlColorFilter* color_filter = nullptr;
   const flutter::DlImageFilter* image_filter = nullptr;
 
-  StrokeParameters stroke;
+  Scalar stroke_width = 0.0;
+  Cap stroke_cap = Cap::kButt;
+  Join stroke_join = Join::kMiter;
+  Scalar stroke_miter = 4.0;
   Style style = Style::kFill;
-  BlendMode blend_mode = BlendMode::kSrcOver;
+  BlendMode blend_mode = BlendMode::kSourceOver;
   bool invert_colors = false;
 
   std::optional<MaskBlurDescriptor> mask_blur_descriptor;
@@ -116,25 +118,6 @@ struct Paint {
       const FilterInput::Variant& input,
       const Matrix& effect_transform,
       Entity::RenderingMode rendering_mode) const;
-
-  /// @brief Convert display list colors + stops into impeller colors and
-  ///        stops, taking care to ensure that the stops monotonically
-  ///        increase from 0.0 to 1.0.
-  ///
-  /// The general process is:
-  /// * Ensure that the first gradient stop value is 0.0. If not, insert a
-  ///   new stop with a value of 0.0 and use the first gradient color as this
-  ///   new stops color.
-  /// * Ensure the last gradient stop value is 1.0. If not, insert a new stop
-  ///   with a value of 1.0 and use the last gradient color as this stops color.
-  /// * Clamp all gradient values between the values of 0.0 and 1.0.
-  /// * For all stop values, ensure that the values are monotonically
-  ///   increasing by clamping each value to a minimum of the previous stop
-  ///   value and itself. For example, with stop values of 0.0, 0.5, 0.4, 1.0,
-  ///   we would clamp such that the values were 0.0, 0.5, 0.5, 1.0.
-  static void ConvertStops(const flutter::DlGradientColorSourceBase* gradient,
-                           std::vector<Color>& colors,
-                           std::vector<float>& stops);
 
  private:
   std::shared_ptr<Contents> WithColorFilter(

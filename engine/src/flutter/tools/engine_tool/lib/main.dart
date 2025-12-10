@@ -22,7 +22,8 @@ void main(List<String> args) async {
   }
 
   final bool verbose = args.contains('--verbose') || args.contains('-v');
-  final bool help = args.contains('help') || args.contains('--help') || args.contains('-h');
+  final bool help = args.contains('help') || args.contains('--help') ||
+                    args.contains('-h');
 
   // Find the engine repo.
   final Engine engine;
@@ -35,14 +36,22 @@ void main(List<String> args) async {
   }
 
   // Find and parse the engine build configs.
-  final buildConfigsDir = io.Directory(p.join(engine.flutterDir.path, 'ci', 'builders'));
-  final loader = BuildConfigLoader(buildConfigsDir: buildConfigsDir);
+  final io.Directory buildConfigsDir = io.Directory(p.join(
+    engine.flutterDir.path,
+    'ci',
+    'builders',
+  ));
+  final BuildConfigLoader loader = BuildConfigLoader(
+    buildConfigsDir: buildConfigsDir,
+  );
 
   // Treat it as an error if no build configs were found. The caller likely
   // expected to find some.
   final Map<String, BuilderConfig> configs = loader.configs;
   if (configs.isEmpty) {
-    io.stderr.writeln('Error: No build configs found under ${buildConfigsDir.path}');
+    io.stderr.writeln(
+      'Error: No build configs found under ${buildConfigsDir.path}',
+    );
     io.exitCode = 1;
     return;
   }
@@ -57,7 +66,7 @@ void main(List<String> args) async {
   } else {
     logger = Logger();
   }
-  final environment = Environment(
+  final Environment environment = Environment(
     abi: ffi.Abi.current(),
     engine: engine,
     platform: const LocalPlatform(),
@@ -67,16 +76,18 @@ void main(List<String> args) async {
   );
 
   // Use the Engine and BuildConfig collection to build the CommandRunner.
-  final runner = ToolCommandRunner(environment: environment, configs: configs, help: help);
+  final ToolCommandRunner runner = ToolCommandRunner(
+    environment: environment,
+    configs: configs,
+    help: help,
+  );
 
   try {
     io.exitCode = await runner.run(args);
   } on FatalError catch (e, st) {
-    environment.logger.error(
-      'FatalError caught in main. Please file a bug\n'
-      'error: $e\n'
-      'stack: $st',
-    );
+    environment.logger.error('FatalError caught in main. Please file a bug\n'
+        'error: $e\n'
+        'stack: $st');
     io.exitCode = 1;
   }
   return;

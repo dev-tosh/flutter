@@ -4,6 +4,7 @@
 
 #include "flutter/display_list/testing/dl_test_surface_software.h"
 
+#include "third_party/skia/include/core/SkCanvas.h"
 #include "third_party/skia/include/core/SkSurface.h"
 
 namespace flutter {

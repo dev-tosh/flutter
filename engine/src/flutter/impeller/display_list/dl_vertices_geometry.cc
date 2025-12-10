@@ -7,8 +7,8 @@
 #include "display_list/dl_vertices.h"
 #include "impeller/core/formats.h"
 #include "impeller/display_list/skia_conversions.h"
-#include "impeller/entity/contents/pipelines.h"
 #include "impeller/geometry/point.h"
+#include "third_party/skia/include/core/SkPoint.h"
 
 namespace impeller {
 
@@ -62,7 +62,7 @@ DlVerticesGeometry::DlVerticesGeometry(
     const ContentContext& renderer)
     : vertices_(vertices) {
   performed_normalization_ = MaybePerformIndexNormalization(renderer);
-  bounds_ = vertices_->GetBounds();
+  bounds_ = skia_conversions::ToRect(vertices_->bounds());
 }
 
 PrimitiveType DlVerticesGeometry::GetPrimitiveType() const {
@@ -85,10 +85,10 @@ bool DlVerticesGeometry::HasVertexColors() const {
 }
 
 bool DlVerticesGeometry::HasTextureCoordinates() const {
-  return vertices_->texture_coordinate_data() != nullptr;
+  return vertices_->texture_coordinates() != nullptr;
 }
 
-std::optional<Rect> DlVerticesGeometry::GetTextureCoordinateCoverage() const {
+std::optional<Rect> DlVerticesGeometry::GetTextureCoordinateCoverge() const {
   if (!HasTextureCoordinates()) {
     return std::nullopt;
   }
@@ -97,17 +97,17 @@ std::optional<Rect> DlVerticesGeometry::GetTextureCoordinateCoverage() const {
     return std::nullopt;
   }
 
-  auto first = vertices_->texture_coordinate_data();
-  auto left = first->x;
-  auto top = first->y;
-  auto right = first->x;
-  auto bottom = first->y;
+  auto first = vertices_->texture_coordinates();
+  auto left = first->x();
+  auto top = first->y();
+  auto right = first->x();
+  auto bottom = first->y();
   int i = 1;
   for (auto it = first + 1; i < vertex_count; ++it, i++) {
-    left = std::min(left, it->x);
-    top = std::min(top, it->y);
-    right = std::max(right, it->x);
-    bottom = std::max(bottom, it->y);
+    left = std::min(left, it->x());
+    top = std::min(top, it->y());
+    right = std::max(right, it->x());
+    bottom = std::max(bottom, it->y());
   }
   return Rect::MakeLTRB(left, top, right, bottom);
 }
@@ -117,8 +117,8 @@ GeometryResult DlVerticesGeometry::GetPositionBuffer(
     const Entity& entity,
     RenderPass& pass) const {
   int vertex_count = vertices_->vertex_count();
-  BufferView vertex_buffer = renderer.GetTransientsDataBuffer().Emplace(
-      vertices_->vertex_data(), vertex_count * sizeof(Point), alignof(Point));
+  BufferView vertex_buffer = renderer.GetTransientsBuffer().Emplace(
+      vertices_->vertices(), vertex_count * sizeof(SkPoint), alignof(SkPoint));
 
   BufferView index_buffer = {};
   auto index_count =
@@ -126,7 +126,7 @@ GeometryResult DlVerticesGeometry::GetPositionBuffer(
   const uint16_t* indices_data =
       performed_normalization_ ? indices_.data() : vertices_->indices();
   if (index_count) {
-    index_buffer = renderer.GetTransientsIndexesBuffer().Emplace(
+    index_buffer = renderer.GetTransientsBuffer().Emplace(
         indices_data, index_count * sizeof(uint16_t), alignof(uint16_t));
   }
 
@@ -158,25 +158,25 @@ GeometryResult DlVerticesGeometry::GetPositionUVColorBuffer(
   bool has_texture_coordinates = HasTextureCoordinates();
   bool has_colors = HasVertexColors();
 
-  const Point* coordinates = has_texture_coordinates
-                                 ? vertices_->texture_coordinate_data()
-                                 : vertices_->vertex_data();
-  BufferView vertex_buffer = renderer.GetTransientsDataBuffer().Emplace(
+  const SkPoint* coordinates = has_texture_coordinates
+                                   ? vertices_->texture_coordinates()
+                                   : vertices_->vertices();
+  BufferView vertex_buffer = renderer.GetTransientsBuffer().Emplace(
       vertex_count * sizeof(VS::PerVertexData), alignof(VS::PerVertexData),
       [&](uint8_t* data) {
         VS::PerVertexData* vtx_contents =
             reinterpret_cast<VS::PerVertexData*>(data);
-        const Point* vertex_points = vertices_->vertex_data();
         for (auto i = 0; i < vertex_count; i++) {
-          Point texture_coord = coordinates[i];
+          Point texture_coord = skia_conversions::ToPoint(coordinates[i]);
           Point uv = uv_transform * texture_coord;
           Color color = has_colors
                             ? skia_conversions::ToColor(vertices_->colors()[i])
                                   .Premultiply()
                             : Color::BlackTransparent();
-          VS::PerVertexData vertex_data = {.vertices = vertex_points[i],
-                                           .texture_coords = uv,
-                                           .color = color};
+          VS::PerVertexData vertex_data = {
+              .vertices = skia_conversions::ToPoint(vertices_->vertices()[i]),
+              .texture_coords = uv,
+              .color = color};
           vtx_contents[i] = vertex_data;
         }
       });
@@ -187,7 +187,7 @@ GeometryResult DlVerticesGeometry::GetPositionUVColorBuffer(
   const uint16_t* indices_data =
       performed_normalization_ ? indices_.data() : vertices_->indices();
   if (index_count) {
-    index_buffer = renderer.GetTransientsIndexesBuffer().Emplace(
+    index_buffer = renderer.GetTransientsBuffer().Emplace(
         indices_data, index_count * sizeof(uint16_t), alignof(uint16_t));
   }
 
@@ -218,10 +218,6 @@ bool DlVerticesGeometry::MaybePerformIndexNormalization(
                               vertices_->index_count(), vertices_->indices());
     return true;
   }
-  return false;
-}
-
-bool DlVerticesGeometry::CanApplyMaskFilter() const {
   return false;
 }
 

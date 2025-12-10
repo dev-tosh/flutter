@@ -8,6 +8,7 @@
 
 #include "flutter/shell/platform/common/client_wrapper/include/flutter/standard_method_codec.h"
 #include "flutter/shell/platform/windows/flutter_windows_engine.h"
+#include "flutter/shell/platform/windows/flutter_windows_view.h"
 
 static constexpr char kChannelName[] = "flutter/mousecursor";
 
@@ -73,7 +74,16 @@ void CursorHandler::HandleMethodCall(
       return;
     }
     const auto& kind = std::get<std::string>(kind_iter->second);
-    engine_->UpdateFlutterCursor(kind);
+
+    // TODO(loicsharma): Remove implicit view assumption.
+    // https://github.com/flutter/flutter/issues/142845
+    FlutterWindowsView* view = engine_->view(kImplicitViewId);
+    if (view == nullptr) {
+      result->Error(kCursorError,
+                    "Cursor is not available in Windows headless mode");
+      return;
+    }
+    view->UpdateFlutterCursor(kind);
     result->Success();
   } else if (method.compare(kCreateCustomCursorMethod) == 0) {
     const auto& arguments = std::get<EncodableMap>(*method_call.arguments());
@@ -157,7 +167,16 @@ void CursorHandler::HandleMethodCall(
       return;
     }
     HCURSOR cursor = custom_cursors_[name];
-    engine_->SetFlutterCursor(cursor);
+
+    // TODO(loicsharma): Remove implicit view assumption.
+    // https://github.com/flutter/flutter/issues/142845
+    FlutterWindowsView* view = engine_->view(kImplicitViewId);
+    if (view == nullptr) {
+      result->Error(kCursorError,
+                    "Cursor is not available in Windows headless mode");
+      return;
+    }
+    view->SetFlutterCursor(cursor);
     result->Success();
   } else if (method.compare(kDeleteCustomCursorMethod) == 0) {
     const auto& arguments = std::get<EncodableMap>(*method_call.arguments());

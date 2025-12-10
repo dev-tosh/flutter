@@ -200,7 +200,7 @@ bool ReactorGLES::RegisterCleanupCallback(const HandleGLES& handle,
   return false;
 }
 
-HandleGLES ReactorGLES::CreateUntrackedHandle(HandleType type) const {
+HandleGLES ReactorGLES::CreateUntrackedHandle(HandleType type) {
   FML_DCHECK(CanReactOnCurrentThread());
   auto new_handle = HandleGLES::Create(type);
   std::optional<ReactorGLES::GLStorage> gl_handle =
@@ -233,9 +233,6 @@ HandleGLES ReactorGLES::CreateHandle(HandleType type, GLuint external_handle) {
 }
 
 void ReactorGLES::CollectHandle(HandleGLES handle) {
-  if (handle.IsDead()) {
-    return;
-  }
   if (handle.untracked_id_.has_value()) {
     LiveHandle live_handle(GLStorage{.integer = handle.untracked_id_.value()});
     live_handle.pending_collection = true;
@@ -377,7 +374,7 @@ bool ReactorGLES::FlushOps() {
 
 void ReactorGLES::SetupDebugGroups() {
   // Setup of a default active debug group: Filter everything in.
-  if (can_set_debug_labels_) {
+  if (proc_table_->DebugMessageControlKHR.IsAvailable()) {
     proc_table_->DebugMessageControlKHR(GL_DONT_CARE,  // source
                                         GL_DONT_CARE,  // type
                                         GL_DONT_CARE,  // severity

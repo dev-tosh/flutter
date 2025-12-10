@@ -32,13 +32,13 @@ class Surface final : public flutter::Surface {
 
   // |flutter::Surface|
   std::unique_ptr<flutter::SurfaceFrame> AcquireFrame(
-      const flutter::DlISize& size) override;
+      const SkISize& size) override;
 
   // |flutter::Surface|
   GrDirectContext* GetContext() override;
 
   // |flutter::Surface|
-  flutter::DlMatrix GetRootTransformation() const override;
+  SkMatrix GetRootTransformation() const override;
 
   FML_DISALLOW_COPY_AND_ASSIGN(Surface);
 };

@@ -13,7 +13,9 @@ import java.util.HashMap;
 import java.util.Map;
 import org.junit.Test;
 import org.junit.runner.RunWith;
+import org.robolectric.annotation.Config;
 
+@Config(manifest = Config.NONE)
 @RunWith(AndroidJUnit4.class)
 public class StandardMethodCodecTest {
 

@@ -149,6 +149,19 @@ class PlatformHandlerTest : public WindowsTest {
     engine_ = builder.Build();
   }
 
+  void UseEngineWithView() {
+    FlutterWindowsEngineBuilder builder{GetContext()};
+
+    auto window = std::make_unique<NiceMock<MockWindowBindingHandler>>();
+
+    engine_ = builder.Build();
+    view_ = std::make_unique<FlutterWindowsView>(kImplicitViewId, engine_.get(),
+                                                 std::move(window));
+
+    EngineModifier modifier{engine_.get()};
+    modifier.SetImplicitView(view_.get());
+  }
+
  private:
   std::unique_ptr<FlutterWindowsEngine> engine_;
   std::unique_ptr<FlutterWindowsView> view_;
@@ -157,7 +170,7 @@ class PlatformHandlerTest : public WindowsTest {
 };
 
 TEST_F(PlatformHandlerTest, GetClipboardData) {
-  UseHeadlessEngine();
+  UseEngineWithView();
 
   TestBinaryMessenger messenger;
   PlatformHandler platform_handler(&messenger, engine(), []() {
@@ -181,7 +194,7 @@ TEST_F(PlatformHandlerTest, GetClipboardData) {
 }
 
 TEST_F(PlatformHandlerTest, GetClipboardDataRejectsUnknownContentType) {
-  UseHeadlessEngine();
+  UseEngineWithView();
 
   TestBinaryMessenger messenger;
   PlatformHandler platform_handler(&messenger, engine());
@@ -193,8 +206,22 @@ TEST_F(PlatformHandlerTest, GetClipboardDataRejectsUnknownContentType) {
   EXPECT_EQ(result, "[\"Clipboard error\",\"Unknown clipboard format\",null]");
 }
 
-TEST_F(PlatformHandlerTest, GetClipboardDataReportsOpenFailure) {
+TEST_F(PlatformHandlerTest, GetClipboardDataRequiresView) {
   UseHeadlessEngine();
+
+  TestBinaryMessenger messenger;
+  PlatformHandler platform_handler(&messenger, engine());
+
+  std::string result =
+      SimulatePlatformMessage(&messenger, kClipboardGetDataMessage);
+
+  EXPECT_EQ(result,
+            "[\"Clipboard error\",\"Clipboard is not available in "
+            "Windows headless mode\",null]");
+}
+
+TEST_F(PlatformHandlerTest, GetClipboardDataReportsOpenFailure) {
+  UseEngineWithView();
 
   TestBinaryMessenger messenger;
   PlatformHandler platform_handler(&messenger, engine(), []() {
@@ -214,7 +241,7 @@ TEST_F(PlatformHandlerTest, GetClipboardDataReportsOpenFailure) {
 }
 
 TEST_F(PlatformHandlerTest, GetClipboardDataReportsGetDataFailure) {
-  UseHeadlessEngine();
+  UseEngineWithView();
 
   TestBinaryMessenger messenger;
   PlatformHandler platform_handler(&messenger, engine(), []() {
@@ -238,7 +265,7 @@ TEST_F(PlatformHandlerTest, GetClipboardDataReportsGetDataFailure) {
 }
 
 TEST_F(PlatformHandlerTest, ClipboardHasStrings) {
-  UseHeadlessEngine();
+  UseEngineWithView();
 
   TestBinaryMessenger messenger;
   PlatformHandler platform_handler(&messenger, engine(), []() {
@@ -259,7 +286,7 @@ TEST_F(PlatformHandlerTest, ClipboardHasStrings) {
 }
 
 TEST_F(PlatformHandlerTest, ClipboardHasStringsReturnsFalse) {
-  UseHeadlessEngine();
+  UseEngineWithView();
 
   TestBinaryMessenger messenger;
   PlatformHandler platform_handler(&messenger, engine(), []() {
@@ -280,7 +307,7 @@ TEST_F(PlatformHandlerTest, ClipboardHasStringsReturnsFalse) {
 }
 
 TEST_F(PlatformHandlerTest, ClipboardHasStringsRejectsUnknownContentType) {
-  UseHeadlessEngine();
+  UseEngineWithView();
 
   TestBinaryMessenger messenger;
   PlatformHandler platform_handler(&messenger, engine());
@@ -291,9 +318,23 @@ TEST_F(PlatformHandlerTest, ClipboardHasStringsRejectsUnknownContentType) {
   EXPECT_EQ(result, "[\"Clipboard error\",\"Unknown clipboard format\",null]");
 }
 
+TEST_F(PlatformHandlerTest, ClipboardHasStringsRequiresView) {
+  UseHeadlessEngine();
+
+  TestBinaryMessenger messenger;
+  PlatformHandler platform_handler(&messenger, engine());
+
+  std::string result =
+      SimulatePlatformMessage(&messenger, kClipboardHasStringsMessage);
+
+  EXPECT_EQ(result,
+            "[\"Clipboard error\",\"Clipboard is not available in Windows "
+            "headless mode\",null]");
+}
+
 // Regression test for https://github.com/flutter/flutter/issues/95817.
 TEST_F(PlatformHandlerTest, ClipboardHasStringsIgnoresPermissionErrors) {
-  UseHeadlessEngine();
+  UseEngineWithView();
 
   TestBinaryMessenger messenger;
   PlatformHandler platform_handler(&messenger, engine(), []() {
@@ -313,7 +354,7 @@ TEST_F(PlatformHandlerTest, ClipboardHasStringsIgnoresPermissionErrors) {
 }
 
 TEST_F(PlatformHandlerTest, ClipboardHasStringsReportsErrors) {
-  UseHeadlessEngine();
+  UseEngineWithView();
 
   TestBinaryMessenger messenger;
   PlatformHandler platform_handler(&messenger, engine(), []() {
@@ -333,7 +374,7 @@ TEST_F(PlatformHandlerTest, ClipboardHasStringsReportsErrors) {
 }
 
 TEST_F(PlatformHandlerTest, ClipboardSetData) {
-  UseHeadlessEngine();
+  UseEngineWithView();
 
   TestBinaryMessenger messenger;
   PlatformHandler platform_handler(&messenger, engine(), []() {
@@ -360,7 +401,7 @@ TEST_F(PlatformHandlerTest, ClipboardSetData) {
 
 // Regression test for: https://github.com/flutter/flutter/issues/121976
 TEST_F(PlatformHandlerTest, ClipboardSetDataTextMustBeString) {
-  UseHeadlessEngine();
+  UseEngineWithView();
 
   TestBinaryMessenger messenger;
   PlatformHandler platform_handler(&messenger, engine());
@@ -372,7 +413,7 @@ TEST_F(PlatformHandlerTest, ClipboardSetDataTextMustBeString) {
 }
 
 TEST_F(PlatformHandlerTest, ClipboardSetDataUnknownType) {
-  UseHeadlessEngine();
+  UseEngineWithView();
 
   TestBinaryMessenger messenger;
   PlatformHandler platform_handler(&messenger, engine());
@@ -383,8 +424,22 @@ TEST_F(PlatformHandlerTest, ClipboardSetDataUnknownType) {
   EXPECT_EQ(result, "[\"Clipboard error\",\"Unknown clipboard format\",null]");
 }
 
-TEST_F(PlatformHandlerTest, ClipboardSetDataReportsOpenFailure) {
+TEST_F(PlatformHandlerTest, ClipboardSetDataRequiresView) {
   UseHeadlessEngine();
+
+  TestBinaryMessenger messenger;
+  PlatformHandler platform_handler(&messenger, engine());
+
+  std::string result =
+      SimulatePlatformMessage(&messenger, kClipboardSetDataMessage);
+
+  EXPECT_EQ(result,
+            "[\"Clipboard error\",\"Clipboard is not available in Windows "
+            "headless mode\",null]");
+}
+
+TEST_F(PlatformHandlerTest, ClipboardSetDataReportsOpenFailure) {
+  UseEngineWithView();
 
   TestBinaryMessenger messenger;
   PlatformHandler platform_handler(&messenger, engine(), []() {
@@ -404,7 +459,7 @@ TEST_F(PlatformHandlerTest, ClipboardSetDataReportsOpenFailure) {
 }
 
 TEST_F(PlatformHandlerTest, ClipboardSetDataReportsSetDataFailure) {
-  UseHeadlessEngine();
+  UseEngineWithView();
 
   TestBinaryMessenger messenger;
   PlatformHandler platform_handler(&messenger, engine(), []() {

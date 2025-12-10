@@ -14,6 +14,7 @@
 #include "flutter/fml/task_runner.h"
 #include "flutter/fml/trace_event.h"
 #include "impeller/base/thread_safety.h"
+#include "third_party/skia/include/core/SkRect.h"
 
 #import "flutter/shell/platform/darwin/common/framework/Headers/FlutterChannels.h"
 #import "flutter/shell/platform/darwin/ios/framework/Headers/FlutterPlatformViews.h"
@@ -47,7 +48,7 @@ NS_ASSUME_NONNULL_BEGIN
         (FlutterPlatformViewGestureRecognizersBlockingPolicy)gestureRecognizerBlockingPolicy;
 
 /// @brief Mark the beginning of a frame and record the size of the onscreen.
-- (void)beginFrameWithSize:(flutter::DlISize)frameSize;
+- (void)beginFrameWithSize:(SkISize)frameSize;
 
 /// @brief Cancel the current frame, indicating that no platform views are composited.
 ///
@@ -72,14 +73,16 @@ NS_ASSUME_NONNULL_BEGIN
 ///
 /// Called from the raster thread.
 - (flutter::PostPrerollResult)postPrerollActionWithThreadMerger:
-    (const fml::RefPtr<fml::RasterThreadMerger>&)rasterThreadMerger;
+                                  (const fml::RefPtr<fml::RasterThreadMerger>&)rasterThreadMerger
+                                                impellerEnabled:(BOOL)impellerEnabled;
 
 /// @brief Mark the end of a compositor frame.
 ///
 /// May determine changes are required to the thread merging state.
 /// Called from the raster thread.
 - (void)endFrameWithResubmit:(BOOL)shouldResubmitFrame
-                threadMerger:(const fml::RefPtr<fml::RasterThreadMerger>&)rasterThreadMerger;
+                threadMerger:(const fml::RefPtr<fml::RasterThreadMerger>&)rasterThreadMerger
+             impellerEnabled:(BOOL)impellerEnabled;
 
 /// @brief Returns the Canvas for the overlay slice for the given platform view.
 ///
@@ -96,7 +99,8 @@ NS_ASSUME_NONNULL_BEGIN
 ///
 /// Called from the raster thread.
 - (BOOL)submitFrame:(std::unique_ptr<flutter::SurfaceFrame>)frame
-     withIosContext:(const std::shared_ptr<flutter::IOSContext>&)iosContext;
+     withIosContext:(const std::shared_ptr<flutter::IOSContext>&)iosContext
+          grContext:(GrDirectContext* _Nullable)grContext;
 
 /// @brief Handler for platform view message channels.
 - (void)onMethodCall:(FlutterMethodCall*)call result:(FlutterResult)result;
@@ -109,7 +113,7 @@ NS_ASSUME_NONNULL_BEGIN
 
 /// @brief Pushes backdrop filter mutation to the mutator stack of each visited platform view.
 - (void)pushFilterToVisitedPlatformViews:(const std::shared_ptr<flutter::DlImageFilter>&)filter
-                                withRect:(const flutter::DlRect&)filterRect;
+                                withRect:(const SkRect&)filterRect;
 
 /// @brief Pushes the view id of a visted platform view to the list of visied platform views.
 - (void)pushVisitedPlatformViewId:(int64_t)viewId;
@@ -138,8 +142,6 @@ NS_ASSUME_NONNULL_BEGIN
 - (void)compositeView:(int64_t)viewId withParams:(const flutter::EmbeddedViewParams&)params;
 
 - (const flutter::EmbeddedViewParams&)compositionParamsForView:(int64_t)viewId;
-
-- (std::vector<int64_t>&)previousCompositionOrder;
 
 @end
 

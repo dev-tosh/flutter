@@ -1,7 +1,3 @@
-// Copyright 2013 The Flutter Authors. All rights reserved.
-// Use of this source code is governed by a BSD-style license that can be
-// found in the LICENSE file.
-
 package io.flutter.embedding.engine.systemchannels;
 
 import static io.flutter.Build.API_LEVELS;
@@ -208,16 +204,16 @@ public class SettingsChannel {
         Log.e(
             TAG,
             "Cannot find config with generation: "
-                + configGeneration
+                + String.valueOf(configGeneration)
                 + ", after exhausting the queue.");
         return null;
       } else if (currentConfiguration.generationNumber != configGeneration) {
         Log.e(
             TAG,
             "Cannot find config with generation: "
-                + configGeneration
+                + String.valueOf(configGeneration)
                 + ", the oldest config is now: "
-                + currentConfiguration.generationNumber);
+                + String.valueOf(currentConfiguration.generationNumber));
         return null;
       }
       return currentConfiguration;
@@ -252,7 +248,7 @@ public class SettingsChannel {
                 Log.e(
                     TAG,
                     "The queue becomes empty after removing config generation "
-                        + configurationToRemove.generationNumber);
+                        + String.valueOf(configurationToRemove.generationNumber));
               }
             }
           };

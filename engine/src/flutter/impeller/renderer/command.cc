@@ -4,4 +4,8 @@
 
 #include "impeller/renderer/command.h"
 
-namespace impeller {}  // namespace impeller
+namespace impeller {
+
+//
+
+}  // namespace impeller

@@ -4,11 +4,10 @@
 
 #include "impeller/renderer/backend/vulkan/pipeline_vk.h"
 
-#include <format>
-
 #include "flutter/fml/make_copyable.h"
 #include "flutter/fml/status_or.h"
 #include "flutter/fml/trace_event.h"
+#include "impeller/base/strings.h"
 #include "impeller/base/timing.h"
 #include "impeller/renderer/backend/vulkan/capabilities_vk.h"
 #include "impeller/renderer/backend/vulkan/context_vk.h"
@@ -164,7 +163,7 @@ static vk::UniqueRenderPass CreateCompatRenderPassForPipeline(
 #ifdef IMPELLER_DEBUG
   ContextVK::SetDebugName(
       device, pass.get(),
-      std::format("Compat Render Pass: {}", desc.GetLabel()));
+      SPrintF("Compat Render Pass: %s", desc.GetLabel().data()));
 #endif  // IMPELLER_DEBUG
 
   return pass;
@@ -215,7 +214,7 @@ fml::StatusOr<vk::UniqueDescriptorSetLayout> MakeDescriptorSetLayout(
 #ifdef IMPELLER_DEBUG
   ContextVK::SetDebugName(
       device_holder->GetDevice(), descs_layout.get(),
-      std::format("Descriptor Set Layout: {}", desc.GetLabel()));
+      SPrintF("Descriptor Set Layout: %s", desc.GetLabel().data()));
 #endif  // IMPELLER_DEBUG
 
   return fml::StatusOr<vk::UniqueDescriptorSetLayout>(std::move(descs_layout));
@@ -238,8 +237,9 @@ fml::StatusOr<vk::UniquePipelineLayout> MakePipelineLayout(
   }
 
 #ifdef IMPELLER_DEBUG
-  ContextVK::SetDebugName(device_holder->GetDevice(), *pipeline_layout.value,
-                          std::format("Pipeline Layout {}", desc.GetLabel()));
+  ContextVK::SetDebugName(
+      device_holder->GetDevice(), *pipeline_layout.value,
+      SPrintF("Pipeline Layout %s", desc.GetLabel().data()));
 #endif  // IMPELLER_DEBUG
 
   return std::move(pipeline_layout.value);
@@ -362,7 +362,6 @@ fml::StatusOr<vk::UniquePipeline> MakePipeline(
   const auto topology = ToVKPrimitiveTopology(desc.GetPrimitiveType());
   input_assembly.setTopology(topology);
   input_assembly.setPrimitiveRestartEnable(
-      caps->SupportsPrimitiveRestart() &&
       PrimitiveTopologySupportsPrimitiveRestart(desc.GetPrimitiveType()));
   pipeline_info.setPInputAssemblyState(&input_assembly);
 
@@ -454,7 +453,7 @@ fml::StatusOr<vk::UniquePipeline> MakePipeline(
 
 #ifdef IMPELLER_DEBUG
   ContextVK::SetDebugName(device_holder->GetDevice(), *pipeline,
-                          std::format("Pipeline {}", desc.GetLabel()));
+                          SPrintF("Pipeline %s", desc.GetLabel().data()));
 #endif  // IMPELLER_DEBUG
 
   return std::move(pipeline);
@@ -465,7 +464,6 @@ std::unique_ptr<PipelineVK> PipelineVK::Create(
     const PipelineDescriptor& desc,
     const std::shared_ptr<DeviceHolderVK>& device_holder,
     const std::weak_ptr<PipelineLibrary>& weak_library,
-    PipelineKey pipeline_key,
     std::shared_ptr<SamplerVK> immutable_sampler) {
   TRACE_EVENT1("flutter", "PipelineVK::Create", "Name", desc.GetLabel().data());
 
@@ -503,7 +501,6 @@ std::unique_ptr<PipelineVK> PipelineVK::Create(
     return nullptr;
   }
 
-  // NOLINTNEXTLINE(clang-analyzer-cplusplus.NewDeleteLeaks)
   auto pipeline_vk = std::unique_ptr<PipelineVK>(new PipelineVK(
       device_holder,                       //
       library,                             //
@@ -512,7 +509,6 @@ std::unique_ptr<PipelineVK> PipelineVK::Create(
       std::move(render_pass),              //
       std::move(pipeline_layout.value()),  //
       std::move(descs_layout.value()),     //
-      pipeline_key,                        //
       std::move(immutable_sampler)         //
       ));
   if (!pipeline_vk->IsValid()) {
@@ -529,7 +525,6 @@ PipelineVK::PipelineVK(std::weak_ptr<DeviceHolderVK> device_holder,
                        vk::UniqueRenderPass render_pass,
                        vk::UniquePipelineLayout layout,
                        vk::UniqueDescriptorSetLayout descriptor_set_layout,
-                       PipelineKey pipeline_key,
                        std::shared_ptr<SamplerVK> immutable_sampler)
     : Pipeline(std::move(library), desc),
       device_holder_(std::move(device_holder)),
@@ -537,8 +532,7 @@ PipelineVK::PipelineVK(std::weak_ptr<DeviceHolderVK> device_holder,
       render_pass_(std::move(render_pass)),
       layout_(std::move(layout)),
       descriptor_set_layout_(std::move(descriptor_set_layout)),
-      immutable_sampler_(std::move(immutable_sampler)),
-      pipeline_key_(pipeline_key) {
+      immutable_sampler_(std::move(immutable_sampler)) {
   is_valid_ = pipeline_ && render_pass_ && layout_ && descriptor_set_layout_;
 }
 
@@ -582,11 +576,8 @@ std::shared_ptr<PipelineVK> PipelineVK::CreateVariantForImmutableSamplers(
   if (!device_holder) {
     return nullptr;
   }
-  // Note: immutable sampler variant of a pipeline is the negation of the
-  // existing pipeline key. This keeps the descriptors separate.
   return (immutable_sampler_variants_[cache_key] =
-              Create(desc_, device_holder, library_, -1 * pipeline_key_,
-                     immutable_sampler));
+              Create(desc_, device_holder, library_, immutable_sampler));
 }
 
 }  // namespace impeller

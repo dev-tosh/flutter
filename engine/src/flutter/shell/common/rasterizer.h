@@ -5,7 +5,6 @@
 #ifndef FLUTTER_SHELL_COMMON_RASTERIZER_H_
 #define FLUTTER_SHELL_COMMON_RASTERIZER_H_
 
-#include <future>
 #include <memory>
 #include <optional>
 #include <unordered_map>
@@ -37,13 +36,14 @@
 #include "flutter/shell/common/snapshot_surface_producer.h"
 #include "third_party/skia/include/core/SkData.h"
 #include "third_party/skia/include/core/SkImage.h"
+#include "third_party/skia/include/core/SkRect.h"
+#include "third_party/skia/include/core/SkRefCnt.h"
 #include "third_party/skia/include/gpu/ganesh/GrDirectContext.h"
 
 #if !IMPELLER_SUPPORTS_RENDERING
 namespace impeller {
 class Context;
 class AiksContext;
-class ImpellerContextFuture;
 }  // namespace impeller
 #endif  // !IMPELLER_SUPPORTS_RENDERING
 
@@ -205,8 +205,7 @@ class Rasterizer final : public SnapshotDelegate,
   ///
   ~Rasterizer();
 
-  void SetImpellerContext(
-      std::shared_ptr<impeller::ImpellerContextFuture> impeller_context);
+  void SetImpellerContext(std::weak_ptr<impeller::Context> impeller_context);
 
   //----------------------------------------------------------------------------
   /// @brief      Rasterizers may be created well before an on-screen surface is
@@ -408,7 +407,7 @@ class Rasterizer final : public SnapshotDelegate,
     //--------------------------------------------------------------------------
     /// The size of the screenshot in texels.
     ///
-    DlISize frame_size;
+    SkISize frame_size = SkISize::MakeEmpty();
 
     //--------------------------------------------------------------------------
     /// Characterization of the format of the data in `data`.
@@ -436,7 +435,7 @@ class Rasterizer final : public SnapshotDelegate,
     /// @param[in]  p_pixel_format  The screenshot format.
     ///
     Screenshot(sk_sp<SkData> p_data,
-               DlISize p_size,
+               SkISize p_size,
                const std::string& p_format,
                ScreenshotFormat p_pixel_format);
 
@@ -644,16 +643,14 @@ class Rasterizer final : public SnapshotDelegate,
       const SkImageInfo& image_info) override;
 
   // |SnapshotDelegate|
-  void MakeRasterSnapshot(sk_sp<DisplayList> display_list,
-                          DlISize picture_size,
-                          std::function<void(sk_sp<DlImage>)> callback,
-                          SnapshotPixelFormat pixel_format) override;
+  void MakeRasterSnapshot(
+      sk_sp<DisplayList> display_list,
+      SkISize picture_size,
+      std::function<void(sk_sp<DlImage>)> callback) override;
 
   // |SnapshotDelegate|
-  sk_sp<DlImage> MakeRasterSnapshotSync(
-      sk_sp<DisplayList> display_list,
-      DlISize picture_size,
-      SnapshotPixelFormat pixel_format) override;
+  sk_sp<DlImage> MakeRasterSnapshotSync(sk_sp<DisplayList> display_list,
+                                        SkISize picture_size) override;
 
   // |SnapshotDelegate|
   sk_sp<SkImage> ConvertToRasterImage(sk_sp<SkImage> image) override;
@@ -661,9 +658,6 @@ class Rasterizer final : public SnapshotDelegate,
   // |SnapshotDelegate|
   void CacheRuntimeStage(
       const std::shared_ptr<impeller::RuntimeStage>& runtime_stage) override;
-
-  // |SnapshotDelegate|
-  bool MakeRenderContextCurrent() override;
 
   // |Stopwatch::Delegate|
   /// Time limit for a smooth frame.
@@ -677,21 +671,12 @@ class Rasterizer final : public SnapshotDelegate,
   }
 
   // |SnapshotController::Delegate|
-  bool IsAiksContextInitialized() const override {
-#if IMPELLER_SUPPORTS_RENDERING
-    return surface_ && surface_->GetAiksContext();
-#else
-    return false;
-#endif
-  }
-
-  // |SnapshotController::Delegate|
   std::shared_ptr<impeller::AiksContext> GetAiksContext() const override {
 #if IMPELLER_SUPPORTS_RENDERING
     if (surface_) {
       return surface_->GetAiksContext();
     }
-    if (auto context = impeller_context_->GetContext()) {
+    if (auto context = impeller_context_.lock()) {
       return std::make_shared<impeller::AiksContext>(
           context, impeller::TypographerContextSkia::Make());
     }
@@ -763,7 +748,7 @@ class Rasterizer final : public SnapshotDelegate,
   bool is_torn_down_ = false;
   Delegate& delegate_;
   [[maybe_unused]] MakeGpuImageBehavior gpu_image_behavior_;
-  std::shared_ptr<impeller::ImpellerContextFuture> impeller_context_;
+  std::weak_ptr<impeller::Context> impeller_context_;
   std::unique_ptr<Surface> surface_;
   std::unique_ptr<SnapshotSurfaceProducer> snapshot_surface_producer_;
   std::unique_ptr<flutter::CompositorContext> compositor_context_;

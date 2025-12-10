@@ -8,7 +8,6 @@ import("//flutter/build/bin_to_obj.gni")
 import("//flutter/build/zip_bundle.gni")
 import("//flutter/common/config.gni")
 import("//flutter/impeller/tools/impeller.gni")
-import("//flutter/lib/snapshot/gen_snapshot.gni")
 import("//flutter/shell/config.gni")
 import("//flutter/shell/gpu/gpu.gni")
 import("//flutter/shell/version/version.gni")
@@ -29,7 +28,7 @@ source_set("image_generator") {
 
   deps = [
     "//flutter/fml",
-    "//flutter/lib/ui",
+    "//flutter/lib/ui:ui",
     "//flutter/skia",
   ]
 
@@ -44,15 +43,13 @@ executable("flutter_shell_native_unittests") {
   testonly = true
   sources = [
     "android_context_gl_impeller_unittests.cc",
+    "android_context_gl_unittests.cc",
     "android_shell_holder_unittests.cc",
     "apk_asset_provider_unittests.cc",
     "flutter_shell_native_unittests.cc",
     "image_lru_unittests.cc",
     "platform_view_android_unittests.cc",
   ]
-  if (!slimpeller) {
-    sources += [ "android_context_gl_unittests.cc" ]
-  }
   public_configs = [ "//flutter:config" ]
   deps = [
     ":flutter_shell_native_src",
@@ -83,10 +80,10 @@ source_set("flutter_shell_native_src") {
   visibility = [ ":*" ]
 
   sources = [
-    "android_context_dynamic_impeller.cc",
-    "android_context_dynamic_impeller.h",
     "android_context_gl_impeller.cc",
     "android_context_gl_impeller.h",
+    "android_context_gl_skia.cc",
+    "android_context_gl_skia.h",
     "android_context_vk_impeller.cc",
     "android_context_vk_impeller.h",
     "android_display.cc",
@@ -97,10 +94,12 @@ source_set("flutter_shell_native_src") {
     "android_environment_gl.h",
     "android_shell_holder.cc",
     "android_shell_holder.h",
-    "android_surface_dynamic_impeller.cc",
-    "android_surface_dynamic_impeller.h",
     "android_surface_gl_impeller.cc",
     "android_surface_gl_impeller.h",
+    "android_surface_gl_skia.cc",
+    "android_surface_gl_skia.h",
+    "android_surface_software.cc",
+    "android_surface_software.h",
     "android_surface_vk_impeller.cc",
     "android_surface_vk_impeller.h",
     "apk_asset_provider.cc",
@@ -113,6 +112,8 @@ source_set("flutter_shell_native_src") {
     "image_external_texture_gl.h",
     "image_external_texture_gl_impeller.cc",
     "image_external_texture_gl_impeller.h",
+    "image_external_texture_gl_skia.cc",
+    "image_external_texture_gl_skia.h",
     "image_external_texture_vk_impeller.cc",
     "image_external_texture_vk_impeller.h",
     "image_lru.cc",
@@ -130,26 +131,13 @@ source_set("flutter_shell_native_src") {
     "surface_texture_external_texture.h",
     "surface_texture_external_texture_gl_impeller.cc",
     "surface_texture_external_texture_gl_impeller.h",
+    "surface_texture_external_texture_gl_skia.cc",
+    "surface_texture_external_texture_gl_skia.h",
     "surface_texture_external_texture_vk_impeller.cc",
     "surface_texture_external_texture_vk_impeller.h",
     "vsync_waiter_android.cc",
     "vsync_waiter_android.h",
   ]
-
-  if (!slimpeller) {
-    sources += [
-      "android_context_gl_skia.cc",
-      "android_context_gl_skia.h",
-      "android_surface_gl_skia.cc",
-      "android_surface_gl_skia.h",
-      "android_surface_software.cc",
-      "android_surface_software.h",
-      "image_external_texture_gl_skia.cc",
-      "image_external_texture_gl_skia.h",
-      "surface_texture_external_texture_gl_skia.cc",
-      "surface_texture_external_texture_gl_skia.h",
-    ]
-  }
 
   sources += get_target_outputs(":icudtl_asm")
 
@@ -178,7 +166,7 @@ source_set("flutter_shell_native_src") {
     "//flutter/shell/platform/android/surface",
     "//flutter/shell/platform/android/surface:native_window",
     "//flutter/skia",
-    "//flutter/txt",
+    "//flutter/third_party/txt",
     "//flutter/vulkan",
   ]
 
@@ -219,7 +207,6 @@ android_java_sources = [
   "io/flutter/Build.java",
   "io/flutter/FlutterInjector.java",
   "io/flutter/Log.java",
-  "io/flutter/app/FlutterApplication.java",
   "io/flutter/embedding/android/AndroidTouchProcessor.java",
   "io/flutter/embedding/android/ExclusiveAppComponent.java",
   "io/flutter/embedding/android/FlutterActivity.java",
@@ -242,7 +229,6 @@ android_java_sources = [
   "io/flutter/embedding/android/KeyboardMap.java",
   "io/flutter/embedding/android/MotionEventTracker.java",
   "io/flutter/embedding/android/RenderMode.java",
-  "io/flutter/embedding/android/SurfaceHolderCallbackCompat.java",
   "io/flutter/embedding/android/TransparencyMode.java",
   "io/flutter/embedding/android/WindowInfoRepositoryCallbackAdapterWrapper.java",
   "io/flutter/embedding/engine/FlutterEngine.java",
@@ -259,15 +245,6 @@ android_java_sources = [
   "io/flutter/embedding/engine/dart/PlatformTaskQueue.java",
   "io/flutter/embedding/engine/deferredcomponents/DeferredComponentManager.java",
   "io/flutter/embedding/engine/deferredcomponents/PlayStoreDeferredComponentManager.java",
-  "io/flutter/embedding/engine/image/BitmapMetadataReader.java",
-  "io/flutter/embedding/engine/image/ExifMetadataReader.java",
-  "io/flutter/embedding/engine/image/FlutterImageDecoder.java",
-  "io/flutter/embedding/engine/image/ImageDecoderDefaultImpl.java",
-  "io/flutter/embedding/engine/image/ImageDecoderHeifApi36Impl.java",
-  "io/flutter/embedding/engine/image/ImageDecoderHeifPre36Impl.java",
-  "io/flutter/embedding/engine/image/ImageUtils.java",
-  "io/flutter/embedding/engine/image/MediaMetadataReader.java",
-  "io/flutter/embedding/engine/image/Metadata.java",
   "io/flutter/embedding/engine/loader/ApplicationInfoLoader.java",
   "io/flutter/embedding/engine/loader/FlutterApplicationInfo.java",
   "io/flutter/embedding/engine/loader/FlutterLoader.java",
@@ -305,14 +282,10 @@ android_java_sources = [
   "io/flutter/embedding/engine/systemchannels/MouseCursorChannel.java",
   "io/flutter/embedding/engine/systemchannels/NavigationChannel.java",
   "io/flutter/embedding/engine/systemchannels/PlatformChannel.java",
-  "io/flutter/embedding/engine/systemchannels/PlatformViewCreationRequest.java",
-  "io/flutter/embedding/engine/systemchannels/PlatformViewTouch.java",
   "io/flutter/embedding/engine/systemchannels/PlatformViewsChannel.java",
-  "io/flutter/embedding/engine/systemchannels/PlatformViewsChannel2.java",
   "io/flutter/embedding/engine/systemchannels/ProcessTextChannel.java",
   "io/flutter/embedding/engine/systemchannels/RestorationChannel.java",
   "io/flutter/embedding/engine/systemchannels/ScribeChannel.java",
-  "io/flutter/embedding/engine/systemchannels/SensitiveContentChannel.java",
   "io/flutter/embedding/engine/systemchannels/SettingsChannel.java",
   "io/flutter/embedding/engine/systemchannels/SpellCheckChannel.java",
   "io/flutter/embedding/engine/systemchannels/SystemChannel.java",
@@ -357,8 +330,6 @@ android_java_sources = [
   "io/flutter/plugin/platform/PlatformViewWrapper.java",
   "io/flutter/plugin/platform/PlatformViewsAccessibilityDelegate.java",
   "io/flutter/plugin/platform/PlatformViewsController.java",
-  "io/flutter/plugin/platform/PlatformViewsController2.java",
-  "io/flutter/plugin/platform/PlatformViewsControllerDelegator.java",
   "io/flutter/plugin/platform/SingleViewFakeWindowViewGroup.java",
   "io/flutter/plugin/platform/SingleViewPresentation.java",
   "io/flutter/plugin/platform/SingleViewWindowManager.java",
@@ -367,7 +338,6 @@ android_java_sources = [
   "io/flutter/plugin/platform/VirtualDisplayController.java",
   "io/flutter/plugin/platform/WindowManagerHandler.java",
   "io/flutter/plugin/text/ProcessTextPlugin.java",
-  "io/flutter/plugin/view/SensitiveContentPlugin.java",
   "io/flutter/util/HandlerCompat.java",
   "io/flutter/util/PathUtils.java",
   "io/flutter/util/Preconditions.java",
@@ -375,7 +345,6 @@ android_java_sources = [
   "io/flutter/util/TraceSection.java",
   "io/flutter/util/ViewUtils.java",
   "io/flutter/view/AccessibilityBridge.java",
-  "io/flutter/view/AccessibilityStringBuilder.java",
   "io/flutter/view/AccessibilityViewEmbedder.java",
   "io/flutter/view/FlutterCallbackInformation.java",
   "io/flutter/view/FlutterRunArguments.java",
@@ -385,7 +354,7 @@ android_java_sources = [
 
 embedding_dependencies_jars = [
   "//flutter/third_party/android_embedding_dependencies/lib/activity-1.8.1.jar",
-  "//flutter/third_party/android_embedding_dependencies/lib/annotation-jvm-1.8.1.jar",
+  "//flutter/third_party/android_embedding_dependencies/lib/annotation-jvm-1.8.0.jar",
   "//flutter/third_party/android_embedding_dependencies/lib/annotation-experimental-1.4.0.jar",
   "//flutter/third_party/android_embedding_dependencies/lib/annotations-23.0.0.jar",
   "//flutter/third_party/android_embedding_dependencies/lib/collection-1.1.0.jar",
@@ -394,7 +363,6 @@ embedding_dependencies_jars = [
   "//flutter/third_party/android_embedding_dependencies/lib/core-common-2.2.0.jar",
   "//flutter/third_party/android_embedding_dependencies/lib/core-runtime-2.2.0.jar",
   "//flutter/third_party/android_embedding_dependencies/lib/customview-1.0.0.jar",
-  "//flutter/third_party/android_embedding_dependencies/lib/exifinterface-1.4.1.jar",
   "//flutter/third_party/android_embedding_dependencies/lib/fragment-1.7.1.jar",
   "//flutter/third_party/android_embedding_dependencies/lib/kotlin-stdlib-1.8.22.jar",
   "//flutter/third_party/android_embedding_dependencies/lib/kotlin-stdlib-common-1.8.22.jar",
@@ -546,8 +514,6 @@ action("android_jar") {
   deps = [
     ":flutter_shell_java",
     ":flutter_shell_native",
-    ":pom_content_hash_embedding",
-    ":pom_content_hash_libflutter",
     ":pom_embedding",
     ":pom_libflutter",
   ]
@@ -618,30 +584,6 @@ action("pom_libflutter") {
   ]
 }
 
-action("pom_content_hash_libflutter") {
-  script = "//flutter/tools/androidx/generate_pom_file.py"
-
-  inputs = [ "//flutter/tools/androidx/files.json" ]
-
-  artifact_id =
-      string_replace(android_app_abi, "-", "_") + "_" + flutter_runtime_mode
-
-  hash_dir = "$root_build_dir/content_hash"
-  outputs = [
-    "$hash_dir/$artifact_id.pom",
-    "$hash_dir/$artifact_id.maven-metadata.xml",
-  ]
-
-  args = [
-    "--destination",
-    rebase_path(hash_dir),
-    "--engine-version",
-    content_hash,
-    "--engine-artifact-id",
-    artifact_id,
-  ]
-}
-
 action("pom_embedding") {
   script = "//flutter/tools/androidx/generate_pom_file.py"
 
@@ -659,31 +601,6 @@ action("pom_embedding") {
     rebase_path(root_build_dir),
     "--engine-version",
     engine_version,
-    "--engine-artifact-id",
-    artifact_id,
-    "--include-embedding-dependencies",
-    "true",
-  ]
-}
-
-action("pom_content_hash_embedding") {
-  script = "//flutter/tools/androidx/generate_pom_file.py"
-
-  inputs = [ "//flutter/tools/androidx/files.json" ]
-
-  artifact_id = "flutter_embedding_$flutter_runtime_mode"
-
-  hash_dir = "$root_build_dir/content_hash"
-  outputs = [
-    "$hash_dir/$artifact_id.pom",
-    "$hash_dir/$artifact_id.maven-metadata.xml",
-  ]
-
-  args = [
-    "--destination",
-    rebase_path(hash_dir),
-    "--engine-version",
-    content_hash,
     "--engine-artifact-id",
     artifact_id,
     "--include-embedding-dependencies",
@@ -761,22 +678,11 @@ generated_file("android_entitlement_config") {
 
 if (target_cpu != "x86") {
   zip_bundle("gen_snapshot") {
+    gen_snapshot_bin = "gen_snapshot"
     gen_snapshot_out_dir =
         get_label_info("$dart_src/runtime/bin:gen_snapshot($host_toolchain)",
                        "root_out_dir")
-
-    # The source gen_snapshot binary from the build outputs.
-    gen_snapshot_src = rebase_path("$gen_snapshot_out_dir/gen_snapshot")
-
-    # The output gen_snapshot binary name in the archive.
-    gen_snapshot_dest = "gen_snapshot"
-
-    if (host_os == "mac") {
-      gen_snapshot_src = rebase_path("$root_out_dir/universal/gen_snapshot")
-    } else if (host_os == "win") {
-      gen_snapshot_src = rebase_path("$root_out_dir/gen_snapshot.exe")
-      gen_snapshot_dest = "gen_snapshot.exe"
-    }
+    gen_snapshot_path = rebase_path("$gen_snapshot_out_dir/$gen_snapshot_bin")
 
     if (host_os == "linux") {
       output = "$android_zip_archive_dir/linux-x64.zip"
@@ -784,16 +690,57 @@ if (target_cpu != "x86") {
       output = "$android_zip_archive_dir/darwin-x64.zip"
     } else if (host_os == "win") {
       output = "$android_zip_archive_dir/windows-x64.zip"
+      gen_snapshot_bin = "gen_snapshot.exe"
+      gen_snapshot_path = rebase_path("$root_out_dir/$gen_snapshot_bin")
     }
 
     files = [
       {
-        source = gen_snapshot_src
-        destination = gen_snapshot_dest
+        source = gen_snapshot_path
+        destination = gen_snapshot_bin
       },
     ]
 
-    deps = [ "//flutter/lib/snapshot:generate_snapshot_bins" ]
+    deps = [ "$dart_src/runtime/bin:gen_snapshot($host_toolchain)" ]
+
+    if (host_os == "mac") {
+      deps += [ ":android_entitlement_config" ]
+      files += [
+        {
+          source = "$target_gen_dir/android_entitlements.txt"
+          destination = "entitlements.txt"
+        },
+      ]
+    }
+  }
+
+  # TODO(godofredoc): Remove gen_snapshot and rename new_gen_snapshot when v2 migration is complete.
+  # BUG: https://github.com/flutter/flutter/issues/105351
+  zip_bundle("new_gen_snapshot") {
+    gen_snapshot_bin = "gen_snapshot"
+    gen_snapshot_out_dir =
+        get_label_info("$dart_src/runtime/bin:gen_snapshot($host_toolchain)",
+                       "root_out_dir")
+    gen_snapshot_path = rebase_path("$gen_snapshot_out_dir/$gen_snapshot_bin")
+
+    if (host_os == "linux") {
+      output = "$android_zip_archive_dir/$full_platform_name-$flutter_runtime_mode/linux-x64.zip"
+    } else if (host_os == "mac") {
+      output = "$android_zip_archive_dir/$full_platform_name-$flutter_runtime_mode/darwin-x64.zip"
+    } else if (host_os == "win") {
+      output = "$android_zip_archive_dir/$full_platform_name-$flutter_runtime_mode/windows-x64.zip"
+      gen_snapshot_bin = "gen_snapshot.exe"
+      gen_snapshot_path = rebase_path("$root_out_dir/$gen_snapshot_bin")
+    }
+
+    files = [
+      {
+        source = gen_snapshot_path
+        destination = gen_snapshot_bin
+      },
+    ]
+
+    deps = [ "$dart_src/runtime/bin:gen_snapshot($host_toolchain)" ]
 
     if (host_os == "mac") {
       deps += [ ":android_entitlement_config" ]
@@ -807,8 +754,7 @@ if (target_cpu != "x86") {
   }
 }
 
-if (host_os == "linux" &&
-    (target_cpu == "x64" || target_cpu == "arm64" || target_cpu == "riscv64")) {
+if (host_os == "linux" && (target_cpu == "x64" || target_cpu == "arm64")) {
   zip_bundle("analyze_snapshot") {
     deps = [ "$dart_src/runtime/bin:analyze_snapshot($host_toolchain)" ]
 
@@ -826,6 +772,37 @@ if (host_os == "linux" &&
       output = "$android_zip_archive_dir/analyze-snapshot-darwin-x64.zip"
     } else if (host_os == "win") {
       output = "$android_zip_archive_dir/analyze-snapshot-windows-x64.zip"
+      analyze_snapshot_bin = "analyze-snapshot.exe"
+      analyze_snapshot_path = rebase_path("$root_out_dir/$analyze_snapshot_bin")
+    }
+
+    files = [
+      {
+        source = analyze_snapshot_path
+        destination = analyze_snapshot_bin
+      },
+    ]
+  }
+
+  # TODO(godofredoc): Remove analyze_snapshot and rename new_analyze_snapshot when v2 migration is complete.
+  # BUG: https://github.com/flutter/flutter/issues/105351
+  zip_bundle("new_analyze_snapshot") {
+    deps = [ "$dart_src/runtime/bin:analyze_snapshot($host_toolchain)" ]
+
+    analyze_snapshot_bin = "analyze_snapshot"
+    analyze_snapshot_out_dir =
+        get_label_info(
+            "$dart_src/runtime/bin:analyze_snapshot($host_toolchain)",
+            "root_out_dir")
+    analyze_snapshot_path =
+        rebase_path("$analyze_snapshot_out_dir/$analyze_snapshot_bin")
+
+    if (host_os == "linux") {
+      output = "$android_zip_archive_dir/$full_platform_name-$flutter_runtime_mode/analyze-snapshot-linux-x64.zip"
+    } else if (host_os == "mac") {
+      output = "$android_zip_archive_dir/$full_platform_name-$flutter_runtime_mode/analyze-snapshot-darwin-x64.zip"
+    } else if (host_os == "win") {
+      output = "$android_zip_archive_dir/$full_platform_name-$flutter_runtime_mode/analyze-snapshot-windows-x64.zip"
       analyze_snapshot_bin = "analyze-snapshot.exe"
       analyze_snapshot_path = rebase_path("$root_out_dir/$analyze_snapshot_bin")
     }
@@ -857,26 +834,18 @@ action("embedding_jars") {
 
   deps = [
     ":flutter_shell_java",
-    ":pom_content_hash_embedding",
     ":pom_embedding",
   ]
-  base_sources = [
+  sources = [
     "$root_out_dir/flutter_embedding_$flutter_runtime_mode.jar",
     "$root_out_dir/flutter_embedding_$flutter_runtime_mode.pom",
   ]
-  hash_dir = "$root_build_dir/content_hash"
-  hash_sources = [
-    "$hash_dir/flutter_embedding_$flutter_runtime_mode.pom",
-    "$root_out_dir/flutter_embedding_$flutter_runtime_mode.jar",
-  ]
-  sources = base_sources + hash_sources
-
   outputs = []
   args = []
   base_name = "$root_out_dir/zip_archives/download.flutter.io/io/flutter/" +
               "flutter_embedding_$flutter_runtime_mode/1.0.0-$engine_version/" +
               "flutter_embedding_$flutter_runtime_mode-1.0.0-${engine_version}"
-  foreach(source, base_sources) {
+  foreach(source, sources) {
     extension = get_path_info(source, "extension")
     name = get_path_info(source, "name")
     if (extension == "jar") {
@@ -901,40 +870,6 @@ action("embedding_jars") {
       ]
     }
   }
-
-  # NOTE(codefu): the URL having /*-$engine_version/ is expected; we want these
-  # files in one URL. The flutter-recipes duplicate them to content_hash as
-  # part of its upload step.
-  # More info here: https://github.com/flutter/flutter/issues/172259
-  hash_base_name =
-      "$root_out_dir/zip_archives/download.flutter.io/io/flutter/" +
-      "flutter_embedding_$flutter_runtime_mode/1.0.0-$engine_version/" +
-      "flutter_embedding_$flutter_runtime_mode-1.0.0-${content_hash}"
-  foreach(source, hash_sources) {
-    extension = get_path_info(source, "extension")
-    name = get_path_info(source, "name")
-    if (extension == "jar") {
-      outputs += [
-        "${hash_base_name}.jar",
-        "${hash_base_name}-sources.jar",
-      ]
-      args += [
-        "-i",
-        "${name}.jar",
-        rebase_path("${hash_base_name}.jar"),
-        "-i",
-        "${name}-sources.jar",
-        rebase_path("${hash_base_name}-sources.jar"),
-      ]
-    } else {
-      outputs += [ "${hash_base_name}.${extension}" ]
-      args += [
-        "-i",
-        rebase_path(source),
-        rebase_path("${hash_base_name}.${extension}"),
-      ]
-    }
-  }
 }
 
 # Renames android artifacts and places them in the final
@@ -943,28 +878,21 @@ action("abi_jars") {
   script = "//flutter/build/android_artifacts.py"
   deps = [
     ":android_jar",
-    ":pom_content_hash_libflutter",
     ":pom_libflutter",
   ]
 
   artifact_id =
       string_replace(android_app_abi, "-", "_") + "_" + flutter_runtime_mode
-  base_sources = [
+  sources = [
     "$root_out_dir/${artifact_id}.jar",
     "$root_out_dir/${artifact_id}.pom",
   ]
-  hash_dir = "$root_build_dir/content_hash"
-  hash_sources = [
-    "$hash_dir/${artifact_id}.pom",
-    "$root_out_dir/${artifact_id}.jar",
-  ]
-  sources = base_sources + hash_sources
   outputs = []
   args = []
   base_name = "$root_out_dir/zip_archives/download.flutter.io/io/flutter/" +
               "${artifact_id}/1.0.0-$engine_version/" +
               "${artifact_id}-1.0.0-${engine_version}"
-  foreach(source, base_sources) {
+  foreach(source, sources) {
     extension = get_path_info(source, "extension")
     name = get_path_info(source, "name")
     outputs += [ "${base_name}.${extension}" ]
@@ -972,25 +900,6 @@ action("abi_jars") {
       "-i",
       rebase_path(source),
       rebase_path("${base_name}.${extension}"),
-    ]
-  }
-
-  # NOTE(codefu): the URL having /*-$engine_version/ is expected; we want these
-  # files in one URL. The flutter-recipes duplicate them to content_hash as
-  # part of its upload step.
-  # More info here: https://github.com/flutter/flutter/issues/172259
-  hash_base_name =
-      "$root_out_dir/zip_archives/download.flutter.io/io/flutter/" +
-      "${artifact_id}/1.0.0-$engine_version/" +
-      "${artifact_id}-1.0.0-${content_hash}"
-  foreach(source, hash_sources) {
-    extension = get_path_info(source, "extension")
-    name = get_path_info(source, "name")
-    outputs += [ "${hash_base_name}.${extension}" ]
-    args += [
-      "-i",
-      rebase_path(source),
-      rebase_path("${hash_base_name}.${extension}"),
     ]
   }
 }

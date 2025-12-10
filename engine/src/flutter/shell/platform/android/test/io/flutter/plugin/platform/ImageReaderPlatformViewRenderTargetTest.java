@@ -7,6 +7,8 @@ package io.flutter.plugin.platform;
 import static android.os.Looper.getMainLooper;
 import static io.flutter.Build.API_LEVELS;
 import static org.junit.Assert.*;
+import static org.mockito.ArgumentMatchers.*;
+import static org.mockito.Mockito.*;
 import static org.robolectric.Shadows.shadowOf;
 
 import android.annotation.TargetApi;
@@ -17,7 +19,6 @@ import android.graphics.PorterDuff;
 import android.media.Image;
 import android.view.Surface;
 import android.view.View;
-import androidx.annotation.NonNull;
 import androidx.test.core.app.ApplicationProvider;
 import androidx.test.ext.junit.runners.AndroidJUnit4;
 import io.flutter.view.TextureRegistry.ImageTextureEntry;
@@ -29,7 +30,7 @@ import org.junit.runner.RunWith;
 public class ImageReaderPlatformViewRenderTargetTest {
   private final Context ctx = ApplicationProvider.getApplicationContext();
 
-  static class TestImageTextureEntry implements ImageTextureEntry {
+  class TestImageTextureEntry implements ImageTextureEntry {
     private Image lastPushedImage;
 
     public long id() {
@@ -65,7 +66,7 @@ public class ImageReaderPlatformViewRenderTargetTest {
     final View platformView =
         new View(ctx) {
           @Override
-          public void draw(@NonNull Canvas canvas) {
+          public void draw(Canvas canvas) {
             super.draw(canvas);
             canvas.drawColor(Color.RED);
           }
@@ -102,7 +103,7 @@ public class ImageReaderPlatformViewRenderTargetTest {
     // An image was pushed into the texture entry and it has the correct dimensions.
     Image pushedImage = textureEntry.acquireLatestImage();
     assertNotNull(pushedImage);
-    assertEquals(size, pushedImage.getWidth());
-    assertEquals(size, pushedImage.getHeight());
+    assertEquals(pushedImage.getWidth(), size);
+    assertEquals(pushedImage.getHeight(), size);
   }
 }

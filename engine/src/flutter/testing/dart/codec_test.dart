@@ -12,6 +12,7 @@ import 'package:test/test.dart';
 import 'impeller_enabled.dart';
 
 void main() {
+
   test('Animation metadata', () async {
     Uint8List data = await _getSkiaResource('alphabetAnim.gif').readAsBytes();
     ui.Codec codec = await ui.instantiateImageCodec(data);
@@ -27,7 +28,7 @@ void main() {
   });
 
   test('Fails with invalid data', () async {
-    final data = Uint8List.fromList(<int>[1, 2, 3]);
+    final Uint8List data = Uint8List.fromList(<int>[1, 2, 3]);
     try {
       await ui.instantiateImageCodec(data);
       fail('exception not thrown');
@@ -37,7 +38,7 @@ void main() {
   });
 
   test('getNextFrame fails with invalid data', () async {
-    Uint8List data = await _getSkiaResource('test640x479.gif').readAsBytes();
+    Uint8List data = await _getSkiaResource('flutter_logo.jpg').readAsBytes();
     data = Uint8List.view(data.buffer, 0, 4000);
     final ui.Codec codec = await ui.instantiateImageCodec(data);
     try {
@@ -49,16 +50,14 @@ void main() {
       } else {
         expect(e.toString(), contains('Codec failed'));
       }
-    } finally {
-      codec.dispose();
     }
   });
 
   test('nextFrame', () async {
     final Uint8List data = await _getSkiaResource('test640x479.gif').readAsBytes();
     final ui.Codec codec = await ui.instantiateImageCodec(data);
-    final decodedFrameInfos = <List<int>>[];
-    for (var i = 0; i < 5; i++) {
+    final List<List<int>> decodedFrameInfos = <List<int>>[];
+    for (int i = 0; i < 5; i++) {
       final ui.FrameInfo frameInfo = await codec.getNextFrame();
       decodedFrameInfos.add(<int>[
         frameInfo.duration.inMilliseconds,
@@ -66,24 +65,20 @@ void main() {
         frameInfo.image.height,
       ]);
     }
-    codec.dispose();
-    expect(
-      decodedFrameInfos,
-      equals(<List<int>>[
-        <int>[200, 640, 479],
-        <int>[200, 640, 479],
-        <int>[200, 640, 479],
-        <int>[200, 640, 479],
-        <int>[200, 640, 479],
-      ]),
-    );
+    expect(decodedFrameInfos, equals(<List<int>>[
+      <int>[200, 640, 479],
+      <int>[200, 640, 479],
+      <int>[200, 640, 479],
+      <int>[200, 640, 479],
+      <int>[200, 640, 479],
+    ]));
   });
 
   test('non animated image', () async {
     final Uint8List data = await _getSkiaResource('baby_tux.png').readAsBytes();
     final ui.Codec codec = await ui.instantiateImageCodec(data);
-    final decodedFrameInfos = <List<int>>[];
-    for (var i = 0; i < 2; i++) {
+    final List<List<int>> decodedFrameInfos = <List<int>>[];
+    for (int i = 0; i < 2; i++) {
       final ui.FrameInfo frameInfo = await codec.getNextFrame();
       decodedFrameInfos.add(<int>[
         frameInfo.duration.inMilliseconds,
@@ -91,14 +86,10 @@ void main() {
         frameInfo.image.height,
       ]);
     }
-    codec.dispose();
-    expect(
-      decodedFrameInfos,
-      equals(<List<int>>[
-        <int>[0, 240, 246],
-        <int>[0, 240, 246],
-      ]),
-    );
+    expect(decodedFrameInfos, equals(<List<int>>[
+      <int>[0, 240, 246],
+      <int>[0, 240, 246],
+    ]));
   });
 
   test('with size', () async {
@@ -107,11 +98,14 @@ void main() {
     final ui.Codec codec = await ui.instantiateImageCodecWithSize(
       buffer,
       getTargetSize: (int intrinsicWidth, int intrinsicHeight) {
-        return ui.TargetImageSize(width: intrinsicWidth ~/ 2, height: intrinsicHeight ~/ 2);
+        return ui.TargetImageSize(
+          width: intrinsicWidth ~/ 2,
+          height: intrinsicHeight ~/ 2,
+        );
       },
     );
-    final decodedFrameInfos = <List<int>>[];
-    for (var i = 0; i < 2; i++) {
+    final List<List<int>> decodedFrameInfos = <List<int>>[];
+    for (int i = 0; i < 2; i++) {
       final ui.FrameInfo frameInfo = await codec.getNextFrame();
       decodedFrameInfos.add(<int>[
         frameInfo.duration.inMilliseconds,
@@ -119,14 +113,10 @@ void main() {
         frameInfo.image.height,
       ]);
     }
-    codec.dispose();
-    expect(
-      decodedFrameInfos,
-      equals(<List<int>>[
-        <int>[0, 120, 123],
-        <int>[0, 120, 123],
-      ]),
-    );
+    expect(decodedFrameInfos, equals(<List<int>>[
+      <int>[0, 120, 123],
+      <int>[0, 120, 123],
+    ]));
   });
 
   test('disposed decoded image', () async {
@@ -141,7 +131,6 @@ void main() {
     } on Exception catch (e) {
       expect(e.toString(), contains('Decoded image has been disposed'));
     }
-    codec.dispose();
   });
 
   test('Animated gif can reuse across multiple frames', () async {
@@ -155,17 +144,14 @@ void main() {
     // Capture the final frame of animation. If we have not composited
     // correctly, it will be clipped strangely.
     late ui.FrameInfo frameInfo;
-    for (var i = 0; i < 4; i++) {
+    for (int i = 0; i < 4; i++) {
       frameInfo = await codec.getNextFrame();
     }
-    codec.dispose();
 
     final ui.Image image = frameInfo.image;
     final ByteData imageData = (await image.toByteData(format: ui.ImageByteFormat.png))!;
 
-    final fileName = impellerEnabled
-        ? 'impeller_four_frame_with_reuse_end.png'
-        : 'four_frame_with_reuse_end.png';
+    final String fileName = impellerEnabled ? 'impeller_four_frame_with_reuse_end.png' : 'four_frame_with_reuse_end.png';
     final Uint8List goldenData = File(
       path.join('flutter', 'lib', 'ui', 'fixtures', fileName),
     ).readAsBytesSync();
@@ -184,21 +170,21 @@ void main() {
     // Capture the final frame of animation. If we have not composited
     // correctly, the hearts will be incorrectly repeated in the image.
     late ui.FrameInfo frameInfo;
-    for (var i = 0; i < 69; i++) {
-      frameInfo = await codec.getNextFrame();
+    for (int i = 0; i < 69; i++) {
+      frameInfo  = await codec.getNextFrame();
     }
-    codec.dispose();
 
     final ui.Image image = frameInfo.image;
     final ByteData imageData = (await image.toByteData(format: ui.ImageByteFormat.png))!;
 
-    final fileName = impellerEnabled ? 'impeller_heart_end.png' : 'heart_end.png';
+    final String fileName = impellerEnabled ? 'impeller_heart_end.png' : 'heart_end.png';
 
     final Uint8List goldenData = File(
       path.join('flutter', 'lib', 'ui', 'fixtures', fileName),
     ).readAsBytesSync();
 
     expect(imageData.buffer.asUint8List(), goldenData);
+
   });
 
   test('Animated apng can reuse pre-pre-frame', () async {
@@ -211,15 +197,13 @@ void main() {
 
     // Capture the 67,68,69 frames of animation and then compare the pixels.
     late ui.FrameInfo frameInfo;
-    for (var i = 0; i < 70; i++) {
+    for (int i = 0; i < 70; i++) {
       frameInfo = await codec.getNextFrame();
       if (i >= 67) {
         final ui.Image image = frameInfo.image;
         final ByteData imageData = (await image.toByteData(format: ui.ImageByteFormat.png))!;
 
-        final fileName = impellerEnabled
-            ? 'impeller_2_dispose_op_restore_previous.apng.$i.png'
-            : '2_dispose_op_restore_previous.apng.$i.png';
+        final String fileName = impellerEnabled ? 'impeller_2_dispose_op_restore_previous.apng.$i.png' : '2_dispose_op_restore_previous.apng.$i.png';
 
         final Uint8List goldenData = File(
           path.join('flutter', 'lib', 'ui', 'fixtures', fileName),
@@ -228,7 +212,6 @@ void main() {
         expect(imageData.buffer.asUint8List(), goldenData);
       }
     }
-    codec.dispose();
   });
 
   test('Animated apng alpha type handling', () async {
@@ -245,7 +228,6 @@ void main() {
     image = (await codec.getNextFrame()).image;
     imageData = (await image.toByteData())!;
     expect(imageData.getUint32(0), 0x99000099);
-    codec.dispose();
   });
 
   test('Animated apng background color restore', () async {
@@ -269,10 +251,11 @@ void main() {
     image = (await codec.getNextFrame()).image;
     imageData = (await image.toByteData())!;
     expect(imageData.getUint32(imageData.lengthInBytes - 4), 0x00000000);
-    codec.dispose();
   });
 
-  test('Animated apng frame decode does not crash with invalid destination region', () async {
+  test(
+      'Animated apng frame decode does not crash with invalid destination region',
+      () async {
     final Uint8List data = File(
       path.join('flutter', 'lib', 'ui', 'fixtures', 'out_of_bounds.apng'),
     ).readAsBytesSync();
@@ -287,33 +270,28 @@ void main() {
       } else {
         expect(e.toString(), contains('Codec failed'));
       }
-    } finally {
-      codec.dispose();
     }
   });
 
   test(
-    'Animated apng frame decode does not crash with invalid destination region and bounds wrapping',
-    () async {
-      final Uint8List data = File(
-        path.join('flutter', 'lib', 'ui', 'fixtures', 'out_of_bounds_wrapping.apng'),
-      ).readAsBytesSync();
+      'Animated apng frame decode does not crash with invalid destination region and bounds wrapping',
+      () async {
+    final Uint8List data = File(
+      path.join('flutter', 'lib', 'ui', 'fixtures', 'out_of_bounds_wrapping.apng'),
+    ).readAsBytesSync();
 
-      final ui.Codec codec = await ui.instantiateImageCodec(data);
-      try {
-        await codec.getNextFrame();
-        fail('exception not thrown');
-      } on Exception catch (e) {
-        if (impellerEnabled) {
-          expect(e.toString(), contains('Could not decompress image.'));
-        } else {
-          expect(e.toString(), contains('Codec failed'));
-        }
-      } finally {
-        codec.dispose();
+    final ui.Codec codec = await ui.instantiateImageCodec(data);
+    try {
+      await codec.getNextFrame();
+      fail('exception not thrown');
+    } on Exception catch (e) {
+      if (impellerEnabled) {
+        expect(e.toString(), contains('Could not decompress image.'));
+      } else {
+        expect(e.toString(), contains('Codec failed'));
       }
-    },
-  );
+    }
+  });
 }
 
 /// Returns a File handle to a file in the skia/resources directory.
@@ -324,12 +302,7 @@ File _getSkiaResource(String fileName) {
   // This is fragile and should be changed once the Platform.script issue is
   // resolved.
   final String assetPath = path.join(
-    'flutter',
-    'third_party',
-    'skia',
-    'resources',
-    'images',
-    fileName,
+    'flutter', 'third_party', 'skia', 'resources', 'images', fileName,
   );
   return File(assetPath);
 }

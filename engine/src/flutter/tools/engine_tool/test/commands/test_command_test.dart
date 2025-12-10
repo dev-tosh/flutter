@@ -38,10 +38,15 @@ void main() {
     final runner = ToolCommandRunner(
       environment: testEnvironment.environment,
       configs: {
-        'linux_test_config': builders.buildConfig(path: 'ci/builders/linux_test_config.json'),
+        'linux_test_config': builders.buildConfig(
+          path: 'ci/builders/linux_test_config.json',
+        )
       },
     );
-    final int result = await runner.run(['test', '//flutter/display_list:display_list_unittests']);
+    final result = await runner.run([
+      'test',
+      '//flutter/display_list:display_list_unittests',
+    ]);
 
     printOnFailure(testEnvironment.testLogs.map((t) => t.message).join('\n'));
     expect(result, equals(0));
@@ -92,10 +97,15 @@ void main() {
     final runner = ToolCommandRunner(
       environment: testEnvironment.environment,
       configs: {
-        'linux_test_config': builders.buildConfig(path: 'ci/builders/linux_test_config.json'),
+        'linux_test_config': builders.buildConfig(
+          path: 'ci/builders/linux_test_config.json',
+        )
       },
     );
-    final int result = await runner.run(<String>['test', '//...']);
+    final result = await runner.run(<String>[
+      'test',
+      '//...',
+    ]);
 
     printOnFailure(testEnvironment.testLogs.map((t) => t.message).join('\n'));
     expect(result, equals(0));
@@ -116,7 +126,11 @@ void main() {
       testEnvironment.processHistory,
       isNot(
         contains(
-          isA<ExecutedProcess>().having((e) => e.command, 'command', contains(endsWith('protoc'))),
+          isA<ExecutedProcess>().having(
+            (e) => e.command,
+            'command',
+            contains(endsWith('protoc')),
+          ),
         ),
       ),
       reason: 'protoc is not marked as testonly',

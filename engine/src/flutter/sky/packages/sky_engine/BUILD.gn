@@ -8,7 +8,6 @@ import("//flutter/web_sdk/web_sdk.gni")
 import("$dart_src/sdk/lib/_http/http_sources.gni")
 import("$dart_src/sdk/lib/_internal/js_runtime/interceptors_sources.gni")
 import("$dart_src/sdk/lib/_internal/js_shared/js_types_sources.gni")
-import("$dart_src/sdk/lib/_internal/vm/bin/vm_internal_bin.gni")
 import("$dart_src/sdk/lib/_internal/vm/lib/vm_internal.gni")
 import("$dart_src/sdk/lib/_internal/vm_shared/lib/vm_shared_sources.gni")
 import("$dart_src/sdk/lib/async/async_sources.gni")
@@ -22,9 +21,11 @@ import("$dart_src/sdk/lib/html/html_sources.gni")
 import("$dart_src/sdk/lib/internal/internal_sources.gni")
 import("$dart_src/sdk/lib/io/io_sources.gni")
 import("$dart_src/sdk/lib/isolate/isolate_sources.gni")
+import("$dart_src/sdk/lib/js/js_annotations_sources.gni")
 import("$dart_src/sdk/lib/js/js_sources.gni")
 import("$dart_src/sdk/lib/js_interop/js_interop_sources.gni")
 import("$dart_src/sdk/lib/js_interop_unsafe/js_interop_unsafe_sources.gni")
+import("$dart_src/sdk/lib/js_util/js_util_sources.gni")
 import("$dart_src/sdk/lib/math/math_sources.gni")
 import("$dart_src/sdk/lib/typed_data/typed_data_sources.gni")
 
@@ -102,6 +103,12 @@ copy("_interceptors") {
   ]
 }
 
+copy("_js_annotations") {
+  lib_path = rebase_path("js", "", dart_sdk_lib_path)
+  sources = rebase_path(js_annotations_sdk_sources, "", lib_path)
+  outputs = [ "$root_gen_dir/dart-pkg/sky_engine/lib/_js_annotations/{{source_file_part}}" ]
+}
+
 copy("_js_types") {
   lib_path = rebase_path("_internal/js_shared", "", dart_sdk_lib_path)
   sources = rebase_path(js_types_sdk_sources, "", lib_path)
@@ -120,12 +127,6 @@ copy("vm_internal") {
   lib_path = rebase_path("_internal/vm/lib/", "", dart_sdk_lib_path)
   sources = rebase_path(vm_internal_sdk_sources, "", lib_path)
   outputs = [ "$root_gen_dir/dart-pkg/sky_engine/lib/_internal/vm/lib/{{source_file_part}}" ]
-}
-
-copy("vm_internal_bin") {
-  lib_path = rebase_path("_internal/vm/bin/", "", dart_sdk_lib_path)
-  sources = rebase_path(vm_internal_bin_sources, "", lib_path)
-  outputs = [ "$root_gen_dir/dart-pkg/sky_engine/lib/_internal/vm/bin/{{source_file_part}}" ]
 }
 
 copy("vm_shared") {
@@ -180,6 +181,13 @@ copy("js_interop_unsafe") {
   outputs = [ "$root_gen_dir/dart-pkg/sky_engine/lib/js_interop_unsafe/{{source_file_part}}" ]
 }
 
+copy("js_util") {
+  lib_path = rebase_path("js_util", "", dart_sdk_lib_path)
+  sources = rebase_path(js_util_sdk_sources, "", lib_path)
+  outputs =
+      [ "$root_gen_dir/dart-pkg/sky_engine/lib/js_util/{{source_file_part}}" ]
+}
+
 copy("math") {
   lib_path = rebase_path("math", "", dart_sdk_lib_path)
   sources = rebase_path(math_sdk_sources, "", lib_path)
@@ -217,6 +225,7 @@ group("copy_dart_sdk") {
   deps = [
     ":_http",
     ":_interceptors",
+    ":_js_annotations",
     ":_js_types",
     ":async",
     ":collection",
@@ -233,10 +242,10 @@ group("copy_dart_sdk") {
     ":js",
     ":js_interop",
     ":js_interop_unsafe",
+    ":js_util",
     ":math",
     ":typed_data",
     ":vm_internal",
-    ":vm_internal_bin",
     ":vm_shared",
   ]
 }
@@ -261,6 +270,7 @@ generated_file("_embedder_yaml") {
     "  \"dart:js\": \"js/js.dart\"",
     "  \"dart:js_interop\": \"js_interop/js_interop.dart\"",
     "  \"dart:js_interop_unsafe\": \"js_interop_unsafe/js_interop_unsafe.dart\"",
+    "  \"dart:js_util\": \"js_util/js_util.dart\"",
     "  \"dart:math\": \"math/math.dart\"",
     "  \"dart:typed_data\": \"typed_data/typed_data.dart\"",
     "  \"dart:ui\": \"ui/ui.dart\"",
@@ -272,6 +282,8 @@ generated_file("_embedder_yaml") {
     "  # public API, e.g. List being Iterable by virtue of implementing",
     "  # EfficientLengthIterable. Not including this library yields analysis errors.",
     "  \"dart:_internal\": \"internal/internal.dart\"",
+    "  # The _js_annotations library is also needed for the same reasons as _internal.",
+    "  \"dart:_js_annotations\": \"_js_annotations/_js_annotations.dart\"",
     "  # The _js_types library is also needed for the same reasons as _internal.",
     "  \"dart:_js_types\": \"_js_types/js_types.dart\"",
     "  \"dart:nativewrappers\": \"_empty.dart\"",
@@ -281,7 +293,9 @@ generated_file("_embedder_yaml") {
 action("sky_engine") {
   package_name = "sky_engine"
   pkg_directory = rebase_path("$root_gen_dir/dart-pkg")
+  package_root = rebase_path("$root_gen_dir/dart-pkg/packages")
   stamp_file = "$root_gen_dir/dart-pkg/${package_name}.stamp"
+  entries_file = "$root_gen_dir/dart-pkg/${package_name}.entries"
 
   sources = [
     "LICENSE",
@@ -308,7 +322,12 @@ action("sky_engine") {
     "$service_isolate_dir/vmservice_server.dart",
   ]
 
-  outputs = [ stamp_file ]
+  outputs = [
+    "$root_gen_dir/dart-pkg/${package_name}",
+    "$root_gen_dir/dart-pkg/${package_name}/pubspec.yaml",
+    "$root_gen_dir/dart-pkg/packages/${package_name}",
+    stamp_file,
+  ]
 
   script = rebase_path("//flutter/build/dart/tools/dart_pkg.py", ".", "//")
 
@@ -321,8 +340,12 @@ action("sky_engine") {
            rebase_path(dart_sdk_root),
            "--pkg-directory",
            pkg_directory,
+           "--package-root",
+           package_root,
            "--stamp-file",
            rebase_path(stamp_file),
+           "--entries-file",
+           rebase_path(entries_file),
            "--package-sources",
          ] + rebase_path(sources) + [ "--sdk-ext-directories" ] +
          rebase_path(sdk_ext_directory) + [ "--sdk-ext-files" ] +

@@ -13,6 +13,7 @@
 #include "flutter/shell/gpu/gpu_surface_vulkan_delegate.h"
 #include "flutter/vulkan/vulkan_backbuffer.h"
 #include "flutter/vulkan/vulkan_native_surface.h"
+#include "flutter/vulkan/vulkan_window.h"
 
 #include "third_party/skia/include/core/SkRefCnt.h"
 #include "third_party/skia/include/core/SkSurface.h"
@@ -39,10 +40,10 @@ class GPUSurfaceVulkan : public Surface {
   bool IsValid() override;
 
   // |Surface|
-  std::unique_ptr<SurfaceFrame> AcquireFrame(const DlISize& size) override;
+  std::unique_ptr<SurfaceFrame> AcquireFrame(const SkISize& size) override;
 
   // |Surface|
-  DlMatrix GetRootTransformation() const override;
+  SkMatrix GetRootTransformation() const override;
 
   // |Surface|
   GrDirectContext* GetContext() override;
@@ -58,7 +59,7 @@ class GPUSurfaceVulkan : public Surface {
 
   sk_sp<SkSurface> CreateSurfaceFromVulkanImage(const VkImage image,
                                                 const VkFormat format,
-                                                const DlISize& size);
+                                                const SkISize& size);
 
   FML_DISALLOW_COPY_AND_ASSIGN(GPUSurfaceVulkan);
 };

@@ -6,7 +6,6 @@
 
 #include <vector>
 
-#include "flutter/fml/logging.h"
 #include "impeller/toolkit/egl/context.h"
 #include "impeller/toolkit/egl/surface.h"
 
@@ -162,7 +161,8 @@ std::unique_ptr<Config> Display::ChooseConfig(ConfigDescriptor config) const {
     return nullptr;
   }
 
-  if (config_count_out < 1) {
+  if (config_count_out != 1u) {
+    IMPELLER_LOG_EGL_ERROR;
     return nullptr;
   }
 

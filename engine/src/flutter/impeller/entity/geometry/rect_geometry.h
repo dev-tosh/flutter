@@ -6,15 +6,14 @@
 #define FLUTTER_IMPELLER_ENTITY_GEOMETRY_RECT_GEOMETRY_H_
 
 #include "impeller/entity/geometry/geometry.h"
-#include "impeller/geometry/stroke_parameters.h"
 
 namespace impeller {
 
-class FillRectGeometry final : public Geometry {
+class RectGeometry final : public Geometry {
  public:
-  explicit FillRectGeometry(Rect rect);
+  explicit RectGeometry(Rect rect);
 
-  ~FillRectGeometry() override;
+  ~RectGeometry() override;
 
   // |Geometry|
   bool CoversArea(const Matrix& transform, const Rect& rect) const override;
@@ -32,28 +31,6 @@ class FillRectGeometry final : public Geometry {
 
  private:
   Rect rect_;
-};
-
-class StrokeRectGeometry final : public Geometry {
- public:
-  explicit StrokeRectGeometry(const Rect& rect, const StrokeParameters& stroke);
-
-  ~StrokeRectGeometry() override;
-
-  // |Geometry|
-  GeometryResult GetPositionBuffer(const ContentContext& renderer,
-                                   const Entity& entity,
-                                   RenderPass& pass) const override;
-
-  // |Geometry|
-  std::optional<Rect> GetCoverage(const Matrix& transform) const override;
-
- private:
-  const Rect rect_;
-  const Scalar stroke_width_;
-  const Join stroke_join_;
-
-  static Join AdjustStrokeJoin(const StrokeParameters& stroke);
 };
 
 }  // namespace impeller

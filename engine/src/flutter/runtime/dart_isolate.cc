@@ -153,18 +153,11 @@ std::weak_ptr<DartIsolate> DartIsolate::CreateRunningRootIsolate(
     return {};
   }
 
-  {
+  if (settings.root_isolate_create_callback) {
+    // Isolate callbacks always occur in isolate scope and before user code has
+    // had a chance to run.
     tonic::DartState::Scope scope(isolate.get());
-    if (settings.merged_platform_ui_thread !=
-        Settings::MergedPlatformUIThread::kMergeAfterLaunch) {
-      Dart_SetCurrentThreadOwnsIsolate();
-    }
-
-    if (settings.root_isolate_create_callback) {
-      // Isolate callbacks always occur in isolate scope and before user code
-      // has had a chance to run.
-      settings.root_isolate_create_callback(*isolate.get());
-    }
+    settings.root_isolate_create_callback(*isolate.get());
   }
 
   if (root_isolate_create_callback) {
@@ -352,7 +345,6 @@ Dart_Isolate DartIsolate::CreatePlatformIsolate(Dart_Handle entry_point,
       }
       old_task_observer_add(key, callback);
     });
-    return platform_task_runner->GetTaskQueueId();
   };
 
   UIDartState::Context context(task_runners);
@@ -518,13 +510,7 @@ bool DartIsolate::Initialize(Dart_Isolate dart_isolate) {
     SetMessageHandlingTaskRunner(GetTaskRunners().GetPlatformTaskRunner(),
                                  true);
   } else {
-    // When running with custom UI task runner post directly to runner (there is
-    // no task queue).
-    bool post_directly_to_runner =
-        GetTaskRunners().GetUITaskRunner() &&
-        !GetTaskRunners().GetUITaskRunner()->GetTaskQueueId().is_valid();
-    SetMessageHandlingTaskRunner(GetTaskRunners().GetUITaskRunner(),
-                                 post_directly_to_runner);
+    SetMessageHandlingTaskRunner(GetTaskRunners().GetUITaskRunner(), false);
   }
 
   if (tonic::CheckAndHandleError(
@@ -674,14 +660,11 @@ bool DartIsolate::LoadLibraries() {
   DartIO::InitForIsolate(may_insecurely_connect_to_all_domains_,
                          domain_network_policy_);
 
-  const auto& settings = GetIsolateGroupData().GetSettings();
-
-  DartUI::InitForIsolate(settings);
+  DartUI::InitForIsolate(GetIsolateGroupData().GetSettings());
 
   const bool is_service_isolate = Dart_IsServiceIsolate(isolate());
 
   DartRuntimeHooks::Install(IsRootIsolate() && !is_service_isolate,
-                            settings.profile_microtasks,
                             GetAdvisoryScriptURI());
 
   if (!is_service_isolate) {
@@ -1378,11 +1361,6 @@ void DartIsolate::DartIsolateCleanupCallback(
 
 std::weak_ptr<DartIsolate> DartIsolate::GetWeakIsolatePtr() {
   return std::static_pointer_cast<DartIsolate>(shared_from_this());
-}
-
-void DartIsolate::SetOwnerToCurrentThread() {
-  tonic::DartIsolateScope isolate_scope(isolate());
-  Dart_SetCurrentThreadOwnsIsolate();
 }
 
 void DartIsolate::AddIsolateShutdownCallback(const fml::closure& closure) {

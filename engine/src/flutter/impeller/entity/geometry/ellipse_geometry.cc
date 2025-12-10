@@ -36,12 +36,4 @@ bool EllipseGeometry::IsAxisAlignedRect() const {
   return false;
 }
 
-StrokeEllipseGeometry::StrokeEllipseGeometry(const Rect& bounds,
-                                             const StrokeParameters& parameters)
-    : StrokePathSourceGeometry(parameters), ellipse_source_(bounds) {}
-
-const PathSource& StrokeEllipseGeometry::GetSource() const {
-  return ellipse_source_;
-}
-
 }  // namespace impeller

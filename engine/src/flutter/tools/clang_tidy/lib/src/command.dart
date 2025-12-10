@@ -37,17 +37,20 @@ enum LintAction {
 /// it.
 class Command {
   /// Generate a [Command] from a [Map].
-  Command.fromMap(Map<String, dynamic> map)
-    : directory = io.Directory(map['directory'] as String).absolute,
-      command = map['command'] as String {
-    filePath = path.normalize(path.join(directory.path, map['file'] as String));
+  Command.fromMap(Map<String, dynamic> map) :
+    directory = io.Directory(map['directory'] as String).absolute,
+    command = map['command'] as String {
+    filePath = path.normalize(path.join(
+      directory.path,
+      map['file'] as String,
+    ));
   }
 
   /// The working directory of the command.
   final io.Directory directory;
 
   /// The compilation command.
-  final String command;
+  final String command ;
 
   /// The file on which the command operates.
   late final String filePath;
@@ -66,7 +69,9 @@ class Command {
       String result = command;
       result = result.replaceAll(r'\s+', ' ');
       // Remove everything that comes before the compiler command.
-      result = result.split(' ').skipWhile((String s) => !_pathRegex.hasMatch(s)).join(' ');
+      result = result.split(' ')
+                     .skipWhile((String s) => !_pathRegex.hasMatch(s))
+                     .join(' ');
       result = result.replaceAll(_pathRegex, '');
       result = result.replaceAll(_argRegex, '');
       result = result.replaceAll(_extraCommandRegex, '');
@@ -78,17 +83,17 @@ class Command {
 
   /// The command but with clang-tidy instead of clang.
   String get tidyPath {
-    return _tidyPath ??=
-        _pathRegex
-            .stringMatch(command)
-            ?.replaceAll('clang/bin/clang', 'clang/bin/clang-tidy')
-            .replaceAll('clang-tidy++', 'clang-tidy') ??
-        '';
+    return _tidyPath ??= _pathRegex.stringMatch(command)?.replaceAll(
+      'clang/bin/clang',
+      'clang/bin/clang-tidy',
+    ).replaceAll('clang-tidy++', 'clang-tidy') ?? '';
   }
 
   /// Whether this command operates on any of the files in `queries`.
   bool containsAny(List<io.File> queries) {
-    return queries.indexWhere((io.File query) => path.equals(query.path, filePath)) != -1;
+    return queries.indexWhere(
+      (io.File query) => path.equals(query.path, filePath),
+    ) != -1;
   }
 
   static final RegExp _nolintRegex = RegExp(
@@ -105,26 +110,27 @@ class Command {
       return LintAction.skipThirdParty;
     }
 
-    final file = io.File(filePath);
+    final io.File file = io.File(filePath);
     if (!file.existsSync()) {
       return LintAction.skipMissing;
     }
-    final Stream<String> lines = file
-        .openRead()
-        .transform(utf8.decoder)
-        .transform(const LineSplitter());
+    final Stream<String> lines = file.openRead()
+      .transform(utf8.decoder)
+      .transform(const LineSplitter());
     return lintActionFromContents(lines);
   }
 
   /// Determine the lint action for the file with contents `lines`.
   @visibleForTesting
   static Future<LintAction> lintActionFromContents(Stream<String> lines) async {
-    // Check for FLUTTER_NOLINT at top of file.
+    // Check for FlUTTER_NOLINT at top of file.
     await for (final String line in lines) {
       final RegExpMatch? match = _nolintRegex.firstMatch(line);
       if (match != null) {
-        return match.group(1) != null ? LintAction.skipNoLint : LintAction.failMalformedNoLint;
-      } else if (line.isNotEmpty && line[0] != '\n' && line[0] != '/' && line[0] != '#') {
+        return match.group(1) != null
+          ? LintAction.skipNoLint
+          : LintAction.failMalformedNoLint;
+      } else if (line.isNotEmpty && line[0] != '\n' && line[0] != '/') {
         // Quick out once we find a line that isn't empty or a comment.  The
         // FLUTTER_NOLINT must show up before the first real code.
         return LintAction.lint;
@@ -135,12 +141,17 @@ class Command {
 
   /// The job for the process runner for the lint needed for this command.
   WorkerJob createLintJob(Options options) {
-    final args = <String>[
+    final List<String> args = <String>[
       filePath,
       '--warnings-as-errors=${options.warningsAsErrors ?? '*'}',
-      if (options.checks != null) options.checks!,
-      if (options.fix) ...<String>['--fix', '--format-style=file'],
-      if (options.enableCheckProfile) '--enable-check-profile',
+      if (options.checks != null)
+        options.checks!,
+      if (options.fix) ...<String>[
+        '--fix',
+        '--format-style=file',
+      ],
+      if (options.enableCheckProfile)
+        '--enable-check-profile',
       '--',
     ];
     args.addAll(tidyArgs.split(' '));

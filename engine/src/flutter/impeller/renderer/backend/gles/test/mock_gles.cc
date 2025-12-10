@@ -39,23 +39,13 @@ auto const kExtensions = std::vector<const char*>{
 };
 
 namespace {
-
-template <typename T>
-struct function_traits;
-
-template <typename C, typename Ret, typename... Args>
-struct function_traits<Ret (C::*)(Args...)> {
-  using return_type = Ret;
-};
-
 template <typename Func, typename... Args>
-auto CallMockMethod(Func func, Args&&... args) {
+void CallMockMethod(Func func, Args&&... args) {
   if (auto mock_gles = g_mock_gles.lock()) {
     if (mock_gles->GetImpl()) {
-      return (mock_gles->GetImpl()->*func)(std::forward<Args>(args)...);
+      (mock_gles->GetImpl()->*func)(std::forward<Args>(args)...);
     }
   }
-  return typename function_traits<Func>::return_type();
 }
 }  // namespace
 
@@ -99,11 +89,8 @@ void mockGetIntegerv(GLenum name, int* value) {
     case GL_MAX_LABEL_LENGTH_KHR:
       *value = 64;
       break;
-    case GL_MAX_TEXTURE_SIZE:
-      *value = 4096;
-      break;
     default:
-      CallMockMethod(&IMockGLESImpl::GetIntegerv, name, value);
+      *value = 0;
       break;
   }
 }
@@ -207,55 +194,6 @@ void mockObjectLabelKHR(GLenum identifier,
 static_assert(CheckSameSignature<decltype(mockObjectLabelKHR),  //
                                  decltype(glObjectLabelKHR)>::value);
 
-GLboolean mockIsTexture(GLuint texture) {
-  return CallMockMethod(&IMockGLESImpl::IsTexture, texture);
-}
-
-static_assert(CheckSameSignature<decltype(mockIsTexture),  //
-                                 decltype(glIsTexture)>::value);
-
-GLenum mockCheckFramebufferStatus(GLenum target) {
-  return CallMockMethod(&IMockGLESImpl::CheckFramebufferStatus, target);
-}
-
-static_assert(CheckSameSignature<decltype(mockCheckFramebufferStatus),  //
-                                 decltype(glCheckFramebufferStatus)>::value);
-
-void mockGenFramebuffers(GLsizei n, GLuint* ids) {
-  return CallMockMethod(&IMockGLESImpl::GenFramebuffers, n, ids);
-}
-
-static_assert(CheckSameSignature<decltype(mockGenFramebuffers),  //
-                                 decltype(glGenFramebuffers)>::value);
-
-void mockBindFramebuffer(GLenum target, GLuint framebuffer) {
-  return CallMockMethod(&IMockGLESImpl::BindFramebuffer, target, framebuffer);
-}
-
-static_assert(CheckSameSignature<decltype(mockBindFramebuffer),  //
-                                 decltype(glBindFramebuffer)>::value);
-
-void mockReadPixels(GLint x,
-                    GLint y,
-                    GLsizei width,
-                    GLsizei height,
-                    GLenum format,
-                    GLenum type,
-                    void* data) {
-  return CallMockMethod(&IMockGLESImpl::ReadPixels, x, y, width, height, format,
-                        type, data);
-}
-
-void mockDiscardFramebufferEXT(GLenum target,
-                               GLsizei numAttachments,
-                               const GLenum* attachments) {
-  return CallMockMethod(&IMockGLESImpl::DiscardFramebufferEXT, target,
-                        numAttachments, attachments);
-}
-
-static_assert(CheckSameSignature<decltype(mockDiscardFramebufferEXT),  //
-                                 decltype(glDiscardFramebufferEXT)>::value);
-
 // static
 std::shared_ptr<MockGLES> MockGLES::Init(
     std::unique_ptr<MockGLESImpl> impl,
@@ -319,18 +257,6 @@ const ProcTableGLES::Resolver kMockResolverGLES = [](const char* name) {
     return reinterpret_cast<void*>(mockObjectLabelKHR);
   } else if (strcmp(name, "glGenBuffers") == 0) {
     return reinterpret_cast<void*>(mockGenBuffers);
-  } else if (strcmp(name, "glIsTexture") == 0) {
-    return reinterpret_cast<void*>(mockIsTexture);
-  } else if (strcmp(name, "glCheckFramebufferStatus") == 0) {
-    return reinterpret_cast<void*>(mockCheckFramebufferStatus);
-  } else if (strcmp(name, "glReadPixels") == 0) {
-    return reinterpret_cast<void*>(mockReadPixels);
-  } else if (strcmp(name, "glGenFramebuffers") == 0) {
-    return reinterpret_cast<void*>(mockGenFramebuffers);
-  } else if (strcmp(name, "glBindFramebuffer") == 0) {
-    return reinterpret_cast<void*>(mockBindFramebuffer);
-  } else if (strcmp(name, "glDiscardFramebufferEXT") == 0) {
-    return reinterpret_cast<void*>(mockDiscardFramebufferEXT);
   } else {
     return reinterpret_cast<void*>(&doNothing);
   }

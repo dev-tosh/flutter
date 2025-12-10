@@ -6,7 +6,6 @@ package io.flutter.util;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
@@ -19,14 +18,16 @@ import android.view.ViewGroup;
 import androidx.test.ext.junit.runners.AndroidJUnit4;
 import org.junit.Test;
 import org.junit.runner.RunWith;
+import org.robolectric.annotation.Config;
 
+@Config(manifest = Config.NONE)
 @RunWith(AndroidJUnit4.class)
 public class ViewUtilsTest {
   @Test
   public void canGetActivity() {
     // Non activity context returns null
     Context nonActivityContext = mock(Context.class);
-    assertNull(ViewUtils.getActivity(nonActivityContext));
+    assertEquals(null, ViewUtils.getActivity(nonActivityContext));
 
     Activity activity = mock(Activity.class);
     assertEquals(activity, ViewUtils.getActivity(activity));

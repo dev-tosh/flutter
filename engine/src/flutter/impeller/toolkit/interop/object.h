@@ -138,7 +138,6 @@ class ScopedObject final {
       object_->Release();
       object_ = nullptr;
     }
-    // NOLINTNEXTLINE(clang-analyzer-cplusplus.NewDeleteLeaks)
   }
 };
 

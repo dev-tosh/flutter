@@ -108,26 +108,6 @@ enum class MaliGPU {
   kUnknown,
 };
 
-// Ordered by approximate release date. We currently don't attempt to
-// parse the exact power VR GPU variant so newer names will fall back
-// to OpenGL. This is acceptable for now.
-enum class PowerVRGPU {
-  kUnknown,
-  // Not good.
-  kRogue,
-  // Vulkan may work, but not tested.
-  kAXE,
-  kAXM,
-  kAXT,
-  kBXE,
-  kBXM,
-  kBXS,
-  kBXT,
-  // First good vulkan drivers.
-  kCXT,
-  kDXT,
-};
-
 enum class VendorVK {
   kUnknown,
   //----------------------------------------------------------------------------
@@ -142,7 +122,6 @@ enum class VendorVK {
   kNvidia,
   kIntel,
   kHuawei,
-  kSamsung,
   //----------------------------------------------------------------------------
   /// Includes the LLVM Pipe CPU implementation.
   ///
@@ -260,22 +239,17 @@ class DriverInfoVK {
   bool IsKnownBadDriver() const;
 
   //----------------------------------------------------------------------------
-  /// @brief      Returns Mali GPU info if this is a Mali GPU, otherwise
-  ///             std::nullopt.
+  /// @brief      Determines if the driver can batch submit command buffers
+  ///             without triggering erronious deadlock errors.
   ///
-  std::optional<MaliGPU> GetMaliGPUInfo() const;
-
-  //----------------------------------------------------------------------------
-  /// @brief      Returns Adreno GPU info if this is a Adreno GPU, otherwise
-  ///             std::nullopt.
+  ///             Early 600 series Adreno drivers would deadlock if a command
+  ///             buffer submission had too much work attached to it, this
+  ///             requires the renderer to split up command buffers that could
+  ///             be logically combined.
   ///
-  std::optional<AdrenoGPU> GetAdrenoGPUInfo() const;
-
-  //----------------------------------------------------------------------------
-  /// @brief      Returns PowerVR GPU info if this is a PowerVR GPU, otherwise
-  ///             std::nullopt.
+  /// @return     True if device can batch submit command buffers.
   ///
-  std::optional<PowerVRGPU> GetPowerVRGPUInfo() const;
+  bool CanBatchSubmitCommandBuffers() const;
 
  private:
   bool is_valid_ = false;
@@ -286,7 +260,6 @@ class DriverInfoVK {
   // identified Adreno GPU.
   std::optional<AdrenoGPU> adreno_gpu_ = std::nullopt;
   std::optional<MaliGPU> mali_gpu_ = std::nullopt;
-  std::optional<PowerVRGPU> powervr_gpu_ = std::nullopt;
   std::string driver_name_;
 };
 

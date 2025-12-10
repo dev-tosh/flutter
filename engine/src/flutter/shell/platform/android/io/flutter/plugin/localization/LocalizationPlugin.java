@@ -183,25 +183,26 @@ public class LocalizationPlugin {
    */
   @NonNull
   public static Locale localeFromString(@NonNull String localeString) {
-    Locale.Builder localeBuilder = new Locale.Builder();
+    // Normalize the locale string, replace all underscores with hyphens.
+    localeString = localeString.replace('_', '-');
 
     // Pre-API 21, we fall back to manually parsing the locale tag.
-    // Normalize the locale string, replace all underscores with hyphens.
-    String[] parts = localeString.replace('_', '-').split("-");
+    String parts[] = localeString.split("-", -1);
 
     // Assume the first part is always the language code.
-    localeBuilder.setLanguage(parts[0]);
-
+    String languageCode = parts[0];
+    String scriptCode = "";
+    String countryCode = "";
     int index = 1;
     if (parts.length > index && parts[index].length() == 4) {
-      localeBuilder.setScript(parts[index]);
+      scriptCode = parts[index];
       index++;
     }
     if (parts.length > index && parts[index].length() >= 2 && parts[index].length() <= 3) {
-      localeBuilder.setRegion(parts[index]);
+      countryCode = parts[index];
       index++;
     }
     // Ignore the rest of the locale for this purpose.
-    return localeBuilder.build();
+    return new Locale(languageCode, countryCode, scriptCode);
   }
 }

@@ -45,7 +45,7 @@ struct OverlayLayer {
 
 class SurfacePool {
  public:
-  explicit SurfacePool(bool use_new_surface_methods);
+  SurfacePool();
 
   ~SurfacePool();
 
@@ -71,15 +71,10 @@ class SurfacePool {
   // Sets the frame size used by the layers in the pool.
   // If the current layers in the pool have a different frame size,
   // then they are deallocated as soon as |GetLayer| is called.
-  void SetFrameSize(DlISize frame_size);
+  void SetFrameSize(SkISize frame_size);
 
   // Returns true if the current pool has layers in use.
   bool HasLayers();
-
-  // Reset the layer index but do not release any layers.
-  void ResetLayers();
-
-  void TrimLayers();
 
  private:
   // The index of the entry in the layers_ vector that determines the beginning
@@ -100,14 +95,13 @@ class SurfacePool {
   std::vector<std::shared_ptr<OverlayLayer>> layers_;
 
   // The frame size of the layers in the pool.
-  DlISize current_frame_size_;
+  SkISize current_frame_size_;
 
   // The frame size to be used by future layers.
-  DlISize requested_frame_size_;
+  SkISize requested_frame_size_;
 
   // Used to guard public methods.
   std::mutex mutex_;
-  bool use_new_surface_methods_ = false;
 
   void DestroyLayersLocked(
       const std::shared_ptr<PlatformViewAndroidJNI>& jni_facade);

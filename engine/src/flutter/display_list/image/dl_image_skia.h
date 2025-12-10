@@ -33,7 +33,7 @@ class DlImageSkia final : public DlImage {
   bool isUIThreadSafe() const override;
 
   // |DlImage|
-  DlISize GetSize() const override;
+  SkISize dimensions() const override;
 
   // |DlImage|
   size_t GetApproximateByteSize() const override;

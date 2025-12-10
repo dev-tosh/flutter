@@ -24,17 +24,17 @@ void main() {
       print('Disabled on Impeller - https://github.com/flutter/flutter/issues/135702');
       return;
     }
-    const width = 2;
-    const height = 2;
-    final pixels = Float32List(width * height * 4);
-    final pixels2d = <List<double>>[
+    const int width = 2;
+    const int height = 2;
+    final Float32List pixels = Float32List(width * height * 4);
+    final List<List<double>> pixels2d = <List<double>>[
       <double>[1, 0, 0, 1],
       <double>[0, 1, 0, 1],
       <double>[0, 0, 1, 1],
       <double>[1, 1, 1, 0],
     ];
-    var offset = 0;
-    for (final color in pixels2d) {
+    int offset = 0;
+    for (final List<double> color in pixels2d) {
       pixels[offset + 0] = color[0];
       pixels[offset + 1] = color[1];
       pixels[offset + 2] = color[2];
@@ -42,16 +42,17 @@ void main() {
       offset += 4;
     }
 
-    final completer = Completer<Image>();
-    decodeImageFromPixels(Uint8List.view(pixels.buffer), width, height, PixelFormat.rgbaFloat32, (
-      Image result,
-    ) {
+    final Completer<Image> completer = Completer<Image>();
+    decodeImageFromPixels(
+        Uint8List.view(pixels.buffer), width, height, PixelFormat.rgbaFloat32,
+        (Image result) {
       completer.complete(result);
     });
 
     final Image image = await completer.future;
-    final ByteData data = (await image.toByteData(format: ImageByteFormat.rawStraightRgba))!;
-    final readPixels = Uint32List.view(data.buffer);
+    final ByteData data =
+        (await image.toByteData(format: ImageByteFormat.rawStraightRgba))!;
+    final Uint32List readPixels = Uint32List.view(data.buffer);
     expect(width * height, readPixels.length);
     expect(readPixels[0], 0xff0000ff);
     expect(readPixels[1], 0xff00ff00);
@@ -125,7 +126,7 @@ void main() {
     expect(image.height, _kWidth);
     expect(data.lengthInBytes, _kWidth * _kWidth * 4 * 4);
     // Top-left pixel should be black.
-    final floats = Float32List.view(data.buffer);
+    final Float32List floats = Float32List.view(data.buffer);
     expect(floats[0], 0.0);
     expect(floats[1], 0.0);
     expect(floats[2], 0.0);
@@ -142,28 +143,31 @@ class Square4x4Image {
     final double radius = _kRadius.toDouble();
     final double innerWidth = (_kWidth - 2 * _kRadius).toDouble();
 
-    final recorder = PictureRecorder();
-    final canvas = Canvas(recorder, Rect.fromLTWH(0.0, 0.0, width, width));
+    final PictureRecorder recorder = PictureRecorder();
+    final Canvas canvas =
+        Canvas(recorder, Rect.fromLTWH(0.0, 0.0, width, width));
 
-    final black = Paint()
+    final Paint black = Paint()
       ..strokeWidth = 1.0
       ..color = _kBlack;
-    final green = Paint()
+    final Paint green = Paint()
       ..strokeWidth = 1.0
       ..color = _kGreen;
 
     canvas.drawRect(Rect.fromLTWH(0.0, 0.0, width, width), black);
-    canvas.drawRect(Rect.fromLTWH(radius, radius, innerWidth, innerWidth), green);
+    canvas.drawRect(
+        Rect.fromLTWH(radius, radius, innerWidth, innerWidth), green);
     return recorder.endRecording().toImage(_kWidth, _kWidth);
   }
 
   static List<int> get bytes {
-    const bytesPerChannel = 4;
-    final result = List<int>.filled(_kWidth * _kWidth * bytesPerChannel, 0);
+    const int bytesPerChannel = 4;
+    final List<int> result = List<int>.filled(
+        _kWidth * _kWidth * bytesPerChannel, 0);
 
     void fillWithColor(Color color, int min, int max) {
-      for (var i = min; i < max; i++) {
-        for (var j = min; j < max; j++) {
+      for (int i = min; i < max; i++) {
+        for (int j = min; j < max; j++) {
           final int offset = i * bytesPerChannel + j * _kWidth * bytesPerChannel;
           result[offset] = color.red;
           result[offset + 1] = color.green;
@@ -185,24 +189,29 @@ class GrayscaleImage {
 
   static Future<Image> load() async {
     final Uint8List bytes = await readFile('2x2.png');
-    final completer = Completer<Image>();
+    final Completer<Image> completer = Completer<Image>();
     decodeImageFromList(bytes, (Image image) => completer.complete(image));
     return completer.future;
   }
 
   static List<int> get bytesAsRgba {
-    return <int>[255, 255, 255, 255, 127, 127, 127, 255, 127, 127, 127, 255, 0, 0, 0, 255];
+    return <int>[
+      255, 255, 255, 255,
+      127, 127, 127, 255,
+      127, 127, 127, 255,
+      0, 0, 0, 255,
+    ];
   }
 
   static List<int> get bytesUnmodified => <int>[255, 127, 127, 0];
 }
 
 class TransparentImage {
-  TransparentImage._();
+    TransparentImage._();
 
   static Future<Image> load() async {
     final Uint8List bytes = await readFile('transparent_image.png');
-    final completer = Completer<Image>();
+    final Completer<Image> completer = Completer<Image>();
     decodeImageFromList(bytes, (Image image) => completer.complete(image));
     return completer.future;
   }
@@ -210,55 +219,61 @@ class TransparentImage {
   static List<int> get bytesAsPremultipliedRgba {
     return <int>[
       //First raw, solid colors
-      255, 0, 0, 255, // red
-      0, 255, 0, 255, // green
-      0, 0, 255, 255, // blue
+      255, 0, 0, 255,     // red
+      0, 255, 0, 255,     // green
+      0, 0, 255, 255,     // blue
       136, 136, 136, 255, // grey
+
       //Second raw, 50% transparent
-      127, 0, 0, 127, // red
-      0, 127, 0, 127, // green
-      0, 0, 127, 127, // blue
-      67, 67, 67, 127, // grey
+      127, 0, 0, 127,     // red
+      0, 127, 0, 127,     // green
+      0, 0, 127, 127,     // blue
+      67, 67, 67, 127,    // grey
+
       //Third raw, 25% transparent
-      63, 0, 0, 63, // red
-      0, 63, 0, 63, // green
-      0, 0, 63, 63, // blue
-      33, 33, 33, 63, // grey
+      63, 0, 0, 63,       // red
+      0, 63, 0, 63,       // green
+      0, 0, 63, 63,       // blue
+      33, 33, 33, 63,     // grey
+
       //Fourth raw, transparent
-      0, 0, 0, 0, // red
-      0, 0, 0, 0, // green
-      0, 0, 0, 0, // blue
-      0, 0, 0, 0, // grey
+      0, 0, 0, 0,         // red
+      0, 0, 0, 0,         // green
+      0, 0, 0, 0,         // blue
+      0, 0, 0, 0,         // grey
     ];
   }
 
   static List<int> get bytesAsStraightRgba {
     return <int>[
       //First raw, solid colors
-      255, 0, 0, 255, // red
-      0, 255, 0, 255, // green
-      0, 0, 255, 255, // blue
+      255, 0, 0, 255,     // red
+      0, 255, 0, 255,     // green
+      0, 0, 255, 255,     // blue
       136, 136, 136, 255, // grey
+
       //Second raw, 50% transparent
-      255, 0, 0, 127, // red
-      0, 255, 0, 127, // green
-      0, 0, 255, 127, // blue
+      255, 0, 0, 127,     // red
+      0, 255, 0, 127,     // green
+      0, 0, 255, 127,     // blue
       135, 135, 135, 127, // grey
+
       //Third raw, 25% transparent
-      255, 0, 0, 63, // red
-      0, 255, 0, 63, // green
-      0, 0, 255, 63, // blue
-      134, 134, 134, 63, // grey
+      255, 0, 0, 63,      // red
+      0, 255, 0, 63,      // green
+      0, 0, 255, 63,      // blue
+      134, 134, 134, 63,  // grey
+
       //Fourth raw, transparent
-      0, 0, 0, 0, // red
-      0, 0, 0, 0, // green
-      0, 0, 0, 0, // blue
-      0, 0, 0, 0, // grey
+      0, 0, 0, 0,         // red
+      0, 0, 0, 0,         // green
+      0, 0, 0, 0,         // blue
+      0, 0, 0, 0,         // grey
     ];
   }
 }
 
 Future<Uint8List> readFile(String fileName) async {
-  final file = File(path.join('flutter', 'testing', 'resources', fileName));
+  final File file = File(path.join('flutter', 'testing', 'resources', fileName));
   return file.readAsBytes();
 }

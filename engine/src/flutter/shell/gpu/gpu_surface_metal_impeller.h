@@ -11,7 +11,6 @@
 #include "flutter/fml/macros.h"
 #include "flutter/impeller/display_list/aiks_context.h"
 #include "flutter/impeller/renderer/backend/metal/context_mtl.h"
-#include "flutter/impeller/renderer/backend/metal/swapchain_transients_mtl.h"
 #include "flutter/shell/gpu/gpu_surface_metal_delegate.h"
 #include "third_party/skia/include/gpu/ganesh/mtl/GrMtlTypes.h"
 
@@ -45,22 +44,21 @@ class IMPELLER_CA_METAL_LAYER_AVAILABLE GPUSurfaceMetalImpeller
   bool disable_partial_repaint_ = false;
   // Accumulated damage for each framebuffer; Key is address of underlying
   // MTLTexture for each drawable
-  std::shared_ptr<std::map<void*, DlIRect>> damage_ =
-      std::make_shared<std::map<void*, DlIRect>>();
-  std::shared_ptr<impeller::SwapchainTransientsMTL> swapchain_transients_;
+  std::shared_ptr<std::map<void*, SkIRect>> damage_ =
+      std::make_shared<std::map<void*, SkIRect>>();
 
   // |Surface|
   std::unique_ptr<SurfaceFrame> AcquireFrame(
-      const DlISize& frame_size) override;
+      const SkISize& frame_size) override;
 
   std::unique_ptr<SurfaceFrame> AcquireFrameFromCAMetalLayer(
-      const DlISize& frame_size);
+      const SkISize& frame_size);
 
   std::unique_ptr<SurfaceFrame> AcquireFrameFromMTLTexture(
-      const DlISize& frame_size);
+      const SkISize& frame_size);
 
   // |Surface|
-  DlMatrix GetRootTransformation() const override;
+  SkMatrix GetRootTransformation() const override;
 
   // |Surface|
   GrDirectContext* GetContext() override;

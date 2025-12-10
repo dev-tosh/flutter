@@ -73,7 +73,13 @@ struct HardwareBufferDescriptor {
   ///
   bool IsAllocatable() const;
 
-  constexpr bool operator==(const HardwareBufferDescriptor& o) const = default;
+  constexpr bool operator==(const HardwareBufferDescriptor& o) const {
+    return format == o.format && size == o.size && usage == o.usage;
+  }
+
+  constexpr bool operator!=(const HardwareBufferDescriptor& o) const {
+    return !(*this == o);
+  }
 };
 
 //------------------------------------------------------------------------------

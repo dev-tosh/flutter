@@ -41,7 +41,7 @@ class EmbedderExternalTextureGL : public flutter::Texture {
 
   // |flutter::Texture|
   void Paint(PaintContext& context,
-             const DlRect& bounds,
+             const SkRect& bounds,
              bool freeze,
              const DlImageSampling sampling) override;
 

@@ -8,12 +8,20 @@
 #include "flutter/display_list/display_list.h"
 #include "flutter/display_list/dl_blend_mode.h"
 #include "flutter/display_list/dl_paint.h"
-#include "flutter/display_list/dl_text.h"
-#include "flutter/display_list/dl_types.h"
 #include "flutter/display_list/dl_vertices.h"
 #include "flutter/display_list/geometry/dl_geometry_types.h"
 #include "flutter/display_list/geometry/dl_path.h"
 #include "flutter/display_list/image/dl_image.h"
+
+#include "third_party/skia/include/core/SkM44.h"
+#include "third_party/skia/include/core/SkMatrix.h"
+#include "third_party/skia/include/core/SkPath.h"
+#include "third_party/skia/include/core/SkRRect.h"
+#include "third_party/skia/include/core/SkRSXform.h"
+#include "third_party/skia/include/core/SkRect.h"
+#include "third_party/skia/include/core/SkTextBlob.h"
+
+#include "impeller/typographer/text_frame.h"
 
 namespace flutter {
 
@@ -31,6 +39,22 @@ namespace flutter {
 ///            used throughout the engine.
 class DlCanvas {
  public:
+  enum class ClipOp {
+    kDifference,
+    kIntersect,
+  };
+
+  enum class PointMode {
+    kPoints,   //!< draw each point separately
+    kLines,    //!< draw each separate pair of points as a line segment
+    kPolygon,  //!< draw each pair of overlapping points as a line segment
+  };
+
+  enum class SrcRectConstraint {
+    kStrict,
+    kFast,
+  };
+
   virtual ~DlCanvas() = default;
 
   virtual DlISize GetBaseLayerDimensions() const = 0;
@@ -69,19 +93,16 @@ class DlCanvas {
   virtual DlMatrix GetMatrix() const = 0;
 
   virtual void ClipRect(const DlRect& rect,
-                        DlClipOp clip_op = DlClipOp::kIntersect,
+                        ClipOp clip_op = ClipOp::kIntersect,
                         bool is_aa = false) = 0;
   virtual void ClipOval(const DlRect& bounds,
-                        DlClipOp clip_op = DlClipOp::kIntersect,
+                        ClipOp clip_op = ClipOp::kIntersect,
                         bool is_aa = false) = 0;
   virtual void ClipRoundRect(const DlRoundRect& rrect,
-                             DlClipOp clip_op = DlClipOp::kIntersect,
+                             ClipOp clip_op = ClipOp::kIntersect,
                              bool is_aa = false) = 0;
-  virtual void ClipRoundSuperellipse(const DlRoundSuperellipse& rse,
-                                     DlClipOp clip_op = DlClipOp::kIntersect,
-                                     bool is_aa = false) = 0;
   virtual void ClipPath(const DlPath& path,
-                        DlClipOp clip_op = DlClipOp::kIntersect,
+                        ClipOp clip_op = ClipOp::kIntersect,
                         bool is_aa = false) = 0;
 
   /// Conservative estimate of the bounds of all outstanding clip operations
@@ -120,15 +141,13 @@ class DlCanvas {
   virtual void DrawDiffRoundRect(const DlRoundRect& outer,
                                  const DlRoundRect& inner,
                                  const DlPaint& paint) = 0;
-  virtual void DrawRoundSuperellipse(const DlRoundSuperellipse& rse,
-                                     const DlPaint& paint) = 0;
   virtual void DrawPath(const DlPath& path, const DlPaint& paint) = 0;
   virtual void DrawArc(const DlRect& bounds,
                        DlScalar start,
                        DlScalar sweep,
                        bool useCenter,
                        const DlPaint& paint) = 0;
-  virtual void DrawPoints(DlPointMode mode,
+  virtual void DrawPoints(PointMode mode,
                           uint32_t count,
                           const DlPoint pts[],
                           const DlPaint& paint) = 0;
@@ -145,24 +164,23 @@ class DlCanvas {
       const DlRect& dst,
       DlImageSampling sampling,
       const DlPaint* paint = nullptr,
-      DlSrcRectConstraint constraint = DlSrcRectConstraint::kFast) = 0;
+      SrcRectConstraint constraint = SrcRectConstraint::kFast) = 0;
   virtual void DrawImageRect(
       const sk_sp<DlImage>& image,
       const DlIRect& src,
       const DlRect& dst,
       DlImageSampling sampling,
       const DlPaint* paint = nullptr,
-      DlSrcRectConstraint constraint = DlSrcRectConstraint::kFast) {
+      SrcRectConstraint constraint = SrcRectConstraint::kFast) {
     auto float_src = DlRect::MakeLTRB(src.GetLeft(), src.GetTop(),
                                       src.GetRight(), src.GetBottom());
     DrawImageRect(image, float_src, dst, sampling, paint, constraint);
   }
-  void DrawImageRect(
-      const sk_sp<DlImage>& image,
-      const DlRect& dst,
-      DlImageSampling sampling,
-      const DlPaint* paint = nullptr,
-      DlSrcRectConstraint constraint = DlSrcRectConstraint::kFast) {
+  void DrawImageRect(const sk_sp<DlImage>& image,
+                     const DlRect& dst,
+                     DlImageSampling sampling,
+                     const DlPaint* paint = nullptr,
+                     SrcRectConstraint constraint = SrcRectConstraint::kFast) {
     DrawImageRect(image, image->GetBounds(), dst, sampling, paint, constraint);
   }
   virtual void DrawImageNine(const sk_sp<DlImage>& image,
@@ -171,7 +189,7 @@ class DlCanvas {
                              DlFilterMode filter,
                              const DlPaint* paint = nullptr) = 0;
   virtual void DrawAtlas(const sk_sp<DlImage>& atlas,
-                         const DlRSTransform xform[],
+                         const SkRSXform xform[],
                          const DlRect tex[],
                          const DlColor colors[],
                          int count,
@@ -182,28 +200,16 @@ class DlCanvas {
   virtual void DrawDisplayList(const sk_sp<DisplayList> display_list,
                                DlScalar opacity = SK_Scalar1) = 0;
 
-  virtual void DrawText(const std::shared_ptr<DlText>& text,
-                        DlScalar x,
-                        DlScalar y,
-                        const DlPaint& paint) = 0;
+  virtual void DrawTextFrame(
+      const std::shared_ptr<impeller::TextFrame>& text_frame,
+      DlScalar x,
+      DlScalar y,
+      const DlPaint& paint) = 0;
 
-  /// @brief  Draws the shadow of the given |path| rendered in the provided
-  ///         |color| (which is only consulted for its opacity) as would be
-  ///         produced by a directional light source uniformly shining in
-  ///         the device space direction {0, -1, 1} against a backdrop
-  ///         which is |elevation * dpr| device coordinates below the |path|
-  ///         in the Z direction.
-  ///
-  /// Normally the renderer might consider omitting the rendering of any
-  /// of the shadow pixels that fall under the |path| itself, as an
-  /// optimization, unless the |transparent_occluder| flag is specified
-  /// which would indicate that the optimization isn't appropriate.
-  ///
-  /// Note that the |elevation| and |dpr| are unique in the API for being
-  /// considered in pure device coordinates while the |path| is interpreted
-  /// relative to the current local-to-device transform.
-  ///
-  /// @see |ComputeShadowBounds|
+  virtual void DrawTextBlob(const sk_sp<SkTextBlob>& blob,
+                            DlScalar x,
+                            DlScalar y,
+                            const DlPaint& paint) = 0;
   virtual void DrawShadow(const DlPath& path,
                           const DlColor color,
                           const DlScalar elevation,
@@ -215,20 +221,226 @@ class DlCanvas {
   static constexpr DlScalar kShadowLightHeight = 600;
   static constexpr DlScalar kShadowLightRadius = 800;
 
-  /// @brief  Compute the local coverage for a |DrawShadow| operation using
-  ///         the given parameters (excluding the color and the transparent
-  ///         occluder parameters which do not affect the bounds).
-  ///
-  /// Since the elevation is expressed in device coordinates relative to the
-  /// provided |dpr| value, the |ctm| of the final rendering coordinate
-  /// system that will be applied to the path must be provided so the two
-  /// sets of coordinates (path and light source) can be correlated.
-  ///
-  /// @see |DrawShadow|
   static DlRect ComputeShadowBounds(const DlPath& path,
                                     float elevation,
                                     DlScalar dpr,
                                     const DlMatrix& ctm);
+
+  // -----------------------------------------------------------------
+  // SkObject Compatibility section - deprecated...
+  // -----------------------------------------------------------------
+
+  SkISize GetBaseLayerSize() const {
+    return ToSkISize(GetBaseLayerDimensions());
+  }
+
+  void SaveLayer(const SkRect* bounds,
+                 const DlPaint* paint = nullptr,
+                 const DlImageFilter* backdrop = nullptr,
+                 std::optional<int64_t> backdrop_id = std::nullopt) {
+    SaveLayer(ToOptDlRect(bounds), paint, backdrop, backdrop_id);
+  }
+
+  void Transform(const SkMatrix* matrix) {
+    if (matrix) {
+      Transform(*matrix);
+    }
+  }
+  void Transform(const SkM44* matrix44) {
+    if (matrix44) {
+      Transform(*matrix44);
+    }
+  }
+  void Transform(const SkMatrix& matrix) { Transform(ToDlMatrix(matrix)); }
+  void Transform(const SkM44& m44) { Transform(ToDlMatrix(m44)); }
+  void SetTransform(const SkMatrix* matrix) {
+    if (matrix) {
+      SetTransform(*matrix);
+    }
+  }
+  void SetTransform(const SkM44* matrix44) {
+    if (matrix44) {
+      SetTransform(*matrix44);
+    }
+  }
+  void SetTransform(const SkMatrix& matrix) {
+    SetTransform(ToDlMatrix(matrix));
+  }
+  void SetTransform(const SkM44& m44) { SetTransform(ToDlMatrix(m44)); }
+
+  /// Returns the 4x4 full perspective transform representing all transform
+  /// operations executed so far in this DisplayList within the enclosing
+  /// save stack.
+  SkM44 GetTransformFullPerspective() const { return ToSkM44(GetMatrix()); }
+  /// Returns the 3x3 partial perspective transform representing all transform
+  /// operations executed so far in this DisplayList within the enclosing
+  /// save stack.
+  SkMatrix GetTransform() const { return ToSkMatrix(GetMatrix()); }
+
+  void ClipRect(const SkRect& rect,
+                ClipOp clip_op = ClipOp::kIntersect,
+                bool is_aa = false) {
+    ClipRect(ToDlRect(rect), clip_op, is_aa);
+  }
+  void ClipOval(const SkRect& bounds,
+                ClipOp clip_op = ClipOp::kIntersect,
+                bool is_aa = false) {
+    ClipOval(ToDlRect(bounds), clip_op, is_aa);
+  }
+  void ClipRRect(const SkRRect& rrect,
+                 ClipOp clip_op = ClipOp::kIntersect,
+                 bool is_aa = false) {
+    ClipRoundRect(ToDlRoundRect(rrect), clip_op, is_aa);
+  }
+  void ClipPath(const SkPath& path,
+                ClipOp clip_op = ClipOp::kIntersect,
+                bool is_aa = false) {
+    ClipPath(DlPath(path), clip_op, is_aa);
+  }
+
+  SkRect GetDestinationClipBounds() const {
+    return ToSkRect(GetDestinationClipCoverage());
+  }
+  SkRect GetLocalClipBounds() const { return ToSkRect(GetLocalClipCoverage()); }
+  bool QuickReject(const SkRect& bounds) const {
+    return QuickReject(ToDlRect(bounds));
+  }
+
+  void DrawLine(const SkPoint& p0, const SkPoint& p1, const DlPaint& paint) {
+    DrawLine(ToDlPoint(p0), ToDlPoint(p1), paint);
+  }
+  void DrawRect(const SkRect& rect, const DlPaint& paint) {
+    DrawRect(ToDlRect(rect), paint);
+  }
+  void DrawOval(const SkRect& bounds, const DlPaint& paint) {
+    DrawOval(ToDlRect(bounds), paint);
+  }
+  void DrawCircle(const SkPoint& center,
+                  DlScalar radius,
+                  const DlPaint& paint) {
+    DrawCircle(ToDlPoint(center), radius, paint);
+  }
+  void DrawRRect(const SkRRect& rrect, const DlPaint& paint) {
+    DrawRoundRect(ToDlRoundRect(rrect), paint);
+  }
+  void DrawDRRect(const SkRRect& outer,
+                  const SkRRect& inner,
+                  const DlPaint& paint) {
+    DrawDiffRoundRect(ToDlRoundRect(outer), ToDlRoundRect(inner), paint);
+  }
+  void DrawPath(const SkPath& path, const DlPaint& paint) {
+    DrawPath(DlPath(path), paint);
+  }
+  void DrawArc(const SkRect& bounds,
+               DlScalar start,
+               DlScalar sweep,
+               bool useCenter,
+               const DlPaint& paint) {
+    DrawArc(ToDlRect(bounds), start, sweep, useCenter, paint);
+  }
+  void DrawPoints(PointMode mode,
+                  uint32_t count,
+                  const SkPoint pts[],
+                  const DlPaint& paint) {
+    DrawPoints(mode, count, ToDlPoints(pts), paint);
+  }
+  void DrawImage(const sk_sp<DlImage>& image,
+                 const SkPoint& point,
+                 DlImageSampling sampling,
+                 const DlPaint* paint = nullptr) {
+    DrawImage(image, ToDlPoint(point), sampling, paint);
+  }
+  void DrawImageRect(const sk_sp<DlImage>& image,
+                     const SkRect& src,
+                     const SkRect& dst,
+                     DlImageSampling sampling,
+                     const DlPaint* paint = nullptr,
+                     SrcRectConstraint constraint = SrcRectConstraint::kFast) {
+    DrawImageRect(image, ToDlRect(src), ToDlRect(dst), sampling, paint,
+                  constraint);
+  }
+  void DrawImageRect(const sk_sp<DlImage>& image,
+                     const SkIRect& src,
+                     const SkRect& dst,
+                     DlImageSampling sampling,
+                     const DlPaint* paint = nullptr,
+                     SrcRectConstraint constraint = SrcRectConstraint::kFast) {
+    DrawImageRect(image, ToDlRect(src), ToDlRect(dst), sampling, paint,
+                  constraint);
+  }
+  void DrawImageRect(const sk_sp<DlImage>& image,
+                     const SkRect& dst,
+                     DlImageSampling sampling,
+                     const DlPaint* paint = nullptr,
+                     SrcRectConstraint constraint = SrcRectConstraint::kFast) {
+    DrawImageRect(image, image->GetBounds(), ToDlRect(dst), sampling, paint,
+                  constraint);
+  }
+  void DrawImageNine(const sk_sp<DlImage>& image,
+                     const SkIRect& center,
+                     const SkRect& dst,
+                     DlFilterMode filter,
+                     const DlPaint* paint = nullptr) {
+    DrawImageNine(image, ToDlIRect(center), ToDlRect(dst), filter, paint);
+  }
+  void DrawAtlas(const sk_sp<DlImage>& atlas,
+                 const SkRSXform xform[],
+                 const SkRect tex[],
+                 const DlColor colors[],
+                 int count,
+                 DlBlendMode mode,
+                 DlImageSampling sampling,
+                 const SkRect* cullRect,
+                 const DlPaint* paint = nullptr) {
+    DrawAtlas(atlas, xform, ToDlRects(tex), colors, count, mode, sampling,
+              ToDlRect(cullRect), paint);
+  }
+  void DrawShadow(const SkPath& path,
+                  const DlColor color,
+                  const DlScalar elevation,
+                  bool transparent_occluder,
+                  DlScalar dpr) {
+    DrawShadow(DlPath(path), color, elevation, transparent_occluder, dpr);
+  }
+
+  static SkRect ComputeShadowBounds(const SkPath& path,
+                                    float elevation,
+                                    DlScalar dpr,
+                                    const SkMatrix& ctm) {
+    return ToSkRect(
+        ComputeShadowBounds(DlPath(path), elevation, dpr, ToDlMatrix(ctm)));
+  }
+
+#define ENABLE_DL_CANVAS_BACKWARDS_COMPATIBILITY \
+  using DlCanvas::GetBaseLayerSize;              \
+                                                 \
+  using DlCanvas::SaveLayer;                     \
+                                                 \
+  using DlCanvas::Transform;                     \
+  using DlCanvas::SetTransform;                  \
+  using DlCanvas::GetTransformFullPerspective;   \
+  using DlCanvas::GetTransform;                  \
+                                                 \
+  using DlCanvas::ClipRect;                      \
+  using DlCanvas::ClipOval;                      \
+  using DlCanvas::ClipPath;                      \
+                                                 \
+  using DlCanvas::GetDestinationClipBounds;      \
+  using DlCanvas::GetLocalClipBounds;            \
+  using DlCanvas::QuickReject;                   \
+                                                 \
+  using DlCanvas::DrawLine;                      \
+  using DlCanvas::DrawRect;                      \
+  using DlCanvas::DrawOval;                      \
+  using DlCanvas::DrawCircle;                    \
+  using DlCanvas::DrawPath;                      \
+  using DlCanvas::DrawArc;                       \
+  using DlCanvas::DrawPoints;                    \
+  using DlCanvas::DrawImage;                     \
+  using DlCanvas::DrawImageRect;                 \
+  using DlCanvas::DrawImageNine;                 \
+  using DlCanvas::DrawAtlas;                     \
+  using DlCanvas::DrawShadow;
 };
 
 class DlAutoCanvasRestore {

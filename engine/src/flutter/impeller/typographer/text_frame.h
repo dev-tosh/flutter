@@ -6,17 +6,10 @@
 #define FLUTTER_IMPELLER_TYPOGRAPHER_TEXT_FRAME_H_
 
 #include <cstdint>
-
-#include "flutter/display_list/geometry/dl_path.h"
-#include "fml/status_or.h"
-#include "impeller/geometry/rational.h"
-#include "impeller/typographer/glyph.h"
 #include "impeller/typographer/glyph_atlas.h"
 #include "impeller/typographer/text_run.h"
 
 namespace impeller {
-
-using PathCreator = std::function<fml::StatusOr<flutter::DlPath>()>;
 
 //------------------------------------------------------------------------------
 /// @brief      Represents a collection of shaped text runs.
@@ -30,20 +23,17 @@ class TextFrame {
  public:
   TextFrame();
 
-  TextFrame(std::vector<TextRun>& runs,
-            Rect bounds,
-            bool has_color,
-            const PathCreator& path_creator = {});
+  TextFrame(std::vector<TextRun>& runs, Rect bounds, bool has_color);
 
   ~TextFrame();
 
-  static SubpixelPosition ComputeSubpixelPosition(
+  static Point ComputeSubpixelPosition(
       const TextRun::GlyphPosition& glyph_position,
       AxisAlignment alignment,
-      const Matrix& transform);
+      Point offset,
+      Scalar scale);
 
-  static Rational RoundScaledFontSize(Scalar scale);
-  static Rational RoundScaledFontSize(Rational scale);
+  static Scalar RoundScaledFontSize(Scalar scale);
 
   //----------------------------------------------------------------------------
   /// @brief      The conservative bounding box for this text frame.
@@ -89,18 +79,10 @@ class TextFrame {
   /// This method is only valid if [IsFrameComplete] returns true.
   const FrameBounds& GetFrameBounds(size_t index) const;
 
-  /// @brief If this text frame contains a single glyph (such as for an Icon),
-  ///        then return it, otherwise std::nullopt.
-  std::optional<Glyph> AsSingleGlyph() const;
-
-  /// @brief Return the font of the first glyph run.
-  const Font& GetFont() const;
-
   /// @brief Store text frame scale, offset, and properties for hashing in th
   /// glyph atlas.
-  void SetPerFrameData(Rational scale,
+  void SetPerFrameData(Scalar scale,
                        Point offset,
-                       const Matrix& transform,
                        std::optional<GlyphProperties> properties);
 
   // A generation id for the glyph atlas this text run was associated
@@ -109,19 +91,17 @@ class TextFrame {
   // processed.
   std::pair<size_t, intptr_t> GetAtlasGenerationAndID() const;
 
-  Rational GetScale() const;
+  TextFrame& operator=(TextFrame&& other) = default;
 
-  const Matrix& GetTransform() const { return transform_; }
-
-  fml::StatusOr<flutter::DlPath> GetPath() const;
-
-  Point GetOffset() const;
-
-  Matrix GetOffsetTransform() const;
+  TextFrame(const TextFrame& other) = default;
 
  private:
   friend class TypographerContextSkia;
   friend class LazyGlyphAtlas;
+
+  Scalar GetScale() const;
+
+  Point GetOffset() const;
 
   std::optional<GlyphProperties> GetProperties() const;
 
@@ -134,17 +114,15 @@ class TextFrame {
   std::vector<TextRun> runs_;
   Rect bounds_;
   bool has_color_;
-  const PathCreator path_creator_;
 
   // Data that is cached when rendering the text frame and is only
   // valid for the current atlas generation.
   std::vector<FrameBounds> bound_values_;
-  Rational scale_ = Rational(0, 1);
+  Scalar scale_ = 0;
   size_t generation_ = 0;
   intptr_t atlas_id_ = 0;
   Point offset_;
   std::optional<GlyphProperties> properties_;
-  Matrix transform_;
 };
 
 }  // namespace impeller

@@ -29,7 +29,6 @@ impeller_component("shader_archive") {
     ":shader_archive_flatbuffers",
     "../base",
     "//flutter/fml",
-    "//third_party/abseil-cpp/absl/status:statusor",
   ]
 }
 

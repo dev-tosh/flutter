@@ -55,14 +55,22 @@ The build names are the "name" fields of the maps in the list of "builds".
   }
 
   // Find and parse the engine build configs.
-  final buildConfigsDir = io.Directory(p.join(engine.flutterDir.path, 'ci', 'builders'));
-  final loader = BuildConfigLoader(buildConfigsDir: buildConfigsDir);
+  final io.Directory buildConfigsDir = io.Directory(p.join(
+    engine.flutterDir.path,
+    'ci',
+    'builders',
+  ));
+  final BuildConfigLoader loader = BuildConfigLoader(
+    buildConfigsDir: buildConfigsDir,
+  );
 
   // Treat it as an error if no build configs were found. The caller likely
   // expected to find some.
   final Map<String, BuilderConfig> configs = loader.configs;
   if (configs.isEmpty) {
-    io.stderr.writeln('Error: No build configs found under ${buildConfigsDir.path}');
+    io.stderr.writeln(
+      'Error: No build configs found under ${buildConfigsDir.path}',
+    );
     io.exitCode = 1;
     return;
   }
@@ -81,7 +89,7 @@ The build names are the "name" fields of the maps in the list of "builds".
   final List<String> buildConfigErrors = targetConfig.check(configName);
   if (buildConfigErrors.isNotEmpty) {
     io.stderr.writeln('Errors in "$configName":');
-    for (final error in buildConfigErrors) {
+    for (final String error in buildConfigErrors) {
       io.stderr.writeln('    $error');
     }
     io.exitCode = 1;
@@ -89,23 +97,32 @@ The build names are the "name" fields of the maps in the list of "builds".
   }
 
   Build? targetBuild;
-  for (var i = 0; i < targetConfig.builds.length; i++) {
+  for (int i = 0; i < targetConfig.builds.length; i++) {
     final Build build = targetConfig.builds[i];
     if (build.name == buildName) {
       targetBuild = build;
     }
   }
   if (targetBuild == null) {
-    io.stderr.writeln('Target build not found. No build called $buildName in $configName');
+    io.stderr.writeln(
+      'Target build not found. No build called $buildName in $configName',
+    );
     io.exitCode = 1;
     return;
   }
 
   // If RBE config files aren't in the tree, then disable RBE.
-  final String rbeConfigPath = p.join(engine.srcDir.path, 'flutter', 'build', 'rbe');
-  final extraGnArgs = <String>[if (!io.Directory(rbeConfigPath).existsSync()) '--no-rbe'];
+  final String rbeConfigPath = p.join(
+    engine.srcDir.path,
+    'flutter',
+    'build',
+    'rbe',
+  );
+  final List<String> extraGnArgs = <String>[
+    if (!io.Directory(rbeConfigPath).existsSync()) '--no-rbe',
+  ];
 
-  final buildRunner = BuildRunner(
+  final BuildRunner buildRunner = BuildRunner(
     platform: const LocalPlatform(),
     processRunner: ProcessRunner(),
     abi: ffi.Abi.current(),
@@ -124,9 +141,9 @@ The build names are the "name" fields of the maps in the list of "builds".
       case RunnerProgress(done: false):
         {
           final int width = io.stdout.terminalColumns;
-          final percent = '${event.percent.toStringAsFixed(1)}%';
-          final fraction = '(${event.completed}/${event.total})';
-          final prefix = '[${event.name}] $percent $fraction ';
+          final String percent = '${event.percent.toStringAsFixed(1)}%';
+          final String fraction = '(${event.completed}/${event.total})';
+          final String prefix = '[${event.name}] $percent $fraction ';
           final int remainingSpace = width - prefix.length;
           final String what;
           if (remainingSpace >= event.what.length) {

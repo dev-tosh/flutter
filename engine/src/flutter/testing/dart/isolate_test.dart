@@ -9,9 +9,13 @@ import 'package:test/test.dart';
 
 void main() {
   test('Invalid isolate URI', () async {
-    var threw = false;
+    bool threw = false;
     try {
-      await Isolate.spawnUri(Uri.parse('http://127.0.0.1/foo.dart'), <String>[], null);
+      await Isolate.spawnUri(
+        Uri.parse('http://127.0.0.1/foo.dart'),
+        <String>[],
+        null,
+      );
     } on IsolateSpawnException {
       threw = true;
     }
@@ -22,10 +26,9 @@ void main() {
     void callUiApi(void message) {
       PlatformDispatcher.instance.onReportTimings = (_) {};
     }
-
-    final errorPort = ReceivePort();
+    final ReceivePort errorPort = ReceivePort();
     await Isolate.spawn<void>(callUiApi, null, onError: errorPort.sendPort);
-    final isolateError = await errorPort.first as List<dynamic>;
+    final List<dynamic> isolateError = await errorPort.first as List<dynamic>;
     expect(isolateError[0], 'UI actions are only available on root isolate.');
   });
 }

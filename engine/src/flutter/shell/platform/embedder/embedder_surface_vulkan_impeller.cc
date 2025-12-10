@@ -10,7 +10,6 @@
 #include "flutter/impeller/entity/vk/framebuffer_blend_shaders_vk.h"
 #include "flutter/impeller/entity/vk/modern_shaders_vk.h"
 #include "flutter/shell/gpu/gpu_surface_vulkan.h"
-#include "impeller/display_list/aiks_context.h"
 #include "impeller/renderer/backend/vulkan/context_vk.h"
 #include "include/gpu/ganesh/GrDirectContext.h"
 #include "shell/gpu/gpu_surface_vulkan_impeller.h"
@@ -96,7 +95,7 @@ const vulkan::VulkanProcTable& EmbedderSurfaceVulkanImpeller::vk() {
 
 // |GPUSurfaceVulkanDelegate|
 FlutterVulkanImage EmbedderSurfaceVulkanImpeller::AcquireImage(
-    const DlISize& size) {
+    const SkISize& size) {
   return vulkan_dispatch_table_.get_next_image(size);
 }
 

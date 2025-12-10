@@ -1,7 +1,3 @@
-// Copyright 2013 The Flutter Authors. All rights reserved.
-// Use of this source code is governed by a BSD-style license that can be
-// found in the LICENSE file.
-
 package io.flutter.embedding.engine.renderer;
 
 import android.graphics.SurfaceTexture;
@@ -9,7 +5,6 @@ import android.os.Handler;
 import android.view.Surface;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
-import androidx.annotation.VisibleForTesting;
 import io.flutter.embedding.engine.FlutterJNI;
 import io.flutter.view.TextureRegistry;
 
@@ -57,8 +52,6 @@ final class SurfaceTextureSurfaceProducer
   @Override
   public void release() {
     texture.release();
-    surface.release();
-    surface = null;
     released = true;
   }
 
@@ -97,21 +90,10 @@ final class SurfaceTextureSurfaceProducer
 
   @Override
   public Surface getSurface() {
-    if (surface == null || !surface.isValid()) {
-      surface = createSurface(texture.surfaceTexture());
+    if (surface == null) {
+      surface = new Surface(texture.surfaceTexture());
     }
     return surface;
-  }
-
-  @Override
-  public Surface getForcedNewSurface() {
-    surface = null;
-    return getSurface();
-  }
-
-  @VisibleForTesting
-  public Surface createSurface(SurfaceTexture surfaceTexture) {
-    return new Surface(surfaceTexture);
   }
 
   @Override

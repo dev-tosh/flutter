@@ -155,9 +155,7 @@ void fl_binary_messenger_set_message_handler_on_channel(
  * #FlBinaryMessengerMessageHandler.
  * @response: (allow-none): response to send or %NULL for an empty response.
  * @error: (allow-none): #GError location to store the error occurring, or %NULL
- * to ignore. If `error` is not %NULL, `*error` must be initialized (typically
- * %NULL, but an error from a previous call using GLib error handling is
- * explicitly valid).
+ * to ignore.
  *
  * Responds to a platform message. This function is thread-safe.
  *
@@ -193,9 +191,7 @@ void fl_binary_messenger_send_on_channel(FlBinaryMessenger* messenger,
  * @messenger: an #FlBinaryMessenger.
  * @result: a #GAsyncResult.
  * @error: (allow-none): #GError location to store the error occurring, or %NULL
- * to ignore. If `error` is not %NULL, `*error` must be initialized (typically
- * %NULL, but an error from a previous call using GLib error handling is
- * explicitly valid).
+ * to ignore.
  *
  * Completes request started with fl_binary_messenger_send_on_channel().
  *

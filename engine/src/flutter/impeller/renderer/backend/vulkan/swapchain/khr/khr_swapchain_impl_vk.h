@@ -7,6 +7,7 @@
 
 #include <cstdint>
 #include <memory>
+#include <variant>
 
 #include "impeller/geometry/size.h"
 #include "impeller/renderer/backend/vulkan/swapchain/swapchain_transients_vk.h"
@@ -62,10 +63,6 @@ class KHRSwapchainImplVK final
 
   const ISize& GetSize() const;
 
-  void AddFinalCommandBuffer(std::shared_ptr<CommandBuffer> cmd_buffer);
-
-  std::optional<ISize> GetCurrentUnderlyingSurfaceSize() const;
-
  private:
   std::weak_ptr<Context> context_;
   vk::UniqueSurfaceKHR surface_;
@@ -74,7 +71,6 @@ class KHRSwapchainImplVK final
   std::shared_ptr<SwapchainTransientsVK> transients_;
   std::vector<std::shared_ptr<KHRSwapchainImageVK>> images_;
   std::vector<std::unique_ptr<KHRFrameSynchronizerVK>> synchronizers_;
-  std::vector<vk::UniqueSemaphore> present_semaphores_;
   size_t current_frame_ = 0u;
   ISize size_;
   bool enable_msaa_ = true;

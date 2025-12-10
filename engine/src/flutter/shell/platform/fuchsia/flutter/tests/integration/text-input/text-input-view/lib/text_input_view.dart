@@ -41,8 +41,8 @@ class TestApp {
     // Set up window callbacks
     window.onPlatformMessage =
         (String name, ByteData? data, PlatformMessageResponseCallback? callback) {
-          this.decodeAndReportPlatformMessage(name, data!);
-        };
+      this.decodeAndReportPlatformMessage(name, data!);
+    };
     window.onMetricsChanged = () {
       window.scheduleFrame();
     };
@@ -95,9 +95,13 @@ class TestApp {
     print('text-input-view reporting keyboard input to KeyboardInputListener');
 
     final message = utf8
-        .encode(json.encode({'method': 'KeyboardInputListener.ReportTextInput', 'text': text}))
+        .encode(json.encode({
+          'method': 'KeyboardInputListener.ReportTextInput',
+          'text': text,
+        }))
         .buffer
         .asByteData();
-    PlatformDispatcher.instance.sendPlatformMessage('fuchsia/input_test', message, null);
+    PlatformDispatcher.instance
+        .sendPlatformMessage('fuchsia/input_test', message, null);
   }
 }

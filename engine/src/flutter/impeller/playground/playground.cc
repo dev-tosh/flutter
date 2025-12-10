@@ -302,9 +302,8 @@ bool Playground::OpenPlaygroundHere(
       }
       pass->SetLabel("ImGui Render Pass");
       if (!host_buffer_) {
-        host_buffer_ = HostBuffer::Create(
-            context_->GetResourceAllocator(), context_->GetIdleWaiter(),
-            context_->GetCapabilities()->GetMinimumUniformAlignment());
+        host_buffer_ = HostBuffer::Create(context_->GetResourceAllocator(),
+                                          context_->GetIdleWaiter());
       }
 
       ImGui_ImplImpeller_RenderDrawData(ImGui::GetDrawData(), *pass,
@@ -422,7 +421,7 @@ static std::shared_ptr<Texture> CreateTextureForDecompressedImage(
     blit_pass->SetLabel("Mipmap Blit Pass");
     blit_pass->GenerateMipmap(texture);
   }
-  blit_pass->EncodeCommands();
+  blit_pass->EncodeCommands(context->GetResourceAllocator());
   if (!context->GetCommandQueue()->Submit({command_buffer}).ok()) {
     FML_DLOG(ERROR) << "Failed to submit blit pass command buffer.";
     return nullptr;
@@ -491,7 +490,7 @@ std::shared_ptr<Texture> Playground::CreateTextureCubeForFixture(
                        "", /*mip_level=*/0, /*slice=*/i);
   }
 
-  if (!blit_pass->EncodeCommands() ||
+  if (!blit_pass->EncodeCommands(context_->GetResourceAllocator()) ||
       !context_->GetCommandQueue()->Submit({std::move(cmd_buffer)}).ok()) {
     VALIDATION_LOG << "Could not upload texture to device memory.";
     return nullptr;
@@ -520,15 +519,6 @@ bool Playground::WillRenderSomething() const {
 Playground::GLProcAddressResolver Playground::CreateGLProcAddressResolver()
     const {
   return impl_->CreateGLProcAddressResolver();
-}
-
-Playground::VKProcAddressResolver Playground::CreateVKProcAddressResolver()
-    const {
-  return impl_->CreateVKProcAddressResolver();
-}
-
-void Playground::SetGPUDisabled(bool value) const {
-  impl_->SetGPUDisabled(value);
 }
 
 }  // namespace impeller

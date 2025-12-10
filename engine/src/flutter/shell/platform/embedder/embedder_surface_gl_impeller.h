@@ -62,7 +62,7 @@ class EmbedderSurfaceGLImpeller final : public EmbedderSurface,
   bool GLContextFBOResetAfterPresent() const override;
 
   // |GPUSurfaceGLDelegate|
-  DlMatrix GLContextSurfaceTransformation() const override;
+  SkMatrix GLContextSurfaceTransformation() const override;
 
   // |GPUSurfaceGLDelegate|
   GLProcResolver GetGLProcResolver() const override;

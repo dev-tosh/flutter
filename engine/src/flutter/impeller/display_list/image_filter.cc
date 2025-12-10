@@ -4,7 +4,6 @@
 
 #include "impeller/display_list/image_filter.h"
 
-#include "flutter/display_list/effects/dl_color_sources.h"
 #include "flutter/display_list/effects/dl_image_filters.h"
 #include "fml/logging.h"
 #include "impeller/display_list/color_filter.h"

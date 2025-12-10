@@ -13,9 +13,6 @@
 #undef GetCurrentTime
 #endif
 
-// This test suite uses raw pointer arithmetic to iterate through a proc table.
-// NOLINTBEGIN(clang-analyzer-security.ArrayBound)
-
 namespace flutter {
 namespace testing {
 
@@ -63,5 +60,3 @@ TEST(EmbedderProcTable, CallProc) {
 
 }  // namespace testing
 }  // namespace flutter
-
-// NOLINTEND(clang-analyzer-security.ArrayBound)

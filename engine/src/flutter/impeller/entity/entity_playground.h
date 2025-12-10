@@ -25,8 +25,6 @@ class EntityPlayground : public PlaygroundTest {
   void SetTypographerContext(
       std::shared_ptr<TypographerContext> typographer_context);
 
-  std::shared_ptr<TypographerContext> GetTypographerContext() const;
-
   bool OpenPlaygroundHere(Entity entity);
 
   bool OpenPlaygroundHere(EntityPlaygroundCallback callback);

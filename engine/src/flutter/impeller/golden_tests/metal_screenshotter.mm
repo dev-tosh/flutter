@@ -13,8 +13,10 @@
 namespace impeller {
 namespace testing {
 
-MetalScreenshotter::MetalScreenshotter(const PlaygroundSwitches& switches) {
+MetalScreenshotter::MetalScreenshotter(bool enable_wide_gamut) {
   FML_CHECK(::glfwInit() == GLFW_TRUE);
+  PlaygroundSwitches switches;
+  switches.enable_wide_gamut = enable_wide_gamut;
   playground_ = PlaygroundImpl::Create(PlaygroundBackend::kMetal, switches);
 }
 
@@ -43,9 +45,8 @@ std::unique_ptr<Screenshot> MetalScreenshotter::MakeScreenshot(
         imageByApplyingOrientation:kCGImagePropertyOrientationDownMirrored];
 
     CGImageRef cgImage = [cicontext createCGImage:flipped
-                                         fromRect:[flipped extent]];
+                                         fromRect:[ciImage extent]];
 
-    // NOLINTNEXTLINE(clang-analyzer-cplusplus.NewDeleteLeaks)
     return std::unique_ptr<MetalScreenshot>(new MetalScreenshot(cgImage));
   }
 }

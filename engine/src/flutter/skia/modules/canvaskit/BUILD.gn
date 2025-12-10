@@ -43,12 +43,9 @@ canvaskit_wasm_lib("canvaskit") {
   deps = [ "../..:skia" ]
   if (skia_canvaskit_enable_paragraph) {
     deps += [
-      "../../modules/skparagraph",
-      "../../modules/skunicode",
+      "../../modules/skparagraph:skparagraph",
+      "../../modules/skunicode:skunicode",
     ]
-  }
-  if (skia_canvaskit_enable_bidi) {
-    deps += [ "../../modules/skunicode" ]
   }
 
   sources = [
@@ -62,17 +59,11 @@ canvaskit_wasm_lib("canvaskit") {
     ]
   }
 
-  if (skia_canvaskit_enable_bidi) {
-    sources += [
-      "$_skia_root/modules/canvaskit/bidi_bindings.cpp",
-      "$_skia_root/modules/canvaskit/bidi_bindings_gen.cpp",
-    ]
-  }
-
   ldflags = []
   if (is_debug) {
     ldflags += [
-      "-O1",
+      "-O0",
+      "-sDEMANGLE_SUPPORT=1",
       "-sASSERTIONS=1",
       "-sGL_ASSERTIONS=1",
       "-g3",
@@ -120,30 +111,21 @@ canvaskit_wasm_lib("canvaskit") {
     "--bind",
     "--no-entry",
     "--pre-js",
-    rebase_path("$_skia_root/modules/canvaskit/util.js"),
-    "--pre-js",
     rebase_path("$_skia_root/modules/canvaskit/preamble.js"),
     "--pre-js",
     rebase_path("$_skia_root/modules/canvaskit/color.js"),
     "--pre-js",
     rebase_path("$_skia_root/modules/canvaskit/memory.js"),
     "--pre-js",
+    rebase_path("$_skia_root/modules/canvaskit/util.js"),
+    "--pre-js",
     rebase_path("$_skia_root/modules/canvaskit/interface.js"),
   ]
 
-  if (skia_canvaskit_enable_paragraph) {
-    ldflags += [
-      "--pre-js",
-      rebase_path("$_skia_root/modules/canvaskit/paragraph.js"),
-    ]
-  }
-
-  if (skia_canvaskit_enable_bidi) {
-    ldflags += [
-      "--pre-js",
-      rebase_path("$_skia_root/modules/canvaskit/bidi.js"),
-    ]
-  }
+  ldflags += [
+    "--pre-js",
+    rebase_path("$_skia_root/modules/canvaskit/paragraph.js"),
+  ]
 
   if (skia_canvaskit_enable_pathops) {
     ldflags += [
@@ -183,7 +165,7 @@ canvaskit_wasm_lib("canvaskit") {
     "-sEXPORT_NAME=CanvasKitInit",
     "-sEXPORTED_FUNCTIONS=[_malloc,_free]",
     "-sEXPORTED_RUNTIME_METHODS=HEAP8,HEAPU8,HEAP16,HEAPU16,HEAP32,HEAPF32,HEAPU32,HEAPF64",
-    "-sINCOMING_MODULE_JS_API=[instantiateWasm,onRuntimeInitialized,noExitRuntime]",
+    "-sINCOMING_MODULE_JS_API=onRuntimeInitialized",
     "-sFORCE_FILESYSTEM=0",
     "-sFILESYSTEM=0",
     "-sMODULARIZE",
@@ -213,9 +195,6 @@ canvaskit_wasm_lib("canvaskit") {
   ]
   if (skia_canvaskit_enable_paragraph) {
     defines += [ "CK_INCLUDE_PARAGRAPH" ]
-  }
-  if (skia_canvaskit_enable_bidi) {
-    defines += [ "CK_ENABLE_BIDI" ]
   }
   if (skia_canvaskit_enable_skp_serialization) {
     defines += [ "CK_SERIALIZE_SKP" ]

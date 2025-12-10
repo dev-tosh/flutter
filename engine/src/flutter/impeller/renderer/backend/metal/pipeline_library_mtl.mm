@@ -113,8 +113,7 @@ bool PipelineLibraryMTL::IsValid() const {
 // |PipelineLibrary|
 PipelineFuture<PipelineDescriptor> PipelineLibraryMTL::GetPipeline(
     PipelineDescriptor descriptor,
-    bool async,
-    bool threadsafe) {
+    bool async) {
   if (auto found = pipelines_.find(descriptor); found != pipelines_.end()) {
     return found->second;
   }

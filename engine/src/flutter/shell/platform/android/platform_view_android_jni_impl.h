@@ -34,8 +34,6 @@ class PlatformViewAndroidJNIImpl final : public PlatformViewAndroidJNI {
       std::vector<std::string> strings,
       std::vector<std::vector<uint8_t>> string_attribute_args) override;
 
-  void FlutterViewSetApplicationLocale(std::string locale) override;
-
   void FlutterViewUpdateCustomAccessibilityActions(
       std::vector<uint8_t> actions_buffer,
       std::vector<std::string> strings) override;
@@ -104,35 +102,6 @@ class PlatformViewAndroidJNIImpl final : public PlatformViewAndroidJNI {
 
   double FlutterViewGetScaledFontSize(double unscaled_font_size,
                                       int configuration_id) const override;
-
-  // New Platform View Support.
-  ASurfaceTransaction* createTransaction() override;
-
-  void swapTransaction() override;
-
-  void applyTransaction() override;
-
-  std::unique_ptr<PlatformViewAndroidJNI::OverlayMetadata>
-  createOverlaySurface2() override;
-
-  void destroyOverlaySurface2() override;
-
-  void onDisplayPlatformView2(int32_t view_id,
-                              int32_t x,
-                              int32_t y,
-                              int32_t width,
-                              int32_t height,
-                              int32_t viewWidth,
-                              int32_t viewHeight,
-                              MutatorsStack mutators_stack) override;
-
-  void hidePlatformView2(int32_t view_id) override;
-
-  void showOverlaySurface2() override;
-
-  void hideOverlaySurface2() override;
-
-  void onEndFrame2() override;
 
  private:
   // Reference to FlutterJNI object.

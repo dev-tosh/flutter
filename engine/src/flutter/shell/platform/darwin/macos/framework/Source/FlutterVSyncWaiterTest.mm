@@ -3,9 +3,8 @@
 // found in the LICENSE file.
 
 #import "flutter/shell/platform/darwin/macos/framework/Source/FlutterDisplayLink.h"
-
-#import "flutter/shell/platform/darwin/macos/InternalFlutterSwift/InternalFlutterSwift.h"
 #import "flutter/shell/platform/darwin/macos/framework/Source/FlutterVSyncWaiter.h"
+
 #import "flutter/testing/testing.h"
 
 @interface TestDisplayLink : FlutterDisplayLink
@@ -36,12 +35,7 @@
 
 @end
 
-class FlutterVSyncWaiterTest : public testing::Test {
- public:
-  void SetUp() override { [FlutterRunLoop ensureMainLoopInitialized]; }
-};
-
-TEST_F(FlutterVSyncWaiterTest, RequestsInitialVSync) {
+TEST(FlutterVSyncWaiterTest, RequestsInitialVSync) {
   TestDisplayLink* displayLink = [[TestDisplayLink alloc] init];
   EXPECT_TRUE(displayLink.paused);
   // When created waiter requests a reference vsync to determine vsync phase.
@@ -55,7 +49,6 @@ TEST_F(FlutterVSyncWaiterTest, RequestsInitialVSync) {
   [displayLink tickWithTimestamp:CACurrentMediaTime()
                  targetTimestamp:CACurrentMediaTime() + 1.0 / 60.0];
   EXPECT_TRUE(displayLink.paused);
-  [waiter invalidate];
 }
 
 static void BusyWait(CFTimeInterval duration) {
@@ -67,7 +60,7 @@ static void BusyWait(CFTimeInterval duration) {
 // See FlutterVSyncWaiter.mm for the original definition.
 static const CFTimeInterval kTimerLatencyCompensation = 0.001;
 
-TEST_F(FlutterVSyncWaiterTest, FirstVSyncIsSynthesized) {
+TEST(FlutterVSyncWaiterTest, FirstVSyncIsSynthesized) {
   TestDisplayLink* displayLink = [[TestDisplayLink alloc] init];
   displayLink.nominalOutputRefreshPeriod = 1.0 / 60.0;
 
@@ -112,8 +105,6 @@ TEST_F(FlutterVSyncWaiterTest, FirstVSyncIsSynthesized) {
     EXPECT_DOUBLE_EQ(timestamp, expectedTimestamp);
     EXPECT_DOUBLE_EQ(targetTimestamp, expectedTimestamp + displayLink.nominalOutputRefreshPeriod);
     EXPECT_EQ(baton, size_t(1));
-
-    [waiter invalidate];
   };
 
   // First argument if the wait duration after reference vsync.
@@ -123,7 +114,7 @@ TEST_F(FlutterVSyncWaiterTest, FirstVSyncIsSynthesized) {
   test(0.040, 3 * displayLink.nominalOutputRefreshPeriod);
 }
 
-TEST_F(FlutterVSyncWaiterTest, VSyncWorks) {
+TEST(FlutterVSyncWaiterTest, VSyncWorks) {
   TestDisplayLink* displayLink = [[TestDisplayLink alloc] init];
   displayLink.nominalOutputRefreshPeriod = 1.0 / 60.0;
   const uintptr_t kWarmUpBaton = 0xFFFFFFFF;
@@ -207,6 +198,4 @@ TEST_F(FlutterVSyncWaiterTest, VSyncWorks) {
   EXPECT_DOUBLE_EQ(entries[3].timestamp, now + 3 * displayLink.nominalOutputRefreshPeriod);
   EXPECT_DOUBLE_EQ(entries[3].targetTimestamp, now + 4 * displayLink.nominalOutputRefreshPeriod);
   EXPECT_EQ(entries[3].baton, size_t(3));
-
-  [waiter invalidate];
 }

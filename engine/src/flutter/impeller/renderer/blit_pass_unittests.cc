@@ -141,7 +141,7 @@ TEST_P(BlitPassTest, CanBlitSmallRegionToUninitializedTexture) {
   EXPECT_TRUE(blit_pass->AddCopy(DeviceBuffer::AsBufferView(src), dst,
                                  IRect::MakeLTRB(0, 0, 1, 1), "",
                                  /*mip_level=*/0, /*slice=*/0));
-  EXPECT_TRUE(blit_pass->EncodeCommands());
+  EXPECT_TRUE(blit_pass->EncodeCommands(GetContext()->GetResourceAllocator()));
   EXPECT_TRUE(context->GetCommandQueue()->Submit({std::move(cmd_buffer)}).ok());
 }
 
@@ -195,7 +195,7 @@ TEST_P(BlitPassTest, CanBlitToHigherTextureMipLevels) {
   EXPECT_TRUE(blit_pass->AddCopy(DeviceBuffer::AsBufferView(src), dst,
                                  IRect::MakeLTRB(0, 0, 1, 1), "",
                                  /*mip_level=*/1, /*slice=*/0));
-  EXPECT_TRUE(blit_pass->EncodeCommands());
+  EXPECT_TRUE(blit_pass->EncodeCommands(GetContext()->GetResourceAllocator()));
   EXPECT_TRUE(context->GetCommandQueue()->Submit({std::move(cmd_buffer)}).ok());
 }
 
@@ -234,7 +234,7 @@ TEST_P(BlitPassTest, CanResizeTextures) {
 
   EXPECT_TRUE(blit_pass->AddCopy(DeviceBuffer::AsBufferView(staging), src));
   EXPECT_TRUE(blit_pass->ResizeTexture(src, dst));
-  EXPECT_TRUE(blit_pass->EncodeCommands());
+  EXPECT_TRUE(blit_pass->EncodeCommands(GetContext()->GetResourceAllocator()));
   EXPECT_TRUE(context->GetCommandQueue()->Submit({std::move(cmd_buffer)}).ok());
 }
 
@@ -256,7 +256,7 @@ TEST_P(BlitPassTest, CanResizeTexturesPlayground) {
   ASSERT_TRUE(src);
 
   EXPECT_TRUE(blit_pass->ResizeTexture(src, dst));
-  EXPECT_TRUE(blit_pass->EncodeCommands());
+  EXPECT_TRUE(blit_pass->EncodeCommands(GetContext()->GetResourceAllocator()));
   EXPECT_TRUE(context->GetCommandQueue()->Submit({std::move(cmd_buffer)}).ok());
 
   DisplayListBuilder builder;
@@ -264,7 +264,7 @@ TEST_P(BlitPassTest, CanResizeTexturesPlayground) {
   DlPaint paint;
   paint.setColor(DlColor::kRed());
   auto image = DlImageImpeller::Make(dst);
-  builder.DrawImage(image, flutter::DlPoint(100.0, 100.0),
+  builder.DrawImage(image, SkPoint::Make(100.0, 100.0),
                     DlImageSampling::kNearestNeighbor, &paint);
   ASSERT_TRUE(OpenPlaygroundHere(builder.Build()));
 }

@@ -16,22 +16,21 @@
 
 namespace flutter {
 
-static DlISize TransformedSurfaceSize(const DlISize& size,
-                                      const DlMatrix& transformation) {
-  const auto source_rect = DlRect::MakeSize(size);
-  const auto transformed_rect =
-      source_rect.TransformAndClipBounds(transformation);
-  return DlIRect::RoundOut(transformed_rect).GetSize();
+static SkISize TransformedSurfaceSize(const SkISize& size,
+                                      const SkMatrix& transformation) {
+  const auto source_rect = SkRect::MakeWH(size.width(), size.height());
+  const auto transformed_rect = transformation.mapRect(source_rect);
+  return SkISize::Make(transformed_rect.width(), transformed_rect.height());
 }
 
 EmbedderExternalView::EmbedderExternalView(
-    const DlISize& frame_size,
-    const DlMatrix& surface_transformation)
+    const SkISize& frame_size,
+    const SkMatrix& surface_transformation)
     : EmbedderExternalView(frame_size, surface_transformation, {}, nullptr) {}
 
 EmbedderExternalView::EmbedderExternalView(
-    const DlISize& frame_size,
-    const DlMatrix& surface_transformation,
+    const SkISize& frame_size,
+    const SkMatrix& surface_transformation,
     ViewIdentifier view_identifier,
     std::unique_ptr<EmbeddedViewParams> params)
     : render_surface_size_(
@@ -40,7 +39,7 @@ EmbedderExternalView::EmbedderExternalView(
       view_identifier_(view_identifier),
       embedded_view_params_(std::move(params)),
       slice_(std::make_unique<DisplayListEmbedderViewSlice>(
-          DlRect::MakeSize(frame_size))) {}
+          SkRect::Make(frame_size))) {}
 
 EmbedderExternalView::~EmbedderExternalView() = default;
 
@@ -53,7 +52,7 @@ DlCanvas* EmbedderExternalView::GetCanvas() {
   return slice_->canvas();
 }
 
-DlISize EmbedderExternalView::GetRenderSurfaceSize() const {
+SkISize EmbedderExternalView::GetRenderSurfaceSize() const {
   return render_surface_size_;
 }
 
@@ -125,19 +124,20 @@ bool EmbedderExternalView::Render(const EmbedderRenderTarget& render_target,
     auto aiks_context = render_target.GetAiksContext();
 
     auto dl_builder = DisplayListBuilder();
-    dl_builder.SetTransform(surface_transformation_);
+    dl_builder.SetTransform(&surface_transformation_);
     slice_->render_into(&dl_builder);
     auto display_list = dl_builder.Build();
 
     auto cull_rect =
-        impeller::Rect::MakeSize(impeller_target->GetRenderTargetSize());
+        impeller::IRect::MakeSize(impeller_target->GetRenderTargetSize());
+    SkIRect sk_cull_rect =
+        SkIRect::MakeWH(cull_rect.GetWidth(), cull_rect.GetHeight());
 
-    return impeller::RenderToTarget(aiks_context->GetContentContext(),  //
-                                    *impeller_target,                   //
-                                    display_list,                       //
-                                    cull_rect,                          //
-                                    /*reset_host_buffer=*/true,         //
-                                    /*is_onscreen=*/false               //
+    return impeller::RenderToOnscreen(aiks_context->GetContentContext(),  //
+                                      *impeller_target,                   //
+                                      display_list,                       //
+                                      sk_cull_rect,                       //
+                                      /*reset_host_buffer=*/true          //
     );
   }
 #endif  // IMPELLER_SUPPORTS_RENDERING

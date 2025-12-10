@@ -44,11 +44,6 @@ class AllocatorMTL final : public Allocator {
   // |Allocator|
   Bytes DebugGetHeapUsage() const override;
 
-  // visible for testing.
-  void DebugSetSupportsUMA(bool value);
-
-  AllocatorMTL(id<MTLDevice> device, std::string label);
-
  private:
   friend class ContextMTL;
 
@@ -65,6 +60,8 @@ class AllocatorMTL final : public Allocator {
 
   ISize max_texture_supported_;
 
+  AllocatorMTL(id<MTLDevice> device, std::string label);
+
   // |Allocator|
   bool IsValid() const;
 
@@ -73,8 +70,8 @@ class AllocatorMTL final : public Allocator {
       const DeviceBufferDescriptor& desc) override;
 
   // |Allocator|
-  std::shared_ptr<Texture> OnCreateTexture(const TextureDescriptor& desc,
-                                           bool threadsafe) override;
+  std::shared_ptr<Texture> OnCreateTexture(
+      const TextureDescriptor& desc) override;
 
   // |Allocator|
   uint16_t MinimumBytesPerRow(PixelFormat format) const override;

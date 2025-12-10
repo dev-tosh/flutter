@@ -6,8 +6,6 @@
 
 import 'dart:async';
 import 'dart:isolate';
-import 'dart:typed_data';
-import 'dart:ui';
 
 import 'split_lib_test.dart' deferred as splitlib;
 
@@ -35,16 +33,13 @@ Future<void>? splitLoadFuture;
 @pragma('vm:entry-point')
 void canCallDeferredLibrary() {
   print('In function canCallDeferredLibrary');
-  splitLoadFuture = splitlib
-      .loadLibrary()
-      .then((_) {
-        print('Deferred load complete');
-        notifySuccess(splitlib.splitAdd(10, 23) == 33);
-      })
-      .catchError((_) {
-        print('Deferred load error');
-        notifySuccess(false);
-      });
+  splitLoadFuture = splitlib.loadLibrary().then((_) {
+    print('Deferred load complete');
+    notifySuccess(splitlib.splitAdd(10, 23) == 33);
+  }).catchError((_) {
+    print('Deferred load error');
+    notifySuccess(false);
+  });
   notifyNative();
 }
 
@@ -70,7 +65,8 @@ void testCanLaunchSecondaryIsolate() {
   final onExit = RawReceivePort((_) {
     notifyNative();
   });
-  Isolate.spawn(secondaryIsolateMain, 'Hello from root isolate.', onExit: onExit.sendPort);
+  Isolate.spawn(secondaryIsolateMain, 'Hello from root isolate.',
+      onExit: onExit.sendPort);
 }
 
 @pragma('vm:entry-point')
@@ -84,10 +80,8 @@ Future<void> testIsolateStartupFailure() async {
       final exits = StreamIterator<dynamic>(onExit);
 
       await Isolate.spawn(
-        (SendPort port) => port.send('good'),
-        onMessage.sendPort,
-        onExit: onExit.sendPort,
-      );
+          (SendPort port) => port.send('good'), onMessage.sendPort,
+          onExit: onExit.sendPort);
       if (!await messages.moveNext()) {
         throw AssertionError('Failed to receive message');
       }
@@ -147,25 +141,29 @@ void testCanConvertEmptyList(List<int> args) {
 
 @pragma('vm:entry-point')
 void testCanConvertListOfStrings(List<String> args) {
-  notifySuccess(
-    args.length == 4 &&
-        args[0] == 'tinker' &&
-        args[1] == 'tailor' &&
-        args[2] == 'soldier' &&
-        args[3] == 'sailor',
-  );
+  notifySuccess(args.length == 4 &&
+      args[0] == 'tinker' &&
+      args[1] == 'tailor' &&
+      args[2] == 'soldier' &&
+      args[3] == 'sailor');
 }
 
 @pragma('vm:entry-point')
 void testCanConvertListOfDoubles(List<double> args) {
-  notifySuccess(
-    args.length == 4 && args[0] == 1.0 && args[1] == 2.0 && args[2] == 3.0 && args[3] == 4.0,
-  );
+  notifySuccess(args.length == 4 &&
+      args[0] == 1.0 &&
+      args[1] == 2.0 &&
+      args[2] == 3.0 &&
+      args[3] == 4.0);
 }
 
 @pragma('vm:entry-point')
 void testCanConvertListOfInts(List<int> args) {
-  notifySuccess(args.length == 4 && args[0] == 1 && args[1] == 2 && args[2] == 3 && args[3] == 4);
+  notifySuccess(args.length == 4 &&
+      args[0] == 1 &&
+      args[1] == 2 &&
+      args[2] == 3 &&
+      args[3] == 4);
 }
 
 bool didCallRegistrantBeforeEntrypoint = false;
@@ -221,104 +219,3 @@ Function createEntryPointForPlatIsoSendAndRecvTest() {
 void mainForPlatformIsolatesThrowError() {
   throw AssertionError('Error from platform isolate');
 }
-
-@pragma('vm:entry-point')
-void sendSemanticsUpdate() {
-  final builder = SemanticsUpdateBuilder();
-  const identifier = 'identifier';
-  const label = 'label';
-  final labelAttributes = <StringAttribute>[
-    SpellOutStringAttribute(range: const TextRange(start: 1, end: 2)),
-  ];
-
-  const value = 'value';
-  final valueAttributes = <StringAttribute>[
-    SpellOutStringAttribute(range: const TextRange(start: 2, end: 3)),
-  ];
-
-  const increasedValue = 'increasedValue';
-  final increasedValueAttributes = <StringAttribute>[
-    SpellOutStringAttribute(range: const TextRange(start: 4, end: 5)),
-  ];
-
-  const decreasedValue = 'decreasedValue';
-  final decreasedValueAttributes = <StringAttribute>[
-    SpellOutStringAttribute(range: const TextRange(start: 5, end: 6)),
-  ];
-
-  const hint = 'hint';
-  final hintAttributes = <StringAttribute>[
-    LocaleStringAttribute(
-      locale: const Locale('en', 'MX'),
-      range: const TextRange(start: 0, end: 1),
-    ),
-  ];
-
-  const tooltip = 'tooltip';
-
-  final transform = Float64List(16);
-  final childrenInTraversalOrder = Int32List(0);
-  final childrenInHitTestOrder = Int32List(0);
-  final additionalActions = Int32List(0);
-  transform[0] = 1;
-  transform[1] = 0;
-  transform[2] = 0;
-  transform[3] = 0;
-
-  transform[4] = 0;
-  transform[5] = 1;
-  transform[6] = 0;
-  transform[7] = 0;
-
-  transform[8] = 0;
-  transform[9] = 0;
-  transform[10] = 1;
-  transform[11] = 0;
-
-  transform[12] = 0;
-  transform[13] = 0;
-  transform[14] = 0;
-  transform[15] = 0;
-  builder.updateNode(
-    id: 0,
-    flags: SemanticsFlags(),
-    actions: 0,
-    maxValueLength: 0,
-    currentValueLength: 0,
-    textSelectionBase: -1,
-    textSelectionExtent: -1,
-    platformViewId: -1,
-    scrollChildren: 0,
-    scrollIndex: 0,
-    traversalParent: 0,
-    scrollPosition: 0,
-    scrollExtentMax: 0,
-    scrollExtentMin: 0,
-    rect: const Rect.fromLTRB(0, 0, 10, 10),
-    identifier: identifier,
-    label: label,
-    labelAttributes: labelAttributes,
-    value: value,
-    valueAttributes: valueAttributes,
-    increasedValue: increasedValue,
-    increasedValueAttributes: increasedValueAttributes,
-    decreasedValue: decreasedValue,
-    decreasedValueAttributes: decreasedValueAttributes,
-    hint: hint,
-    hintAttributes: hintAttributes,
-    tooltip: tooltip,
-    textDirection: TextDirection.ltr,
-    transform: transform,
-    hitTestTransform: transform,
-    childrenInTraversalOrder: childrenInTraversalOrder,
-    childrenInHitTestOrder: childrenInHitTestOrder,
-    additionalActions: additionalActions,
-    controlsNodes: null,
-    inputType: SemanticsInputType.none,
-    locale: null,
-  );
-  _semanticsUpdate(builder.build());
-}
-
-@pragma('vm:external-name', 'SemanticsUpdate')
-external void _semanticsUpdate(SemanticsUpdate update);

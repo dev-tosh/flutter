@@ -44,7 +44,12 @@ struct TextEditingDelta {
   /// Get the delta_end_ value.
   int delta_end() const { return delta_end_; }
 
-  bool operator==(const TextEditingDelta& rhs) const = default;
+  bool operator==(const TextEditingDelta& rhs) const {
+    return old_text_ == rhs.old_text_ && delta_text_ == rhs.delta_text_ &&
+           delta_start_ == rhs.delta_start_ && delta_end_ == rhs.delta_end_;
+  }
+
+  bool operator!=(const TextEditingDelta& rhs) const { return !(*this == rhs); }
 
   TextEditingDelta(const TextEditingDelta& other) = default;
 

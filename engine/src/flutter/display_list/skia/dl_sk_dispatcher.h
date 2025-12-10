@@ -51,15 +51,12 @@ class DlSkCanvasDispatcher : public virtual DlOpReceiver,
   // clang-format on
   void transformReset() override;
 
-  void clipRect(const DlRect& rect, DlClipOp clip_op, bool is_aa) override;
-  void clipOval(const DlRect& bounds, DlClipOp clip_op, bool is_aa) override;
+  void clipRect(const DlRect& rect, ClipOp clip_op, bool is_aa) override;
+  void clipOval(const DlRect& bounds, ClipOp clip_op, bool is_aa) override;
   void clipRoundRect(const DlRoundRect& rrect,
-                     DlClipOp clip_op,
+                     ClipOp clip_op,
                      bool is_aa) override;
-  void clipRoundSuperellipse(const DlRoundSuperellipse& rse,
-                             DlClipOp clip_op,
-                             bool is_aa) override;
-  void clipPath(const DlPath& path, DlClipOp clip_op, bool is_aa) override;
+  void clipPath(const DlPath& path, ClipOp clip_op, bool is_aa) override;
 
   void drawPaint() override;
   void drawColor(DlColor color, DlBlendMode mode) override;
@@ -74,15 +71,12 @@ class DlSkCanvasDispatcher : public virtual DlOpReceiver,
   void drawRoundRect(const DlRoundRect& rrect) override;
   void drawDiffRoundRect(const DlRoundRect& outer,
                          const DlRoundRect& inner) override;
-  void drawRoundSuperellipse(const DlRoundSuperellipse& rse) override;
   void drawPath(const DlPath& path) override;
   void drawArc(const DlRect& bounds,
                DlScalar start,
                DlScalar sweep,
                bool useCenter) override;
-  void drawPoints(DlPointMode mode,
-                  uint32_t count,
-                  const DlPoint pts[]) override;
+  void drawPoints(PointMode mode, uint32_t count, const DlPoint pts[]) override;
   void drawVertices(const std::shared_ptr<DlVertices>& vertices,
                     DlBlendMode mode) override;
   void drawImage(const sk_sp<DlImage> image,
@@ -94,14 +88,14 @@ class DlSkCanvasDispatcher : public virtual DlOpReceiver,
                      const DlRect& dst,
                      DlImageSampling sampling,
                      bool render_with_attributes,
-                     DlSrcRectConstraint constraint) override;
+                     SrcRectConstraint constraint) override;
   void drawImageNine(const sk_sp<DlImage> image,
                      const DlIRect& center,
                      const DlRect& dst,
                      DlFilterMode filter,
                      bool render_with_attributes) override;
   void drawAtlas(const sk_sp<DlImage> atlas,
-                 const DlRSTransform xform[],
+                 const SkRSXform xform[],
                  const DlRect tex[],
                  const DlColor colors[],
                  int count,
@@ -111,9 +105,12 @@ class DlSkCanvasDispatcher : public virtual DlOpReceiver,
                  bool render_with_attributes) override;
   void drawDisplayList(const sk_sp<DisplayList> display_list,
                        DlScalar opacity) override;
-  void drawText(const std::shared_ptr<DlText>& text,
-                DlScalar x,
-                DlScalar y) override;
+  void drawTextBlob(const sk_sp<SkTextBlob> blob,
+                    DlScalar x,
+                    DlScalar y) override;
+  void drawTextFrame(const std::shared_ptr<impeller::TextFrame>& text_frame,
+                     DlScalar x,
+                     DlScalar y) override;
   void drawShadow(const DlPath& path,
                   const DlColor color,
                   const DlScalar elevation,

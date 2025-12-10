@@ -35,31 +35,6 @@ typedef struct FlutterDesktopEngine* FlutterDesktopEngineRef;
 // The unique identifier for a view.
 typedef int64_t FlutterDesktopViewId;
 
-// Configures how the Flutter engine selects a GPU.
-typedef enum {
-  // No preference.
-  NoPreference,
-  // Prefer energy efficiency over performance, such as an integrated GPU.
-  // This falls back to a high performance GPU if no low power GPU is
-  // available.
-  LowPowerPreference,
-  // Prefer performance over energy efficiency, such as a discrete GPU or
-  // dedicated GPU.
-  // This falls back to a low power GPU if no high performance GPU is available.
-  HighPerformancePreference,
-} FlutterDesktopGpuPreference;
-
-// Configures the thread policy for running the UI isolate.
-typedef enum {
-  // Default value. Currently will run the UI isolate on separate thread,
-  // later will be changed to running the UI isolate on platform thread.
-  Default,
-  // Run the UI isolate on platform thread.
-  RunOnPlatformThread,
-  // Run the UI isolate on a separate thread.
-  RunOnSeparateThread,
-} FlutterDesktopUIThreadPolicy;
-
 // Properties for configuring a Flutter engine instance.
 typedef struct {
   // The path to the flutter_assets folder for the application to be run.
@@ -93,11 +68,6 @@ typedef struct {
   // to FlutterDesktopEngineCreate.
   const char** dart_entrypoint_argv;
 
-  // GPU choice preference
-  FlutterDesktopGpuPreference gpu_preference;
-
-  // Policy for the thread that runs UI isolate.
-  FlutterDesktopUIThreadPolicy ui_thread_policy;
 } FlutterDesktopEngineProperties;
 
 // ========== View Controller ==========
@@ -141,8 +111,8 @@ FLUTTER_EXPORT FlutterDesktopEngineRef FlutterDesktopViewControllerGetEngine(
     FlutterDesktopViewControllerRef controller);
 
 // Returns the view managed by the given controller.
-FLUTTER_EXPORT FlutterDesktopViewRef
-FlutterDesktopViewControllerGetView(FlutterDesktopViewControllerRef controller);
+FLUTTER_EXPORT FlutterDesktopViewRef FlutterDesktopViewControllerGetView(
+    FlutterDesktopViewControllerRef controller);
 
 // Requests new frame from the engine and repaints the view.
 FLUTTER_EXPORT void FlutterDesktopViewControllerForceRedraw(
@@ -204,8 +174,8 @@ FLUTTER_EXPORT bool FlutterDesktopEngineRun(FlutterDesktopEngineRef engine,
 // This should be called on every run of the application-level runloop, and
 // a wait for native events in the runloop should never be longer than the
 // last return value from this function.
-FLUTTER_EXPORT uint64_t
-FlutterDesktopEngineProcessMessages(FlutterDesktopEngineRef engine);
+FLUTTER_EXPORT uint64_t FlutterDesktopEngineProcessMessages(
+    FlutterDesktopEngineRef engine);
 
 FLUTTER_EXPORT void FlutterDesktopEngineReloadSystemFonts(
     FlutterDesktopEngineRef engine);
@@ -224,8 +194,8 @@ FlutterDesktopEngineGetPluginRegistrar(FlutterDesktopEngineRef engine,
 //
 // Callers should use |FlutterDesktopMessengerAddRef| if the returned pointer
 // will potentially outlive 'engine', such as when passing it to another thread.
-FLUTTER_EXPORT FlutterDesktopMessengerRef
-FlutterDesktopEngineGetMessenger(FlutterDesktopEngineRef engine);
+FLUTTER_EXPORT FlutterDesktopMessengerRef FlutterDesktopEngineGetMessenger(
+    FlutterDesktopEngineRef engine);
 
 // Returns the texture registrar associated with the engine.
 FLUTTER_EXPORT FlutterDesktopTextureRegistrarRef

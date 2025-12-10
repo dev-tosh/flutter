@@ -48,9 +48,7 @@ struct _FlStandardMessageCodecClass {
    * @buffer: a buffer to write into.
    * @value: (allow-none): value to write.
    * @error: (allow-none): #GError location to store the error occurring, or
-   * %NULL. If `error` is not %NULL, `*error` must be initialized (typically
-   * %NULL, but an error from a previous call using GLib error handling is
-   * explicitly valid).
+   * %NULL.
    *
    * Virtual method to write an #FlValue in Flutter Standard encoding.
    *
@@ -72,9 +70,7 @@ struct _FlStandardMessageCodecClass {
    * @offset: (inout): read position in @buffer.
    * @type: the type of the value.
    * @error: (allow-none): #GError location to store the error occurring, or
-   * %NULL. If `error` is not %NULL, `*error` must be initialized (typically
-   * %NULL, but an error from a previous call using GLib error handling is
-   * explicitly valid).
+   * %NULL.
    *
    * Virtual method to read an #FlValue in Flutter Standard encoding.
    *
@@ -119,9 +115,7 @@ void fl_standard_message_codec_write_size(FlStandardMessageCodec* codec,
  * @offset: (inout): read position in @buffer.
  * @value: location to read size.
  * @error: (allow-none): #GError location to store the error occurring, or
- * %NULL. If `error` is not %NULL, `*error` must be initialized (typically
- * %NULL, but an error from a previous call using GLib error handling is
- * explicitly valid).
+ * %NULL.
  *
  * Reads a size field in Flutter Standard encoding.
  *
@@ -142,9 +136,7 @@ gboolean fl_standard_message_codec_read_size(FlStandardMessageCodec* codec,
  * @buffer: buffer to write into.
  * @value: (allow-none): value to write.
  * @error: (allow-none): #GError location to store the error occurring, or
- * %NULL. If `error` is not %NULL, `*error` must be initialized (typically
- * %NULL, but an error from a previous call using GLib error handling is
- * explicitly valid).
+ * %NULL.
  *
  * Writes an #FlValue in Flutter Standard encoding.
  *
@@ -165,9 +157,7 @@ gboolean fl_standard_message_codec_write_value(FlStandardMessageCodec* codec,
  * @offset: (inout): read position in @buffer.
  * @value: location to read size.
  * @error: (allow-none): #GError location to store the error occurring, or
- * %NULL. If `error` is not %NULL, `*error` must be initialized (typically
- * %NULL, but an error from a previous call using GLib error handling is
- * explicitly valid).
+ * %NULL.
  *
  * Reads an #FlValue in Flutter Standard encoding.
  *

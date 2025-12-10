@@ -53,7 +53,7 @@ void AndroidSurfaceGLImpeller::TeardownOnScreenContext() {
 }
 
 // |AndroidSurface|
-bool AndroidSurfaceGLImpeller::OnScreenSurfaceResize(const DlISize& size) {
+bool AndroidSurfaceGLImpeller::OnScreenSurfaceResize(const SkISize& size) {
   // The size is unused. It was added only for iOS where the sizes were
   // necessary to re-create auxiliary buffers (stencil, depth, etc.).
   return RecreateOnscreenSurfaceAndMakeOnscreenContextCurrent();
@@ -74,8 +74,7 @@ bool AndroidSurfaceGLImpeller::ResourceContextClearCurrent() {
 
 // |AndroidSurface|
 bool AndroidSurfaceGLImpeller::SetNativeWindow(
-    fml::RefPtr<AndroidNativeWindow> window,
-    const std::shared_ptr<PlatformViewAndroidJNI>& jni_facade) {
+    fml::RefPtr<AndroidNativeWindow> window) {
   native_window_ = std::move(window);
   return RecreateOnscreenSurfaceAndMakeOnscreenContextCurrent();
 }
@@ -142,7 +141,7 @@ AndroidSurfaceGLImpeller::GLContextFramebufferInfo() const {
 
 // |GPUSurfaceGLDelegate|
 void AndroidSurfaceGLImpeller::GLContextSetDamageRegion(
-    const std::optional<DlIRect>& region) {
+    const std::optional<SkIRect>& region) {
   // Not supported.
 }
 

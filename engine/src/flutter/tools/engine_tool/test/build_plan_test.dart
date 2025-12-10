@@ -26,18 +26,24 @@ void main() {
     TestEnvironment? environment,
     void Function(TestBuilderConfig)? builds,
   }) {
-    final (List<Build> builders, ArgParser parser, Environment env) = _createTestFixture(
+    final (builders, parser, env) = _createTestFixture(
       environment: environment,
       builds: builds,
     );
 
-    return BuildPlan.fromArgResults(parser.parse(args), env, builds: builders);
+    return BuildPlan.fromArgResults(
+      parser.parse(args),
+      env,
+      builds: builders,
+    );
   }
 
   test('rbe defaults to true if detected', () {
-    final BuildPlan plan = configureAndParse(
+    final plan = configureAndParse(
       [],
-      environment: TestEnvironment.withTestEngine(withRbe: true),
+      environment: TestEnvironment.withTestEngine(
+        withRbe: true,
+      ),
     );
 
     expect(plan.useRbe, isTrue);
@@ -45,7 +51,7 @@ void main() {
   });
 
   test('rbe defaults to false if not detected', () {
-    final BuildPlan plan = configureAndParse(
+    final plan = configureAndParse(
       [],
       environment: TestEnvironment.withTestEngine(
         // This is the default, but make it explicit for the test.
@@ -59,21 +65,21 @@ void main() {
   });
 
   test('lto is true if explicitly enabled', () {
-    final BuildPlan plan = configureAndParse(['--lto']);
+    final plan = configureAndParse(['--lto']);
 
     expect(plan.useLto, isTrue);
     expect(plan.toGnArgs(), contains('--lto'));
   });
 
   test('lto is false if explicitly disabled', () {
-    final BuildPlan plan = configureAndParse(['--no-lto']);
+    final plan = configureAndParse(['--no-lto']);
 
     expect(plan.useLto, isFalse);
     expect(plan.toGnArgs(), contains('--no-lto'));
   });
 
   test('lto is true if the config omits --no-lto', () {
-    final BuildPlan plan = configureAndParse([]);
+    final plan = configureAndParse([]);
 
     expect(
       plan.useLto,
@@ -84,35 +90,36 @@ void main() {
   });
 
   test('lto is false if the config uses --no-lto', () {
-    final BuildPlan plan = configureAndParse(
-      [],
-      builds: (testConfig) {
-        testConfig.addBuild(
-          name: 'linux/host_debug',
-          dimension: TestDroneDimension.linux,
-          enableLto: false,
-        );
-      },
-    );
+    final plan = configureAndParse([], builds: (testConfig) {
+      testConfig.addBuild(
+        name: 'linux/host_debug',
+        dimension: TestDroneDimension.linux,
+        enableLto: false,
+      );
+    });
 
-    expect(plan.useLto, isFalse, reason: 'Not specified and the build config included --no-lto');
+    expect(
+      plan.useLto,
+      isFalse,
+      reason: 'Not specified and the build config included --no-lto',
+    );
     expect(plan.toGnArgs(), contains('--no-lto'));
   });
 
   test('concurrency defaults to null if not specified', () {
-    final BuildPlan plan = configureAndParse([]);
+    final plan = configureAndParse([]);
 
     expect(plan.concurrency, isNull);
   });
 
   test('concurrency parses the number provided', () {
-    final BuildPlan plan = configureAndParse(['--concurrency=1024']);
+    final plan = configureAndParse(['--concurrency=1024']);
 
     expect(plan.concurrency, 1024);
   });
 
   test('strategy defaults to auto', () {
-    final BuildPlan plan = configureAndParse([]);
+    final plan = configureAndParse([]);
 
     expect(plan.strategy, BuildStrategy.auto);
     expect(
@@ -123,20 +130,26 @@ void main() {
   });
 
   test('strategy can be set to --local', () {
-    final BuildPlan plan = configureAndParse(['--build-strategy=local']);
+    final plan = configureAndParse(['--build-strategy=local']);
 
     expect(plan.strategy, BuildStrategy.local);
     expect(
       plan.toRbeConfig(),
-      same(const RbeConfig(execStrategy: RbeExecStrategy.local, remoteDisabled: true)),
+      same(const RbeConfig(
+        execStrategy: RbeExecStrategy.local,
+        remoteDisabled: true,
+      )),
       reason: 'Local should use RbeExecStrategy.local with RBE disabled',
     );
   });
 
   test('strategy can be set to --remote', () {
-    final BuildPlan plan = configureAndParse([
-      '--build-strategy=remote',
-    ], environment: TestEnvironment.withTestEngine(withRbe: true));
+    final plan = configureAndParse(
+      ['--build-strategy=remote'],
+      environment: TestEnvironment.withTestEngine(
+        withRbe: true,
+      ),
+    );
 
     expect(plan.strategy, BuildStrategy.remote);
     expect(
@@ -147,34 +160,46 @@ void main() {
   });
 
   test('can provide a single extra "--gn-args"', () {
-    final BuildPlan result = configureAndParse(['--gn-args', '--foo']);
+    final result = configureAndParse(['--gn-args', '--foo']);
     expect(result.extraGnArgs, ['--foo']);
   });
 
   test('can provide multiple extra "--gn-arg"s', () {
-    final BuildPlan result = configureAndParse(['--gn-args', '--foo', '--gn-args', '--bar']);
+    final result = configureAndParse([
+      '--gn-args',
+      '--foo',
+      '--gn-args',
+      '--bar',
+    ]);
     expect(result.extraGnArgs, ['--foo', '--bar']);
   });
 
   test('build defaults to host_debug', () {
-    final BuildPlan plan = configureAndParse([]);
+    final plan = configureAndParse([]);
 
     expect(plan.build.name, 'linux/host_debug');
   });
 
   test('build defaults to the provided default', () {
-    final testEnv = TestEnvironment.withTestEngine(withRbe: true);
+    final testEnv = TestEnvironment.withTestEngine(
+      withRbe: true,
+    );
     addTearDown(testEnv.cleanup);
 
     final testConfig = TestBuilderConfig();
-    testConfig.addBuild(name: 'linux/host_debug_unopt_arm64', dimension: TestDroneDimension.linux);
+    testConfig.addBuild(
+      name: 'linux/host_debug_unopt_arm64',
+      dimension: TestDroneDimension.linux,
+    );
 
     final parser = ArgParser();
-    final List<Build> builds = BuildPlan.configureArgParser(
+    final builds = BuildPlan.configureArgParser(
       parser,
       testEnv.environment,
       configs: {
-        'linux_test_config': testConfig.buildConfig(path: 'ci/builders/linux_test_config.json'),
+        'linux_test_config': testConfig.buildConfig(
+          path: 'ci/builders/linux_test_config.json',
+        ),
       },
       help: false,
     );
@@ -210,13 +235,11 @@ void main() {
             withRbe: false,
           ),
         ),
-        throwsA(
-          isA<FatalError>().having(
-            (e) => e.toString(),
-            'toString()',
-            contains('Cannot use remote builds without RBE enabled'),
-          ),
-        ),
+        throwsA(isA<FatalError>().having(
+          (e) => e.toString(),
+          'toString()',
+          contains('Cannot use remote builds without RBE enabled'),
+        )),
       );
     });
 
@@ -230,75 +253,62 @@ void main() {
             withRbe: false,
           ),
         ),
-        throwsA(
-          isA<FatalError>().having(
-            (e) => e.toString(),
-            'toString()',
-            contains('RBE requested but configuration not found'),
-          ),
-        ),
+        throwsA(isA<FatalError>().having(
+          (e) => e.toString(),
+          'toString()',
+          contains('RBE requested but configuration not found'),
+        )),
       );
     });
 
     test('concurrency fails on a non-integer', () {
       expect(
         () => configureAndParse(['--concurrency=ABCD']),
-        throwsA(
-          isA<FatalError>().having(
-            (e) => e.toString(),
-            'toString()',
-            contains('Invalid value for --concurrency: ABCD'),
-          ),
-        ),
+        throwsA(isA<FatalError>().having(
+          (e) => e.toString(),
+          'toString()',
+          contains('Invalid value for --concurrency: ABCD'),
+        )),
       );
     });
 
     test('concurrency fails on a negative integer', () {
       expect(
         () => configureAndParse(['--concurrency=-1024']),
-        throwsA(
-          isA<FatalError>().having(
-            (e) => e.toString(),
-            'toString()',
-            contains('Invalid value for --concurrency: -1024'),
-          ),
-        ),
+        throwsA(isA<FatalError>().having(
+          (e) => e.toString(),
+          'toString()',
+          contains('Invalid value for --concurrency: -1024'),
+        )),
       );
     });
 
     test('build fails if host_debug not specified and no config set', () {
       expect(
-        () => configureAndParse(
-          [],
-          builds: (testConfig) {
-            testConfig.addBuild(
-              name: 'linux/host_debug_unopt_arm64',
-              dimension: TestDroneDimension.linux,
-            );
-          },
-        ),
-        throwsA(
-          isA<FatalError>().having(
-            (e) => e.toString(),
-            'toString()',
-            contains('Unknown build configuration: host_debug'),
-          ),
-        ),
+        () => configureAndParse([], builds: (testConfig) {
+          testConfig.addBuild(
+            name: 'linux/host_debug_unopt_arm64',
+            dimension: TestDroneDimension.linux,
+          );
+        }),
+        throwsA(isA<FatalError>().having(
+          (e) => e.toString(),
+          'toString()',
+          contains('Unknown build configuration: host_debug'),
+        )),
       );
     });
 
     group('build fails if an extra "--gn-args" contains a reserved flag', () {
-      for (final String reserved in BuildPlan.reservedGnArgs) {
+      for (final reserved in BuildPlan.reservedGnArgs) {
         test(reserved, () {
           expect(
             () => configureAndParse(['--gn-args', '--$reserved']),
-            throwsA(
-              isA<FatalError>().having(
-                (e) => e.toString(),
-                'toString()',
-                contains(BuildPlan.reservedGnArgsError.toString()),
-              ),
-            ),
+            throwsA(isA<FatalError>().having(
+              (e) => e.toString(),
+              'toString()',
+              contains(BuildPlan.reservedGnArgsError.toString()),
+            )),
           );
         });
       }
@@ -307,26 +317,22 @@ void main() {
     test('builds fails if a non-flag (space) is provided to "--gn-args"', () {
       expect(
         () => configureAndParse(['--gn-args', '--foo name']),
-        throwsA(
-          isA<FatalError>().having(
-            (e) => e.toString(),
-            'toString()',
-            contains(BuildPlan.argumentsMustBeFlagsError.toString()),
-          ),
-        ),
+        throwsA(isA<FatalError>().having(
+          (e) => e.toString(),
+          'toString()',
+          contains(BuildPlan.argumentsMustBeFlagsError.toString()),
+        )),
       );
     });
 
     test('builds fails if a non-flag (with =) is provided to "--gn-args"', () {
       expect(
         () => configureAndParse(['--gn-args', '--foo=name']),
-        throwsA(
-          isA<FatalError>().having(
-            (e) => e.toString(),
-            'toString()',
-            contains('Arguments provided to --gn-args must be flags'),
-          ),
-        ),
+        throwsA(isA<FatalError>().having(
+          (e) => e.toString(),
+          'toString()',
+          contains('Arguments provided to --gn-args must be flags'),
+        )),
       );
     });
 
@@ -337,7 +343,9 @@ void main() {
           isA<ArgParserException>().having(
             (e) => e.toString(),
             'toString()',
-            contains('"host_debug_unopt_arm64" is not an allowed value for option'),
+            contains(
+              '"host_debug_unopt_arm64" is not an allowed value for option',
+            ),
           ),
         ),
       );
@@ -358,15 +366,24 @@ void main() {
       TestEnvironment? environment,
       void Function(TestBuilderConfig)? builds,
     }) {
-      final (_, ArgParser parser, _) = _createTestFixture(environment: environment, builds: builds);
+      final (_, parser, _) = _createTestFixture(
+        environment: environment,
+        builds: builds,
+      );
       return parser;
     }
 
     test('show builds in help message as long as not a [ci/...] build', () {
-      final ArgParser parser = createArgParser(
+      final parser = createArgParser(
         builds: (testConfig) {
-          testConfig.addBuild(name: 'ci/host_debug', dimension: TestDroneDimension.linux);
-          testConfig.addBuild(name: 'linux/host_debug', dimension: TestDroneDimension.linux);
+          testConfig.addBuild(
+            name: 'ci/host_debug',
+            dimension: TestDroneDimension.linux,
+          );
+          testConfig.addBuild(
+            name: 'linux/host_debug',
+            dimension: TestDroneDimension.linux,
+          );
         },
       );
 
@@ -375,11 +392,19 @@ void main() {
     });
 
     test('shows [ci/...] builds if verbose is true', () {
-      final ArgParser parser = createArgParser(
-        environment: TestEnvironment.withTestEngine(verbose: true),
+      final parser = createArgParser(
+        environment: TestEnvironment.withTestEngine(
+          verbose: true,
+        ),
         builds: (testConfig) {
-          testConfig.addBuild(name: 'ci/host_debug', dimension: TestDroneDimension.linux);
-          testConfig.addBuild(name: 'linux/host_debug', dimension: TestDroneDimension.linux);
+          testConfig.addBuild(
+            name: 'ci/host_debug',
+            dimension: TestDroneDimension.linux,
+          );
+          testConfig.addBuild(
+            name: 'linux/host_debug',
+            dimension: TestDroneDimension.linux,
+          );
         },
       );
 
@@ -388,21 +413,29 @@ void main() {
     });
 
     test('hides LTO instructions normally', () {
-      final ArgParser parser = createArgParser();
+      final parser = createArgParser();
 
-      expect(parser.usage, isNot(contains('Whether LTO should be enabled for a build')));
+      expect(
+        parser.usage,
+        isNot(contains('Whether LTO should be enabled for a build')),
+      );
     });
 
     test('shows LTO instructions if verbose', () {
-      final ArgParser parser = createArgParser(
-        environment: TestEnvironment.withTestEngine(verbose: true),
+      final parser = createArgParser(
+        environment: TestEnvironment.withTestEngine(
+          verbose: true,
+        ),
       );
 
-      expect(parser.usage, contains('Whether LTO should be enabled for a build'));
+      expect(
+        parser.usage,
+        contains('Whether LTO should be enabled for a build'),
+      );
     });
 
     test('shows RBE instructions if not configured', () {
-      final ArgParser parser = createArgParser(
+      final parser = createArgParser(
         environment: TestEnvironment.withTestEngine(
           // This is the default, but make it explicit for the test.
           // ignore: avoid_redundant_argument_values
@@ -420,8 +453,10 @@ void main() {
     });
 
     test('shows RBE instructions if verbose', () {
-      final ArgParser parser = createArgParser(
-        environment: TestEnvironment.withTestEngine(verbose: true),
+      final parser = createArgParser(
+        environment: TestEnvironment.withTestEngine(
+          verbose: true,
+        ),
       );
 
       expect(
@@ -434,16 +469,24 @@ void main() {
     });
 
     test('hides RBE instructions if enabled', () {
-      final ArgParser parser = createArgParser(
-        environment: TestEnvironment.withTestEngine(withRbe: true),
+      final parser = createArgParser(
+        environment: TestEnvironment.withTestEngine(
+          withRbe: true,
+        ),
       );
 
-      expect(parser.usage, contains('Enable pre-configured remote build execution'));
-      expect(parser.usage, isNot(contains('https://flutter.dev/to/engine-rbe')));
+      expect(
+        parser.usage,
+        contains('Enable pre-configured remote build execution'),
+      );
+      expect(
+        parser.usage,
+        isNot(contains('https://flutter.dev/to/engine-rbe')),
+      );
     });
 
     test('hides --build-strategy if RBE not enabled', () {
-      final ArgParser parser = createArgParser(
+      final parser = createArgParser(
         environment: TestEnvironment.withTestEngine(
           // This is the default, but make it explicit for the test.
           // ignore: avoid_redundant_argument_values
@@ -451,42 +494,67 @@ void main() {
         ),
       );
 
-      expect(parser.usage, isNot(contains('How to prefer remote or local builds')));
+      expect(
+        parser.usage,
+        isNot(contains('How to prefer remote or local builds')),
+      );
     });
 
     test('shows --build-strategy if RBE enabled', () {
-      final ArgParser parser = createArgParser(
-        environment: TestEnvironment.withTestEngine(withRbe: true),
+      final parser = createArgParser(
+        environment: TestEnvironment.withTestEngine(
+          withRbe: true,
+        ),
       );
 
-      expect(parser.usage, contains('How to prefer remote or local builds'));
+      expect(
+        parser.usage,
+        contains('How to prefer remote or local builds'),
+      );
     });
 
     test('shows --build-strategy if verbose', () {
-      final ArgParser parser = createArgParser(
-        environment: TestEnvironment.withTestEngine(verbose: true),
+      final parser = createArgParser(
+        environment: TestEnvironment.withTestEngine(
+          verbose: true,
+        ),
       );
 
-      expect(parser.usage, contains('How to prefer remote or local builds'));
+      expect(
+        parser.usage,
+        contains('How to prefer remote or local builds'),
+      );
     });
 
     test('hides --gn-args if not verbose', () {
-      final ArgParser parser = createArgParser();
+      final parser = createArgParser();
 
-      expect(parser.usage, isNot(contains('Additional arguments to provide to "gn"')));
+      expect(
+        parser.usage,
+        isNot(contains('Additional arguments to provide to "gn"')),
+      );
     });
 
     test('shows --gn-args if verbose', () {
-      final ArgParser parser = createArgParser(
-        environment: TestEnvironment.withTestEngine(verbose: true),
+      final parser = createArgParser(
+        environment: TestEnvironment.withTestEngine(
+          verbose: true,
+        ),
       );
 
-      expect(parser.usage, contains('Additional arguments to provide to "gn"'));
+      expect(
+        parser.usage,
+        contains('Additional arguments to provide to "gn"'),
+      );
     });
 
     /// Returns an [ArgParser] pre-primed with both MacOS and Linux builds.
-    ArgParser createMultiPlatformArgParser({required bool verbose}) {
-      final testEnv = TestEnvironment.withTestEngine(verbose: verbose);
+    ArgParser createMultiPlatformArgParser({
+      required bool verbose,
+    }) {
+      final testEnv = TestEnvironment.withTestEngine(
+        verbose: verbose,
+      );
       addTearDown(testEnv.cleanup);
 
       final linuxConfig = TestBuilderConfig();
@@ -509,12 +577,16 @@ void main() {
       );
 
       final parser = ArgParser();
-      final List<Build> _ = BuildPlan.configureArgParser(
+      final _ = BuildPlan.configureArgParser(
         parser,
         testEnv.environment,
         configs: {
-          'linux_test_config': linuxConfig.buildConfig(path: 'ci/builders/linux_test_config.json'),
-          'macos_test_config': macOSConfig.buildConfig(path: 'ci/builders/macos_test_config.json'),
+          'linux_test_config': linuxConfig.buildConfig(
+            path: 'ci/builders/linux_test_config.json',
+          ),
+          'macos_test_config': macOSConfig.buildConfig(
+            path: 'ci/builders/macos_test_config.json',
+          ),
         },
         help: true,
       );
@@ -523,21 +595,24 @@ void main() {
     }
 
     test('shows only non-CI builds that can run locally', () {
-      final ArgParser parser = createMultiPlatformArgParser(verbose: false);
+      final parser = createMultiPlatformArgParser(verbose: false);
 
-      expect(parser.usage, contains('[host_debug]'));
+      expect(
+        parser.usage,
+        contains('[host_debug]'),
+      );
     });
 
     test('shows builds that can run locally, with details', () {
-      final ArgParser parser = createMultiPlatformArgParser(verbose: true);
+      final parser = createMultiPlatformArgParser(verbose: true);
 
       expect(
         parser.usage,
         stringContainsInOrder([
-          '[host_debug]',
-          'A development build of the Linux host.',
           '[ci/linux_host_debug]',
           'A CI-suitable development build of the Linux host.',
+          '[host_debug]',
+          'A development build of the Linux host.',
         ]),
       );
     });
@@ -548,22 +623,27 @@ void main() {
   TestEnvironment? environment,
   void Function(TestBuilderConfig)? builds,
 }) {
-  final TestEnvironment testEnv = environment ?? TestEnvironment.withTestEngine();
+  final testEnv = environment ?? TestEnvironment.withTestEngine();
   addTearDown(testEnv.cleanup);
 
   final testConfig = TestBuilderConfig();
   if (builds != null) {
     builds(testConfig);
   } else {
-    testConfig.addBuild(name: 'linux/host_debug', dimension: TestDroneDimension.linux);
+    testConfig.addBuild(
+      name: 'linux/host_debug',
+      dimension: TestDroneDimension.linux,
+    );
   }
 
   final parser = ArgParser();
-  final List<Build> builders = BuildPlan.configureArgParser(
+  final builders = BuildPlan.configureArgParser(
     parser,
     testEnv.environment,
     configs: {
-      'linux_test_config': testConfig.buildConfig(path: 'ci/builders/linux_test_config.json'),
+      'linux_test_config': testConfig.buildConfig(
+        path: 'ci/builders/linux_test_config.json',
+      ),
     },
     help: true,
   );

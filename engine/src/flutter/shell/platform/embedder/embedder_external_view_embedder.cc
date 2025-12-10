@@ -38,9 +38,9 @@ void EmbedderExternalViewEmbedder::SetSurfaceTransformationCallback(
   surface_transformation_callback_ = std::move(surface_transformation_callback);
 }
 
-DlMatrix EmbedderExternalViewEmbedder::GetSurfaceTransformation() const {
+SkMatrix EmbedderExternalViewEmbedder::GetSurfaceTransformation() const {
   if (!surface_transformation_callback_) {
-    return DlMatrix{};
+    return SkMatrix{};
   }
 
   return surface_transformation_callback_();
@@ -63,7 +63,7 @@ void EmbedderExternalViewEmbedder::BeginFrame(
 
 // |ExternalViewEmbedder|
 void EmbedderExternalViewEmbedder::PrepareFlutterView(
-    DlISize frame_size,
+    SkISize frame_size,
     double device_pixel_ratio) {
   Reset();
 
@@ -119,13 +119,13 @@ DlCanvas* EmbedderExternalViewEmbedder::CompositeEmbeddedView(int64_t view_id) {
 
 static FlutterBackingStoreConfig MakeBackingStoreConfig(
     int64_t view_id,
-    const DlISize& backing_store_size) {
+    const SkISize& backing_store_size) {
   FlutterBackingStoreConfig config = {};
 
   config.struct_size = sizeof(config);
 
-  config.size.width = backing_store_size.width;
-  config.size.height = backing_store_size.height;
+  config.size.width = backing_store_size.width();
+  config.size.height = backing_store_size.height();
   config.view_id = view_id;
 
   return config;
@@ -145,42 +145,42 @@ struct PlatformView {
     view_identifier = view->GetViewIdentifier();
     params = view->GetEmbeddedViewParams();
 
-    DlRect clip = view->GetEmbeddedViewParams()->finalBoundingRect();
-    DlMatrix matrix;
+    clipped_frame = view->GetEmbeddedViewParams()->finalBoundingRect();
+    SkMatrix transform;
     for (auto i = params->mutatorsStack().Begin();
          i != params->mutatorsStack().End(); ++i) {
       const auto& m = *i;
       switch (m->GetType()) {
-        case MutatorType::kClipRect: {
-          auto rect = m->GetRect().TransformAndClipBounds(matrix);
-          clip = clip.IntersectionOrEmpty(rect);
+        case kClipRect: {
+          auto rect = transform.mapRect(m->GetRect());
+          if (!clipped_frame.intersect(rect)) {
+            clipped_frame = SkRect::MakeEmpty();
+          }
           break;
         }
-        case MutatorType::kClipRRect: {
-          auto rect = m->GetRRect().GetBounds().TransformAndClipBounds(matrix);
-          clip = clip.IntersectionOrEmpty(rect);
+        case kClipRRect: {
+          auto rect = transform.mapRect(m->GetRRect().getBounds());
+          if (!clipped_frame.intersect(rect)) {
+            clipped_frame = SkRect::MakeEmpty();
+          }
           break;
         }
-        case MutatorType::kClipRSE: {
-          auto rect = m->GetRSE().GetBounds().TransformAndClipBounds(matrix);
-          clip = clip.IntersectionOrEmpty(rect);
+        case kClipPath: {
+          auto rect = transform.mapRect(m->GetPath().getBounds());
+          if (!clipped_frame.intersect(rect)) {
+            clipped_frame = SkRect::MakeEmpty();
+          }
           break;
         }
-        case MutatorType::kClipPath: {
-          auto rect = m->GetPath().GetBounds().TransformAndClipBounds(matrix);
-          clip = clip.IntersectionOrEmpty(rect);
+        case kTransform: {
+          transform.preConcat(m->GetMatrix());
           break;
         }
-        case MutatorType::kTransform: {
-          matrix = matrix * m->GetMatrix();
-          break;
-        }
-        case MutatorType::kOpacity:
-        case MutatorType::kBackdropFilter:
+        case kOpacity:
+        case kBackdropFilter:
           break;
       }
     }
-    clipped_frame = ToSkRect(clip);
   }
 };
 
@@ -207,8 +207,7 @@ class Layer {
   /// layer.
   bool IntersectsPlatformView(const DlRegion& region) {
     for (auto& platform_view : platform_views_) {
-      auto clipped_frame = ToDlIRect(platform_view.clipped_frame.roundOut());
-      if (region.intersects(clipped_frame)) {
+      if (region.intersects(platform_view.clipped_frame.roundOut())) {
         return true;
       }
     }
@@ -218,7 +217,7 @@ class Layer {
   /// Returns whether the rectangle intersects any of the Flutter contents of
   /// this layer.
   bool IntersectsFlutterContents(const SkRect& rect) {
-    return flutter_contents_region_.intersects(ToDlIRect(rect.roundOut()));
+    return flutter_contents_region_.intersects(rect.roundOut());
   }
 
   /// Returns whether the region intersects any of the Flutter contents of this
@@ -293,9 +292,9 @@ class LayerBuilder {
  public:
   using RenderTargetProvider =
       std::function<std::unique_ptr<EmbedderRenderTarget>(
-          const DlISize& frame_size)>;
+          const SkISize& frame_size)>;
 
-  explicit LayerBuilder(DlISize frame_size) : frame_size_(frame_size) {
+  explicit LayerBuilder(SkISize frame_size) : frame_size_(frame_size) {
     layers_.push_back(Layer());
   }
 
@@ -414,7 +413,7 @@ class LayerBuilder {
   }
 
   std::vector<Layer> layers_;
-  DlISize frame_size_;
+  SkISize frame_size_;
 };
 
 };  // namespace
@@ -428,17 +427,18 @@ void EmbedderExternalViewEmbedder::SubmitFlutterView(
   // unrecognized.
   EmbedderRenderTargetCache& render_target_cache =
       render_target_caches_[flutter_view_id];
-  DlRect _rect = DlRect::MakeSize(pending_frame_size_)
-                     .TransformAndClipBounds(pending_surface_transformation_);
+  SkRect _rect = SkRect::MakeIWH(pending_frame_size_.width(),
+                                 pending_frame_size_.height());
+  pending_surface_transformation_.mapRect(&_rect);
 
-  LayerBuilder builder(DlIRect::RoundOut(_rect).GetSize());
+  LayerBuilder builder(SkISize::Make(_rect.width(), _rect.height()));
 
   for (auto view_id : composition_order_) {
     auto& view = pending_views_[view_id];
     builder.AddExternalView(view.get());
   }
 
-  builder.PrepareBackingStore([&](const DlISize& frame_size) {
+  builder.PrepareBackingStore([&](const SkISize& frame_size) {
     if (!avoid_backing_store_cache_) {
       std::unique_ptr<EmbedderRenderTarget> target =
           render_target_cache.GetRenderTarget(

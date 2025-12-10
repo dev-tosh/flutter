@@ -64,13 +64,14 @@ std::optional<Entity> ColorMatrixFilterContents::RenderFilter(
     auto size = input_snapshot->texture->GetSize();
 
     std::array<VS::PerVertexData, 4> vertices = {
-        VS::PerVertexData{Point(0, 0), Point(0, 0)},
-        VS::PerVertexData{Point(1, 0), Point(1, 0)},
-        VS::PerVertexData{Point(0, 1), Point(0, 1)},
-        VS::PerVertexData{Point(1, 1), Point(1, 1)},
+        VS::PerVertexData{Point(0, 0)},
+        VS::PerVertexData{Point(1, 0)},
+        VS::PerVertexData{Point(0, 1)},
+        VS::PerVertexData{Point(1, 1)},
     };
-    auto& data_host_buffer = renderer.GetTransientsDataBuffer();
-    pass.SetVertexBuffer(CreateVertexBuffer(vertices, data_host_buffer));
+    auto& host_buffer = renderer.GetTransientsBuffer();
+    pass.SetVertexBuffer(
+        CreateVertexBuffer(vertices, renderer.GetTransientsBuffer()));
 
     VS::FrameInfo frame_info;
     frame_info.mvp = Entity::GetShaderTransform(
@@ -83,22 +84,24 @@ std::optional<Entity> ColorMatrixFilterContents::RenderFilter(
     FS::FragInfo frag_info;
     const float* matrix = color_matrix.array;
     frag_info.color_v = Vector4(matrix[4], matrix[9], matrix[14], matrix[19]);
-    frag_info.color_m = Matrix(matrix[0], matrix[5], matrix[10], matrix[15],  //
-                               matrix[1], matrix[6], matrix[11], matrix[16],  //
-                               matrix[2], matrix[7], matrix[12], matrix[17],  //
-                               matrix[3], matrix[8], matrix[13], matrix[18]   //
+    // clang-format off
+    frag_info.color_m = Matrix(
+        matrix[0], matrix[5], matrix[10], matrix[15],
+        matrix[1], matrix[6], matrix[11], matrix[16],
+        matrix[2], matrix[7], matrix[12], matrix[17],
+        matrix[3], matrix[8], matrix[13], matrix[18]
     );
+    // clang-format on
     frag_info.input_alpha =
         absorb_opacity == ColorFilterContents::AbsorbOpacity::kYes
             ? input_snapshot->opacity
             : 1.0f;
-    frag_info.output_alpha = 1;
-
     raw_ptr<const Sampler> sampler =
         renderer.GetContext()->GetSamplerLibrary()->GetSampler({});
     FS::BindInputTexture(pass, input_snapshot->texture, sampler);
-    FS::BindFragInfo(pass, data_host_buffer.EmplaceUniform(frag_info));
-    VS::BindFrameInfo(pass, data_host_buffer.EmplaceUniform(frame_info));
+    FS::BindFragInfo(pass, host_buffer.EmplaceUniform(frag_info));
+
+    VS::BindFrameInfo(pass, host_buffer.EmplaceUniform(frame_info));
 
     return pass.Draw().ok();
   };

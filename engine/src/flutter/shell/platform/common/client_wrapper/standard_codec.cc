@@ -301,7 +301,6 @@ const StandardMessageCodec& StandardMessageCodec::GetInstance(
   if (it == sInstances->end()) {
     // Uses new due to private constructor (to prevent API clients from
     // accidentally passing temporary codec instances to channels).
-    // NOLINTNEXTLINE(clang-analyzer-cplusplus.NewDeleteLeaks)
     auto emplace_result = sInstances->emplace(
         serializer, std::unique_ptr<StandardMessageCodec>(
                         new StandardMessageCodec(serializer)));
@@ -349,7 +348,6 @@ const StandardMethodCodec& StandardMethodCodec::GetInstance(
   if (it == sInstances->end()) {
     // Uses new due to private constructor (to prevent API clients from
     // accidentally passing temporary codec instances to channels).
-    // NOLINTNEXTLINE(clang-analyzer-cplusplus.NewDeleteLeaks)
     auto emplace_result = sInstances->emplace(
         serializer, std::unique_ptr<StandardMethodCodec>(
                         new StandardMethodCodec(serializer)));

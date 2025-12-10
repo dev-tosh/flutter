@@ -8,9 +8,9 @@
 
 namespace flutter {
 
-EmbedderLayers::EmbedderLayers(DlISize frame_size,
+EmbedderLayers::EmbedderLayers(SkISize frame_size,
                                double device_pixel_ratio,
-                               DlMatrix root_surface_transformation,
+                               SkMatrix root_surface_transformation,
                                uint64_t presentation_time)
     : frame_size_(frame_size),
       device_pixel_ratio_(device_pixel_ratio),
@@ -28,27 +28,28 @@ void EmbedderLayers::PushBackingStoreLayer(
   layer.type = kFlutterLayerContentTypeBackingStore;
   layer.backing_store = store;
 
-  const auto layer_bounds = DlRect::MakeSize(frame_size_);
+  const auto layer_bounds =
+      SkRect::MakeWH(frame_size_.width(), frame_size_.height());
 
   const auto transformed_layer_bounds =
-      layer_bounds.TransformAndClipBounds(root_surface_transformation_);
+      root_surface_transformation_.mapRect(layer_bounds);
 
-  layer.offset.x = transformed_layer_bounds.GetX();
-  layer.offset.y = transformed_layer_bounds.GetY();
-  layer.size.width = transformed_layer_bounds.GetWidth();
-  layer.size.height = transformed_layer_bounds.GetHeight();
+  layer.offset.x = transformed_layer_bounds.x();
+  layer.offset.y = transformed_layer_bounds.y();
+  layer.size.width = transformed_layer_bounds.width();
+  layer.size.height = transformed_layer_bounds.height();
 
   auto paint_region_rects = std::make_unique<std::vector<FlutterRect>>();
   paint_region_rects->reserve(paint_region_vec.size());
 
   for (const auto& rect : paint_region_vec) {
     auto transformed_rect =
-        DlRect::Make(rect).TransformAndClipBounds(root_surface_transformation_);
+        root_surface_transformation_.mapRect(SkRect::Make(ToSkIRect(rect)));
     paint_region_rects->push_back(FlutterRect{
-        .left = transformed_rect.GetLeft(),
-        .top = transformed_rect.GetTop(),
-        .right = transformed_rect.GetRight(),
-        .bottom = transformed_rect.GetBottom(),
+        transformed_rect.x(),
+        transformed_rect.y(),
+        transformed_rect.right(),
+        transformed_rect.bottom(),
     });
   }
 
@@ -78,57 +79,56 @@ static std::unique_ptr<FlutterPlatformViewMutation> ConvertMutation(
 }
 
 static std::unique_ptr<FlutterPlatformViewMutation> ConvertMutation(
-    const DlRect& rect) {
+    const SkRect& rect) {
   FlutterPlatformViewMutation mutation = {};
   mutation.type = kFlutterPlatformViewMutationTypeClipRect;
-  mutation.clip_rect.left = rect.GetLeft();
-  mutation.clip_rect.top = rect.GetTop();
-  mutation.clip_rect.right = rect.GetRight();
-  mutation.clip_rect.bottom = rect.GetBottom();
+  mutation.clip_rect.left = rect.left();
+  mutation.clip_rect.top = rect.top();
+  mutation.clip_rect.right = rect.right();
+  mutation.clip_rect.bottom = rect.bottom();
   return std::make_unique<FlutterPlatformViewMutation>(mutation);
 }
 
-static FlutterSize ConvertSize(const DlSize& vector) {
+static FlutterSize VectorToSize(const SkVector& vector) {
   FlutterSize size = {};
-  size.width = vector.width;
-  size.height = vector.height;
+  size.width = vector.x();
+  size.height = vector.y();
   return size;
 }
 
 static std::unique_ptr<FlutterPlatformViewMutation> ConvertMutation(
-    const DlRoundRect& rrect) {
+    const SkRRect& rrect) {
   FlutterPlatformViewMutation mutation = {};
   mutation.type = kFlutterPlatformViewMutationTypeClipRoundedRect;
-  const auto& rect = rrect.GetBounds();
-  mutation.clip_rounded_rect.rect.left = rect.GetLeft();
-  mutation.clip_rounded_rect.rect.top = rect.GetTop();
-  mutation.clip_rounded_rect.rect.right = rect.GetRight();
-  mutation.clip_rounded_rect.rect.bottom = rect.GetBottom();
-  const auto& radii = rrect.GetRadii();
+  const auto& rect = rrect.rect();
+  mutation.clip_rounded_rect.rect.left = rect.left();
+  mutation.clip_rounded_rect.rect.top = rect.top();
+  mutation.clip_rounded_rect.rect.right = rect.right();
+  mutation.clip_rounded_rect.rect.bottom = rect.bottom();
   mutation.clip_rounded_rect.upper_left_corner_radius =
-      ConvertSize(radii.top_left);
+      VectorToSize(rrect.radii(SkRRect::Corner::kUpperLeft_Corner));
   mutation.clip_rounded_rect.upper_right_corner_radius =
-      ConvertSize(radii.top_right);
+      VectorToSize(rrect.radii(SkRRect::Corner::kUpperRight_Corner));
   mutation.clip_rounded_rect.lower_right_corner_radius =
-      ConvertSize(radii.bottom_right);
+      VectorToSize(rrect.radii(SkRRect::Corner::kLowerRight_Corner));
   mutation.clip_rounded_rect.lower_left_corner_radius =
-      ConvertSize(radii.bottom_left);
+      VectorToSize(rrect.radii(SkRRect::Corner::kLowerLeft_Corner));
   return std::make_unique<FlutterPlatformViewMutation>(mutation);
 }
 
 static std::unique_ptr<FlutterPlatformViewMutation> ConvertMutation(
-    const DlMatrix& matrix) {
+    const SkMatrix& matrix) {
   FlutterPlatformViewMutation mutation = {};
   mutation.type = kFlutterPlatformViewMutationTypeTransformation;
-  mutation.transformation.scaleX = matrix.m[0];
-  mutation.transformation.skewX = matrix.m[4];
-  mutation.transformation.transX = matrix.m[12];
-  mutation.transformation.skewY = matrix.m[1];
-  mutation.transformation.scaleY = matrix.m[5];
-  mutation.transformation.transY = matrix.m[13];
-  mutation.transformation.pers0 = matrix.m[3];
-  mutation.transformation.pers1 = matrix.m[7];
-  mutation.transformation.pers2 = matrix.m[15];
+  mutation.transformation.scaleX = matrix[SkMatrix::kMScaleX];
+  mutation.transformation.skewX = matrix[SkMatrix::kMSkewX];
+  mutation.transformation.transX = matrix[SkMatrix::kMTransX];
+  mutation.transformation.skewY = matrix[SkMatrix::kMSkewY];
+  mutation.transformation.scaleY = matrix[SkMatrix::kMScaleY];
+  mutation.transformation.transY = matrix[SkMatrix::kMTransY];
+  mutation.transformation.pers0 = matrix[SkMatrix::kMPersp0];
+  mutation.transformation.pers1 = matrix[SkMatrix::kMPersp1];
+  mutation.transformation.pers2 = matrix[SkMatrix::kMPersp2];
   return std::make_unique<FlutterPlatformViewMutation>(mutation);
 }
 
@@ -159,18 +159,12 @@ void EmbedderLayers::PushPlatformViewLayer(
                   .emplace_back(ConvertMutation(mutator->GetRRect()))
                   .get());
         } break;
-        case MutatorType::kClipRSE: {
-          mutations_array.push_back(
-              mutations_referenced_
-                  .emplace_back(ConvertMutation(mutator->GetRSEApproximation()))
-                  .get());
-        } break;
         case MutatorType::kClipPath: {
           // Unsupported mutation.
         } break;
         case MutatorType::kTransform: {
           const auto& matrix = mutator->GetMatrix();
-          if (!matrix.IsIdentity()) {
+          if (!matrix.isIdentity()) {
             mutations_array.push_back(
                 mutations_referenced_.emplace_back(ConvertMutation(matrix))
                     .get());
@@ -193,7 +187,7 @@ void EmbedderLayers::PushPlatformViewLayer(
     if (!mutations_array.empty()) {
       // If there are going to be any mutations, they must first take into
       // account the root surface transformation.
-      if (!root_surface_transformation_.IsIdentity()) {
+      if (!root_surface_transformation_.isIdentity()) {
         mutations_array.push_back(
             mutations_referenced_
                 .emplace_back(ConvertMutation(root_surface_transformation_))
@@ -220,19 +214,19 @@ void EmbedderLayers::PushPlatformViewLayer(
   layer.platform_view = platform_views_referenced_.back().get();
 
   const auto layer_bounds =
-      DlRect::MakeXYWH(params.finalBoundingRect().GetX(),                //
-                       params.finalBoundingRect().GetY(),                //
-                       params.sizePoints().width * device_pixel_ratio_,  //
-                       params.sizePoints().height * device_pixel_ratio_  //
+      SkRect::MakeXYWH(params.finalBoundingRect().x(),                     //
+                       params.finalBoundingRect().y(),                     //
+                       params.sizePoints().width() * device_pixel_ratio_,  //
+                       params.sizePoints().height() * device_pixel_ratio_  //
       );
 
   const auto transformed_layer_bounds =
-      layer_bounds.TransformAndClipBounds(root_surface_transformation_);
+      root_surface_transformation_.mapRect(layer_bounds);
 
-  layer.offset.x = transformed_layer_bounds.GetX();
-  layer.offset.y = transformed_layer_bounds.GetY();
-  layer.size.width = transformed_layer_bounds.GetWidth();
-  layer.size.height = transformed_layer_bounds.GetHeight();
+  layer.offset.x = transformed_layer_bounds.x();
+  layer.offset.y = transformed_layer_bounds.y();
+  layer.size.width = transformed_layer_bounds.width();
+  layer.size.height = transformed_layer_bounds.height();
 
   layer.presentation_time = presentation_time_;
 

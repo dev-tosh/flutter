@@ -13,7 +13,7 @@ buildscript {
         mavenCentral()
     }
     dependencies {
-        classpath "com.android.tools.build:gradle:8.11.1"
+        classpath "com.android.tools.build:gradle:7.3.0"
     }
 }
 
@@ -33,8 +33,7 @@ allprojects {
 apply plugin: "com.android.application"
 
 android {
-  namespace = "io.flutter.licensecheck"
-  compileSdk = 36
+  compileSdk 35
 }
 
 configurations {

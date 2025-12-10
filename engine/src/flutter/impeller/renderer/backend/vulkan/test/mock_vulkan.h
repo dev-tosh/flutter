@@ -131,9 +131,6 @@ class MockVulkanContextBuilder {
 /// @brief Override the image size returned by all swapchain images.
 void SetSwapchainImageSize(ISize size);
 
-std::vector<VkImageMemoryBarrier>& GetImageMemoryBarriers(
-    VkCommandBuffer buffer);
-
 }  // namespace testing
 }  // namespace impeller
 

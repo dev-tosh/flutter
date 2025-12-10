@@ -130,7 +130,6 @@ struct RenderPassData {
   Scalar clear_depth = 1.0;
 
   std::shared_ptr<Texture> color_attachment;
-  std::shared_ptr<Texture> resolve_attachment;
   std::shared_ptr<Texture> depth_attachment;
   std::shared_ptr<Texture> stencil_attachment;
 
@@ -212,32 +211,25 @@ void RenderPassGLES::ResetGLState(const ProcTableGLES& gl) {
   }
 #endif  // IMPELLER_DEBUG
 
+  GLuint fbo = GL_NONE;
   TextureGLES& color_gles = TextureGLES::Cast(*pass_data.color_attachment);
-  const bool is_wrapped_fbo = color_gles.IsWrapped();
+  const bool is_default_fbo = color_gles.IsWrapped();
 
-  std::optional<GLuint> fbo = 0;
-  if (is_wrapped_fbo) {
+  if (is_default_fbo) {
     if (color_gles.GetFBO().has_value()) {
       // NOLINTNEXTLINE(bugprone-unchecked-optional-access)
       gl.BindFramebuffer(GL_FRAMEBUFFER, *color_gles.GetFBO());
     }
   } else {
     // Create and bind an offscreen FBO.
-    if (!color_gles.GetCachedFBO().IsDead()) {
-      fbo = reactor.GetGLHandle(color_gles.GetCachedFBO());
-      if (!fbo.has_value()) {
-        return false;
-      }
-      gl.BindFramebuffer(GL_FRAMEBUFFER, fbo.value());
+    GLuint cached_fbo = color_gles.GetCachedFBO();
+    if (cached_fbo != GL_NONE) {
+      fbo = cached_fbo;
+      gl.BindFramebuffer(GL_FRAMEBUFFER, fbo);
     } else {
-      HandleGLES cached_fbo =
-          reactor.CreateUntrackedHandle(HandleType::kFrameBuffer);
-      color_gles.SetCachedFBO(cached_fbo);
-      fbo = reactor.GetGLHandle(cached_fbo);
-      if (!fbo.has_value()) {
-        return false;
-      }
-      gl.BindFramebuffer(GL_FRAMEBUFFER, fbo.value());
+      gl.GenFramebuffers(1u, &fbo);
+      color_gles.SetCachedFBO(fbo);
+      gl.BindFramebuffer(GL_FRAMEBUFFER, fbo);
 
       if (!color_gles.SetAsFramebufferAttachment(
               GL_FRAMEBUFFER, TextureGLES::AttachmentType::kColor0)) {
@@ -258,9 +250,9 @@ void RenderPassGLES::ResetGLState(const ProcTableGLES& gl) {
         }
       }
 
-      auto status = gl.CheckFramebufferStatusDebug(GL_FRAMEBUFFER);
+      auto status = gl.CheckFramebufferStatus(GL_FRAMEBUFFER);
       if (status != GL_FRAMEBUFFER_COMPLETE) {
-        VALIDATION_LOG << "Could not create a complete framebuffer: "
+        VALIDATION_LOG << "Could not create a complete frambuffer: "
                        << DebugToFramebufferError(status);
         return false;
       }
@@ -522,58 +514,6 @@ void RenderPassGLES::ResetGLState(const ProcTableGLES& gl) {
     }
   }
 
-  if (pass_data.resolve_attachment &&
-      !gl.GetCapabilities()->SupportsImplicitResolvingMSAA() &&
-      !is_wrapped_fbo) {
-    FML_DCHECK(pass_data.resolve_attachment != pass_data.color_attachment);
-    // Perform multisample resolve via blit.
-    // Create and bind a resolve FBO.
-    GLuint resolve_fbo;
-    gl.GenFramebuffers(1u, &resolve_fbo);
-    gl.BindFramebuffer(GL_FRAMEBUFFER, resolve_fbo);
-
-    if (!TextureGLES::Cast(*pass_data.resolve_attachment)
-             .SetAsFramebufferAttachment(
-                 GL_FRAMEBUFFER, TextureGLES::AttachmentType::kColor0)) {
-      return false;
-    }
-
-    auto status = gl.CheckFramebufferStatusDebug(GL_FRAMEBUFFER);
-    if (status != GL_FRAMEBUFFER_COMPLETE) {
-      VALIDATION_LOG << "Could not create a complete frambuffer: "
-                     << DebugToFramebufferError(status);
-      return false;
-    }
-
-    // Bind MSAA renderbuffer to read framebuffer.
-    gl.BindFramebuffer(GL_READ_FRAMEBUFFER, fbo.value());
-    gl.BindFramebuffer(GL_DRAW_FRAMEBUFFER, resolve_fbo);
-
-    RenderPassGLES::ResetGLState(gl);
-    auto size = pass_data.color_attachment->GetSize();
-
-    gl.BlitFramebuffer(/*srcX0=*/0,
-                       /*srcY0=*/0,
-                       /*srcX1=*/size.width,
-                       /*srcY1=*/size.height,
-                       /*dstX0=*/0,
-                       /*dstY0=*/0,
-                       /*dstX1=*/size.width,
-                       /*dstY1=*/size.height,
-                       /*mask=*/GL_COLOR_BUFFER_BIT,
-                       /*filter=*/GL_NEAREST);
-
-    gl.BindFramebuffer(GL_DRAW_FRAMEBUFFER, GL_NONE);
-    gl.BindFramebuffer(GL_READ_FRAMEBUFFER, GL_NONE);
-    gl.DeleteFramebuffers(1u, &resolve_fbo);
-    // Rebind the original FBO so that we can discard it below.
-    gl.BindFramebuffer(GL_FRAMEBUFFER, fbo.value());
-  }
-
-  GLint framebuffer_id = 0;
-  gl.GetIntegerv(GL_FRAMEBUFFER_BINDING, &framebuffer_id);
-  const bool is_default_fbo = framebuffer_id == 0;
-
   if (gl.DiscardFramebufferEXT.IsAvailable()) {
     std::array<GLenum, 3> attachments;
     size_t attachment_count = 0;
@@ -587,7 +527,6 @@ void RenderPassGLES::ResetGLState(const ProcTableGLES& gl) {
       attachments[attachment_count++] =
           (is_default_fbo ? GL_COLOR_EXT : GL_COLOR_ATTACHMENT0);
     }
-
     if (pass_data.discard_depth_attachment && angle_safe) {
       attachments[attachment_count++] =
           (is_default_fbo ? GL_DEPTH_EXT : GL_DEPTH_ATTACHMENT);
@@ -635,7 +574,6 @@ bool RenderPassGLES::OnEncodeCommands(const Context& context) const {
   /// Setup color data.
   ///
   pass_data->color_attachment = color0.texture;
-  pass_data->resolve_attachment = color0.resolve_texture;
   pass_data->clear_color = color0.clear_color;
   pass_data->clear_color_attachment = CanClearAttachment(color0.load_action);
   pass_data->discard_color_attachment =
@@ -643,13 +581,10 @@ bool RenderPassGLES::OnEncodeCommands(const Context& context) const {
 
   // When we are using EXT_multisampled_render_to_texture, it is implicitly
   // resolved when we bind the texture to the framebuffer. We don't need to
-  // discard the attachment when we are done. If not using
-  // EXT_multisampled_render_to_texture but still using MSAA we discard the
-  // attachment as normal.
+  // discard the attachment when we are done.
   if (color0.resolve_texture) {
-    pass_data->discard_color_attachment =
-        pass_data->discard_color_attachment &&
-        !context.GetCapabilities()->SupportsImplicitResolvingMSAA();
+    FML_DCHECK(context.GetCapabilities()->SupportsImplicitResolvingMSAA());
+    pass_data->discard_color_attachment = false;
   }
 
   //----------------------------------------------------------------------------

@@ -9,6 +9,8 @@
 
 #include "flutter/display_list/dl_color.h"
 
+#include "third_party/skia/include/core/SkRect.h"
+
 namespace flutter {
 
 //------------------------------------------------------------------------------
@@ -83,7 +85,7 @@ class DlVertices {
       uint32_t mask = 0;
 
       inline Flags operator|(const Flags& rhs) const {
-        return Flags{.mask = (mask | rhs.mask)};
+        return {.mask = (mask | rhs.mask)};
       }
 
       inline Flags& operator|=(const Flags& rhs) {
@@ -115,7 +117,7 @@ class DlVertices {
     /// @brief Copies the indicated list of points as vertices.
     ///
     /// fails if vertices have already been supplied.
-    void store_vertices(const DlPoint vertices[]);
+    void store_vertices(const SkPoint points[]);
 
     /// @brief Copies the indicated list of float pairs as vertices.
     ///
@@ -126,7 +128,7 @@ class DlVertices {
     ///
     /// fails if texture coordinates have already been supplied or if they
     /// were not promised by the flags.has_texture_coordinates.
-    void store_texture_coordinates(const DlPoint points[]);
+    void store_texture_coordinates(const SkPoint points[]);
 
     /// @brief Copies the indicated list of float pairs as texture coordinates.
     ///
@@ -181,8 +183,8 @@ class DlVertices {
   /// non-null and the index_count is positive (>0).
   static std::shared_ptr<DlVertices> Make(DlVertexMode mode,
                                           int vertex_count,
-                                          const DlPoint vertices[],
-                                          const DlPoint texture_coordinates[],
+                                          const SkPoint vertices[],
+                                          const SkPoint texture_coordinates[],
                                           const DlColor colors[],
                                           int index_count = 0,
                                           const uint16_t indices[] = nullptr,
@@ -192,7 +194,8 @@ class DlVertices {
   size_t size() const;
 
   /// Returns the bounds of the vertices.
-  DlRect GetBounds() const { return bounds_; }
+  SkRect bounds() const { return bounds_; }
+  DlRect GetBounds() const { return ToDlRect(bounds_); }
 
   /// Returns the vertex mode that defines how the vertices (or the indices)
   /// are turned into triangles.
@@ -203,14 +206,14 @@ class DlVertices {
   int vertex_count() const { return vertex_count_; }
 
   /// Returns a pointer to the vertex information. Should be non-null.
-  const DlPoint* vertex_data() const {
-    return static_cast<const DlPoint*>(pod(vertices_offset_));
+  const SkPoint* vertices() const {
+    return static_cast<const SkPoint*>(pod(vertices_offset_));
   }
 
   /// Returns a pointer to the vertex texture coordinate
   /// or null if none were provided.
-  const DlPoint* texture_coordinate_data() const {
-    return static_cast<const DlPoint*>(pod(texture_coordinates_offset_));
+  const SkPoint* texture_coordinates() const {
+    return static_cast<const SkPoint*>(pod(texture_coordinates_offset_));
   }
 
   /// Returns a pointer to the vertex colors
@@ -231,6 +234,8 @@ class DlVertices {
 
   bool operator==(DlVertices const& other) const;
 
+  bool operator!=(DlVertices const& other) const { return !(*this == other); }
+
  private:
   // Constructors are designed to encapsulate arrays sequentially in memory
   // which means they can only be called by intantiations that use the
@@ -238,12 +243,12 @@ class DlVertices {
   // the class body and all of its arrays, such as in Builder.
   DlVertices(DlVertexMode mode,
              int vertex_count,
-             const DlPoint vertices[],
-             const DlPoint texture_coordinates[],
+             const SkPoint vertices[],
+             const SkPoint texture_coordinates[],
              const DlColor colors[],
              int index_count,
              const uint16_t indices[],
-             const DlRect* bounds = nullptr);
+             const SkRect* bounds = nullptr);
 
   // This constructor is specifically used by the DlVertices::Builder to
   // establish the object before the copying of data is requested.
@@ -268,7 +273,7 @@ class DlVertices {
   int index_count_;
   size_t indices_offset_;
 
-  DlRect bounds_;
+  SkRect bounds_;
 
   const void* pod(int offset) const {
     if (offset <= 0) {

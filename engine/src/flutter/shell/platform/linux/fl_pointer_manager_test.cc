@@ -5,19 +5,15 @@
 #include "flutter/shell/platform/linux/fl_pointer_manager.h"
 #include "flutter/shell/platform/embedder/test_utils/proc_table_replacement.h"
 #include "flutter/shell/platform/linux/fl_engine_private.h"
+#include "flutter/shell/platform/linux/testing/fl_test.h"
 
 #include "gtest/gtest.h"
 
-TEST(FlPointerManagerTest, EnterLeave) {
-  g_autoptr(FlDartProject) project = fl_dart_project_new();
-  g_autoptr(FlEngine) engine = fl_engine_new(project);
-
-  g_autoptr(GError) error = nullptr;
-  EXPECT_TRUE(fl_engine_start(engine, &error));
-  EXPECT_EQ(error, nullptr);
-
-  std::vector<FlutterPointerEvent> pointer_events;
-  fl_engine_get_embedder_api(engine)->SendPointerEvent = MOCK_ENGINE_PROC(
+static void log_pointer_events(
+    FlEngine* engine,
+    std::vector<FlutterPointerEvent>& pointer_events) {
+  FlutterEngineProcTable* embedder_api = fl_engine_get_embedder_api(engine);
+  embedder_api->SendPointerEvent = MOCK_ENGINE_PROC(
       SendPointerEvent,
       ([&pointer_events](auto engine, const FlutterPointerEvent* events,
                          size_t events_count) {
@@ -27,6 +23,12 @@ TEST(FlPointerManagerTest, EnterLeave) {
 
         return kSuccess;
       }));
+}
+
+TEST(FlPointerManagerTest, EnterLeave) {
+  g_autoptr(FlEngine) engine = make_mock_engine();
+  std::vector<FlutterPointerEvent> pointer_events;
+  log_pointer_events(engine, pointer_events);
 
   g_autoptr(FlPointerManager) manager = fl_pointer_manager_new(42, engine);
   fl_pointer_manager_handle_enter(manager, 1234, kFlutterPointerDeviceKindMouse,
@@ -52,24 +54,9 @@ TEST(FlPointerManagerTest, EnterLeave) {
 }
 
 TEST(FlPointerManagerTest, EnterEnter) {
-  g_autoptr(FlDartProject) project = fl_dart_project_new();
-  g_autoptr(FlEngine) engine = fl_engine_new(project);
-
-  g_autoptr(GError) error = nullptr;
-  EXPECT_TRUE(fl_engine_start(engine, &error));
-  EXPECT_EQ(error, nullptr);
-
+  g_autoptr(FlEngine) engine = make_mock_engine();
   std::vector<FlutterPointerEvent> pointer_events;
-  fl_engine_get_embedder_api(engine)->SendPointerEvent = MOCK_ENGINE_PROC(
-      SendPointerEvent,
-      ([&pointer_events](auto engine, const FlutterPointerEvent* events,
-                         size_t events_count) {
-        for (size_t i = 0; i < events_count; i++) {
-          pointer_events.push_back(events[i]);
-        }
-
-        return kSuccess;
-      }));
+  log_pointer_events(engine, pointer_events);
 
   g_autoptr(FlPointerManager) manager = fl_pointer_manager_new(42, engine);
   fl_pointer_manager_handle_enter(manager, 1234, kFlutterPointerDeviceKindMouse,
@@ -89,24 +76,9 @@ TEST(FlPointerManagerTest, EnterEnter) {
 }
 
 TEST(FlPointerManagerTest, EnterLeaveLeave) {
-  g_autoptr(FlDartProject) project = fl_dart_project_new();
-  g_autoptr(FlEngine) engine = fl_engine_new(project);
-
-  g_autoptr(GError) error = nullptr;
-  EXPECT_TRUE(fl_engine_start(engine, &error));
-  EXPECT_EQ(error, nullptr);
-
+  g_autoptr(FlEngine) engine = make_mock_engine();
   std::vector<FlutterPointerEvent> pointer_events;
-  fl_engine_get_embedder_api(engine)->SendPointerEvent = MOCK_ENGINE_PROC(
-      SendPointerEvent,
-      ([&pointer_events](auto engine, const FlutterPointerEvent* events,
-                         size_t events_count) {
-        for (size_t i = 0; i < events_count; i++) {
-          pointer_events.push_back(events[i]);
-        }
-
-        return kSuccess;
-      }));
+  log_pointer_events(engine, pointer_events);
 
   g_autoptr(FlPointerManager) manager = fl_pointer_manager_new(42, engine);
   fl_pointer_manager_handle_enter(manager, 1234, kFlutterPointerDeviceKindMouse,
@@ -135,31 +107,16 @@ TEST(FlPointerManagerTest, EnterLeaveLeave) {
 }
 
 TEST(FlPointerManagerTest, EnterButtonPress) {
-  g_autoptr(FlDartProject) project = fl_dart_project_new();
-  g_autoptr(FlEngine) engine = fl_engine_new(project);
-
-  g_autoptr(GError) error = nullptr;
-  EXPECT_TRUE(fl_engine_start(engine, &error));
-  EXPECT_EQ(error, nullptr);
-
+  g_autoptr(FlEngine) engine = make_mock_engine();
   std::vector<FlutterPointerEvent> pointer_events;
-  fl_engine_get_embedder_api(engine)->SendPointerEvent = MOCK_ENGINE_PROC(
-      SendPointerEvent,
-      ([&pointer_events](auto engine, const FlutterPointerEvent* events,
-                         size_t events_count) {
-        for (size_t i = 0; i < events_count; i++) {
-          pointer_events.push_back(events[i]);
-        }
-
-        return kSuccess;
-      }));
+  log_pointer_events(engine, pointer_events);
 
   g_autoptr(FlPointerManager) manager = fl_pointer_manager_new(42, engine);
   fl_pointer_manager_handle_enter(manager, 1234, kFlutterPointerDeviceKindMouse,
                                   1.0, 2.0);
-  fl_pointer_manager_handle_button_press(manager, 1235,
-                                         kFlutterPointerDeviceKindMouse, 4.0,
-                                         8.0, GDK_BUTTON_PRIMARY);
+  fl_pointer_manager_handle_button_press(
+      manager, 1235, kFlutterPointerDeviceKindMouse, 4.0, 8.0,
+      kFlutterPointerButtonMousePrimary);
 
   EXPECT_EQ(pointer_events.size(), 2u);
 
@@ -179,29 +136,14 @@ TEST(FlPointerManagerTest, EnterButtonPress) {
 }
 
 TEST(FlPointerManagerTest, NoEnterButtonPress) {
-  g_autoptr(FlDartProject) project = fl_dart_project_new();
-  g_autoptr(FlEngine) engine = fl_engine_new(project);
-
-  g_autoptr(GError) error = nullptr;
-  EXPECT_TRUE(fl_engine_start(engine, &error));
-  EXPECT_EQ(error, nullptr);
-
+  g_autoptr(FlEngine) engine = make_mock_engine();
   std::vector<FlutterPointerEvent> pointer_events;
-  fl_engine_get_embedder_api(engine)->SendPointerEvent = MOCK_ENGINE_PROC(
-      SendPointerEvent,
-      ([&pointer_events](auto engine, const FlutterPointerEvent* events,
-                         size_t events_count) {
-        for (size_t i = 0; i < events_count; i++) {
-          pointer_events.push_back(events[i]);
-        }
-
-        return kSuccess;
-      }));
+  log_pointer_events(engine, pointer_events);
 
   g_autoptr(FlPointerManager) manager = fl_pointer_manager_new(42, engine);
-  fl_pointer_manager_handle_button_press(manager, 1234,
-                                         kFlutterPointerDeviceKindMouse, 4.0,
-                                         8.0, GDK_BUTTON_PRIMARY);
+  fl_pointer_manager_handle_button_press(
+      manager, 1234, kFlutterPointerDeviceKindMouse, 4.0, 8.0,
+      kFlutterPointerButtonMousePrimary);
 
   EXPECT_EQ(pointer_events.size(), 2u);
 
@@ -221,33 +163,18 @@ TEST(FlPointerManagerTest, NoEnterButtonPress) {
   EXPECT_EQ(pointer_events[1].view_id, 42);
 }
 
-TEST(FlPointerManagerTest, ButtonPressButtonReleasePrimary) {
-  g_autoptr(FlDartProject) project = fl_dart_project_new();
-  g_autoptr(FlEngine) engine = fl_engine_new(project);
-
-  g_autoptr(GError) error = nullptr;
-  EXPECT_TRUE(fl_engine_start(engine, &error));
-  EXPECT_EQ(error, nullptr);
-
+TEST(FlPointerManagerTest, ButtonPressButtonRelease) {
+  g_autoptr(FlEngine) engine = make_mock_engine();
   std::vector<FlutterPointerEvent> pointer_events;
-  fl_engine_get_embedder_api(engine)->SendPointerEvent = MOCK_ENGINE_PROC(
-      SendPointerEvent,
-      ([&pointer_events](auto engine, const FlutterPointerEvent* events,
-                         size_t events_count) {
-        for (size_t i = 0; i < events_count; i++) {
-          pointer_events.push_back(events[i]);
-        }
-
-        return kSuccess;
-      }));
+  log_pointer_events(engine, pointer_events);
 
   g_autoptr(FlPointerManager) manager = fl_pointer_manager_new(42, engine);
-  fl_pointer_manager_handle_button_press(manager, 1234,
-                                         kFlutterPointerDeviceKindMouse, 4.0,
-                                         8.0, GDK_BUTTON_PRIMARY);
-  fl_pointer_manager_handle_button_release(manager, 1235,
-                                           kFlutterPointerDeviceKindMouse, 5.0,
-                                           9.0, GDK_BUTTON_PRIMARY);
+  fl_pointer_manager_handle_button_press(
+      manager, 1234, kFlutterPointerDeviceKindMouse, 4.0, 8.0,
+      kFlutterPointerButtonMousePrimary);
+  fl_pointer_manager_handle_button_release(
+      manager, 1235, kFlutterPointerDeviceKindMouse, 5.0, 9.0,
+      kFlutterPointerButtonMousePrimary);
 
   EXPECT_EQ(pointer_events.size(), 3u);
 
@@ -266,221 +193,28 @@ TEST(FlPointerManagerTest, ButtonPressButtonReleasePrimary) {
   EXPECT_EQ(pointer_events[2].view_id, 42);
 }
 
-TEST(FlPointerManagerTest, ButtonPressButtonReleaseSecondary) {
-  g_autoptr(FlDartProject) project = fl_dart_project_new();
-  g_autoptr(FlEngine) engine = fl_engine_new(project);
-
-  g_autoptr(GError) error = nullptr;
-  EXPECT_TRUE(fl_engine_start(engine, &error));
-  EXPECT_EQ(error, nullptr);
-
-  std::vector<FlutterPointerEvent> pointer_events;
-  fl_engine_get_embedder_api(engine)->SendPointerEvent = MOCK_ENGINE_PROC(
-      SendPointerEvent,
-      ([&pointer_events](auto engine, const FlutterPointerEvent* events,
-                         size_t events_count) {
-        for (size_t i = 0; i < events_count; i++) {
-          pointer_events.push_back(events[i]);
-        }
-
-        return kSuccess;
-      }));
-
-  g_autoptr(FlPointerManager) manager = fl_pointer_manager_new(42, engine);
-  fl_pointer_manager_handle_button_press(manager, 1234,
-                                         kFlutterPointerDeviceKindMouse, 4.0,
-                                         8.0, GDK_BUTTON_SECONDARY);
-  fl_pointer_manager_handle_button_release(manager, 1235,
-                                           kFlutterPointerDeviceKindMouse, 5.0,
-                                           9.0, GDK_BUTTON_SECONDARY);
-
-  EXPECT_EQ(pointer_events.size(), 3u);
-
-  // Ignore first synthetic enter event
-  EXPECT_EQ(pointer_events[1].timestamp, 1234000u);
-  EXPECT_EQ(pointer_events[1].x, 4.0);
-  EXPECT_EQ(pointer_events[1].y, 8.0);
-  EXPECT_EQ(pointer_events[1].device_kind, kFlutterPointerDeviceKindMouse);
-  EXPECT_EQ(pointer_events[1].buttons, kFlutterPointerButtonMouseSecondary);
-  EXPECT_EQ(pointer_events[1].view_id, 42);
-  EXPECT_EQ(pointer_events[2].timestamp, 1235000u);
-  EXPECT_EQ(pointer_events[2].x, 5.0);
-  EXPECT_EQ(pointer_events[2].y, 9.0);
-  EXPECT_EQ(pointer_events[2].device_kind, kFlutterPointerDeviceKindMouse);
-  EXPECT_EQ(pointer_events[2].buttons, 0);
-  EXPECT_EQ(pointer_events[2].view_id, 42);
-}
-
-TEST(FlPointerManagerTest, ButtonPressButtonReleaseMiddle) {
-  g_autoptr(FlDartProject) project = fl_dart_project_new();
-  g_autoptr(FlEngine) engine = fl_engine_new(project);
-
-  g_autoptr(GError) error = nullptr;
-  EXPECT_TRUE(fl_engine_start(engine, &error));
-  EXPECT_EQ(error, nullptr);
-
-  std::vector<FlutterPointerEvent> pointer_events;
-  fl_engine_get_embedder_api(engine)->SendPointerEvent = MOCK_ENGINE_PROC(
-      SendPointerEvent,
-      ([&pointer_events](auto engine, const FlutterPointerEvent* events,
-                         size_t events_count) {
-        for (size_t i = 0; i < events_count; i++) {
-          pointer_events.push_back(events[i]);
-        }
-
-        return kSuccess;
-      }));
-
-  g_autoptr(FlPointerManager) manager = fl_pointer_manager_new(42, engine);
-  fl_pointer_manager_handle_button_press(manager, 1234,
-                                         kFlutterPointerDeviceKindMouse, 4.0,
-                                         8.0, GDK_BUTTON_MIDDLE);
-  fl_pointer_manager_handle_button_release(manager, 1235,
-                                           kFlutterPointerDeviceKindMouse, 5.0,
-                                           9.0, GDK_BUTTON_MIDDLE);
-
-  EXPECT_EQ(pointer_events.size(), 3u);
-
-  // Ignore first synthetic enter event
-  EXPECT_EQ(pointer_events[1].timestamp, 1234000u);
-  EXPECT_EQ(pointer_events[1].x, 4.0);
-  EXPECT_EQ(pointer_events[1].y, 8.0);
-  EXPECT_EQ(pointer_events[1].device_kind, kFlutterPointerDeviceKindMouse);
-  EXPECT_EQ(pointer_events[1].buttons, kFlutterPointerButtonMouseMiddle);
-  EXPECT_EQ(pointer_events[1].view_id, 42);
-  EXPECT_EQ(pointer_events[2].timestamp, 1235000u);
-  EXPECT_EQ(pointer_events[2].x, 5.0);
-  EXPECT_EQ(pointer_events[2].y, 9.0);
-  EXPECT_EQ(pointer_events[2].device_kind, kFlutterPointerDeviceKindMouse);
-  EXPECT_EQ(pointer_events[2].buttons, 0);
-  EXPECT_EQ(pointer_events[2].view_id, 42);
-}
-
-TEST(FlPointerManagerTest, ButtonPressButtonReleaseBack) {
-  g_autoptr(FlDartProject) project = fl_dart_project_new();
-  g_autoptr(FlEngine) engine = fl_engine_new(project);
-
-  g_autoptr(GError) error = nullptr;
-  EXPECT_TRUE(fl_engine_start(engine, &error));
-  EXPECT_EQ(error, nullptr);
-
-  std::vector<FlutterPointerEvent> pointer_events;
-  fl_engine_get_embedder_api(engine)->SendPointerEvent = MOCK_ENGINE_PROC(
-      SendPointerEvent,
-      ([&pointer_events](auto engine, const FlutterPointerEvent* events,
-                         size_t events_count) {
-        for (size_t i = 0; i < events_count; i++) {
-          pointer_events.push_back(events[i]);
-        }
-
-        return kSuccess;
-      }));
-
-  // Forward button is 8 (no GDK define).
-  g_autoptr(FlPointerManager) manager = fl_pointer_manager_new(42, engine);
-  fl_pointer_manager_handle_button_press(
-      manager, 1234, kFlutterPointerDeviceKindMouse, 4.0, 8.0, 8);
-  fl_pointer_manager_handle_button_release(
-      manager, 1235, kFlutterPointerDeviceKindMouse, 5.0, 9.0, 8);
-
-  EXPECT_EQ(pointer_events.size(), 3u);
-
-  // Ignore first synthetic enter event
-  EXPECT_EQ(pointer_events[1].timestamp, 1234000u);
-  EXPECT_EQ(pointer_events[1].x, 4.0);
-  EXPECT_EQ(pointer_events[1].y, 8.0);
-  EXPECT_EQ(pointer_events[1].device_kind, kFlutterPointerDeviceKindMouse);
-  EXPECT_EQ(pointer_events[1].buttons, kFlutterPointerButtonMouseBack);
-  EXPECT_EQ(pointer_events[1].view_id, 42);
-  EXPECT_EQ(pointer_events[2].timestamp, 1235000u);
-  EXPECT_EQ(pointer_events[2].x, 5.0);
-  EXPECT_EQ(pointer_events[2].y, 9.0);
-  EXPECT_EQ(pointer_events[2].device_kind, kFlutterPointerDeviceKindMouse);
-  EXPECT_EQ(pointer_events[2].buttons, 0);
-  EXPECT_EQ(pointer_events[2].view_id, 42);
-}
-
-TEST(FlPointerManagerTest, ButtonPressButtonReleaseForward) {
-  g_autoptr(FlDartProject) project = fl_dart_project_new();
-  g_autoptr(FlEngine) engine = fl_engine_new(project);
-
-  g_autoptr(GError) error = nullptr;
-  EXPECT_TRUE(fl_engine_start(engine, &error));
-  EXPECT_EQ(error, nullptr);
-
-  std::vector<FlutterPointerEvent> pointer_events;
-  fl_engine_get_embedder_api(engine)->SendPointerEvent = MOCK_ENGINE_PROC(
-      SendPointerEvent,
-      ([&pointer_events](auto engine, const FlutterPointerEvent* events,
-                         size_t events_count) {
-        for (size_t i = 0; i < events_count; i++) {
-          pointer_events.push_back(events[i]);
-        }
-
-        return kSuccess;
-      }));
-
-  // Forward button is 9 (no GDK define).
-  g_autoptr(FlPointerManager) manager = fl_pointer_manager_new(42, engine);
-  fl_pointer_manager_handle_button_press(
-      manager, 1234, kFlutterPointerDeviceKindMouse, 4.0, 8.0, 9);
-  fl_pointer_manager_handle_button_release(
-      manager, 1235, kFlutterPointerDeviceKindMouse, 5.0, 9.0, 9);
-
-  EXPECT_EQ(pointer_events.size(), 3u);
-
-  // Ignore first synthetic enter event
-  EXPECT_EQ(pointer_events[1].timestamp, 1234000u);
-  EXPECT_EQ(pointer_events[1].x, 4.0);
-  EXPECT_EQ(pointer_events[1].y, 8.0);
-  EXPECT_EQ(pointer_events[1].device_kind, kFlutterPointerDeviceKindMouse);
-  EXPECT_EQ(pointer_events[1].buttons, kFlutterPointerButtonMouseForward);
-  EXPECT_EQ(pointer_events[1].view_id, 42);
-  EXPECT_EQ(pointer_events[2].timestamp, 1235000u);
-  EXPECT_EQ(pointer_events[2].x, 5.0);
-  EXPECT_EQ(pointer_events[2].y, 9.0);
-  EXPECT_EQ(pointer_events[2].device_kind, kFlutterPointerDeviceKindMouse);
-  EXPECT_EQ(pointer_events[2].buttons, 0);
-  EXPECT_EQ(pointer_events[2].view_id, 42);
-}
-
 TEST(FlPointerManagerTest, ButtonPressButtonReleaseThreeButtons) {
-  g_autoptr(FlDartProject) project = fl_dart_project_new();
-  g_autoptr(FlEngine) engine = fl_engine_new(project);
-
-  g_autoptr(GError) error = nullptr;
-  EXPECT_TRUE(fl_engine_start(engine, &error));
-  EXPECT_EQ(error, nullptr);
-
+  g_autoptr(FlEngine) engine = make_mock_engine();
   std::vector<FlutterPointerEvent> pointer_events;
-  fl_engine_get_embedder_api(engine)->SendPointerEvent = MOCK_ENGINE_PROC(
-      SendPointerEvent,
-      ([&pointer_events](auto engine, const FlutterPointerEvent* events,
-                         size_t events_count) {
-        for (size_t i = 0; i < events_count; i++) {
-          pointer_events.push_back(events[i]);
-        }
-
-        return kSuccess;
-      }));
+  log_pointer_events(engine, pointer_events);
 
   g_autoptr(FlPointerManager) manager = fl_pointer_manager_new(42, engine);
   // Press buttons 1-2-3, release 3-2-1
-  fl_pointer_manager_handle_button_press(manager, 1234,
-                                         kFlutterPointerDeviceKindMouse, 1.0,
-                                         2.0, GDK_BUTTON_PRIMARY);
-  fl_pointer_manager_handle_button_press(manager, 1235,
-                                         kFlutterPointerDeviceKindMouse, 3.0,
-                                         4.0, GDK_BUTTON_SECONDARY);
+  fl_pointer_manager_handle_button_press(
+      manager, 1234, kFlutterPointerDeviceKindMouse, 1.0, 2.0,
+      kFlutterPointerButtonMousePrimary);
+  fl_pointer_manager_handle_button_press(
+      manager, 1235, kFlutterPointerDeviceKindMouse, 3.0, 4.0,
+      kFlutterPointerButtonMouseSecondary);
   fl_pointer_manager_handle_button_press(manager, 1236,
                                          kFlutterPointerDeviceKindMouse, 5.0,
-                                         6.0, GDK_BUTTON_MIDDLE);
-  fl_pointer_manager_handle_button_release(manager, 1237,
-                                           kFlutterPointerDeviceKindMouse, 7.0,
-                                           8.0, GDK_BUTTON_MIDDLE);
-  fl_pointer_manager_handle_button_release(manager, 1238,
-                                           kFlutterPointerDeviceKindMouse, 9.0,
-                                           10.0, GDK_BUTTON_SECONDARY);
+                                         6.0, kFlutterPointerButtonMouseMiddle);
+  fl_pointer_manager_handle_button_release(
+      manager, 1237, kFlutterPointerDeviceKindMouse, 7.0, 8.0,
+      kFlutterPointerButtonMouseMiddle);
+  fl_pointer_manager_handle_button_release(
+      manager, 1238, kFlutterPointerDeviceKindMouse, 9.0, 10.0,
+      kFlutterPointerButtonMouseSecondary);
   fl_pointer_manager_handle_button_release(
       manager, 1239, kFlutterPointerDeviceKindMouse, 11.0, 12.0,
       kFlutterPointerButtonMousePrimary);
@@ -519,36 +253,21 @@ TEST(FlPointerManagerTest, ButtonPressButtonReleaseThreeButtons) {
 }
 
 TEST(FlPointerManagerTest, ButtonPressButtonPressButtonRelease) {
-  g_autoptr(FlDartProject) project = fl_dart_project_new();
-  g_autoptr(FlEngine) engine = fl_engine_new(project);
-
-  g_autoptr(GError) error = nullptr;
-  EXPECT_TRUE(fl_engine_start(engine, &error));
-  EXPECT_EQ(error, nullptr);
-
+  g_autoptr(FlEngine) engine = make_mock_engine();
   std::vector<FlutterPointerEvent> pointer_events;
-  fl_engine_get_embedder_api(engine)->SendPointerEvent = MOCK_ENGINE_PROC(
-      SendPointerEvent,
-      ([&pointer_events](auto engine, const FlutterPointerEvent* events,
-                         size_t events_count) {
-        for (size_t i = 0; i < events_count; i++) {
-          pointer_events.push_back(events[i]);
-        }
-
-        return kSuccess;
-      }));
+  log_pointer_events(engine, pointer_events);
 
   g_autoptr(FlPointerManager) manager = fl_pointer_manager_new(42, engine);
-  fl_pointer_manager_handle_button_press(manager, 1234,
-                                         kFlutterPointerDeviceKindMouse, 4.0,
-                                         8.0, GDK_BUTTON_PRIMARY);
+  fl_pointer_manager_handle_button_press(
+      manager, 1234, kFlutterPointerDeviceKindMouse, 4.0, 8.0,
+      kFlutterPointerButtonMousePrimary);
   // Ignore duplicate press
-  fl_pointer_manager_handle_button_press(manager, 1234,
-                                         kFlutterPointerDeviceKindMouse, 6.0,
-                                         10.0, GDK_BUTTON_PRIMARY);
-  fl_pointer_manager_handle_button_release(manager, 1235,
-                                           kFlutterPointerDeviceKindMouse, 5.0,
-                                           9.0, GDK_BUTTON_PRIMARY);
+  fl_pointer_manager_handle_button_press(
+      manager, 1234, kFlutterPointerDeviceKindMouse, 6.0, 10.0,
+      kFlutterPointerButtonMousePrimary);
+  fl_pointer_manager_handle_button_release(
+      manager, 1235, kFlutterPointerDeviceKindMouse, 5.0, 9.0,
+      kFlutterPointerButtonMousePrimary);
 
   EXPECT_EQ(pointer_events.size(), 3u);
 
@@ -568,36 +287,21 @@ TEST(FlPointerManagerTest, ButtonPressButtonPressButtonRelease) {
 }
 
 TEST(FlPointerManagerTest, ButtonPressButtonReleaseButtonRelease) {
-  g_autoptr(FlDartProject) project = fl_dart_project_new();
-  g_autoptr(FlEngine) engine = fl_engine_new(project);
-
-  g_autoptr(GError) error = nullptr;
-  EXPECT_TRUE(fl_engine_start(engine, &error));
-  EXPECT_EQ(error, nullptr);
-
+  g_autoptr(FlEngine) engine = make_mock_engine();
   std::vector<FlutterPointerEvent> pointer_events;
-  fl_engine_get_embedder_api(engine)->SendPointerEvent = MOCK_ENGINE_PROC(
-      SendPointerEvent,
-      ([&pointer_events](auto engine, const FlutterPointerEvent* events,
-                         size_t events_count) {
-        for (size_t i = 0; i < events_count; i++) {
-          pointer_events.push_back(events[i]);
-        }
-
-        return kSuccess;
-      }));
+  log_pointer_events(engine, pointer_events);
 
   g_autoptr(FlPointerManager) manager = fl_pointer_manager_new(42, engine);
-  fl_pointer_manager_handle_button_press(manager, 1234,
-                                         kFlutterPointerDeviceKindMouse, 4.0,
-                                         8.0, GDK_BUTTON_PRIMARY);
-  fl_pointer_manager_handle_button_release(manager, 1235,
-                                           kFlutterPointerDeviceKindMouse, 5.0,
-                                           9.0, GDK_BUTTON_PRIMARY);
+  fl_pointer_manager_handle_button_press(
+      manager, 1234, kFlutterPointerDeviceKindMouse, 4.0, 8.0,
+      kFlutterPointerButtonMousePrimary);
+  fl_pointer_manager_handle_button_release(
+      manager, 1235, kFlutterPointerDeviceKindMouse, 5.0, 9.0,
+      kFlutterPointerButtonMousePrimary);
   // Ignore duplicate release
-  fl_pointer_manager_handle_button_release(manager, 1235,
-                                           kFlutterPointerDeviceKindMouse, 6.0,
-                                           10.0, GDK_BUTTON_PRIMARY);
+  fl_pointer_manager_handle_button_release(
+      manager, 1235, kFlutterPointerDeviceKindMouse, 6.0, 10.0,
+      kFlutterPointerButtonMousePrimary);
 
   EXPECT_EQ(pointer_events.size(), 3u);
 
@@ -617,53 +321,23 @@ TEST(FlPointerManagerTest, ButtonPressButtonReleaseButtonRelease) {
 }
 
 TEST(FlPointerManagerTest, NoButtonPressButtonRelease) {
-  g_autoptr(FlDartProject) project = fl_dart_project_new();
-  g_autoptr(FlEngine) engine = fl_engine_new(project);
-
-  g_autoptr(GError) error = nullptr;
-  EXPECT_TRUE(fl_engine_start(engine, &error));
-  EXPECT_EQ(error, nullptr);
-
+  g_autoptr(FlEngine) engine = make_mock_engine();
   std::vector<FlutterPointerEvent> pointer_events;
-  fl_engine_get_embedder_api(engine)->SendPointerEvent = MOCK_ENGINE_PROC(
-      SendPointerEvent,
-      ([&pointer_events](auto engine, const FlutterPointerEvent* events,
-                         size_t events_count) {
-        for (size_t i = 0; i < events_count; i++) {
-          pointer_events.push_back(events[i]);
-        }
-
-        return kSuccess;
-      }));
+  log_pointer_events(engine, pointer_events);
 
   g_autoptr(FlPointerManager) manager = fl_pointer_manager_new(42, engine);
   // Release without associated press, will be ignored
-  fl_pointer_manager_handle_button_release(manager, 1235,
-                                           kFlutterPointerDeviceKindMouse, 5.0,
-                                           9.0, GDK_BUTTON_PRIMARY);
+  fl_pointer_manager_handle_button_release(
+      manager, 1235, kFlutterPointerDeviceKindMouse, 5.0, 9.0,
+      kFlutterPointerButtonMousePrimary);
 
   EXPECT_EQ(pointer_events.size(), 0u);
 }
 
 TEST(FlPointerManagerTest, Motion) {
-  g_autoptr(FlDartProject) project = fl_dart_project_new();
-  g_autoptr(FlEngine) engine = fl_engine_new(project);
-
-  g_autoptr(GError) error = nullptr;
-  EXPECT_TRUE(fl_engine_start(engine, &error));
-  EXPECT_EQ(error, nullptr);
-
+  g_autoptr(FlEngine) engine = make_mock_engine();
   std::vector<FlutterPointerEvent> pointer_events;
-  fl_engine_get_embedder_api(engine)->SendPointerEvent = MOCK_ENGINE_PROC(
-      SendPointerEvent,
-      ([&pointer_events](auto engine, const FlutterPointerEvent* events,
-                         size_t events_count) {
-        for (size_t i = 0; i < events_count; i++) {
-          pointer_events.push_back(events[i]);
-        }
-
-        return kSuccess;
-      }));
+  log_pointer_events(engine, pointer_events);
 
   g_autoptr(FlPointerManager) manager = fl_pointer_manager_new(42, engine);
   fl_pointer_manager_handle_motion(manager, 1234,
@@ -697,36 +371,21 @@ TEST(FlPointerManagerTest, Motion) {
 }
 
 TEST(FlPointerManagerTest, Drag) {
-  g_autoptr(FlDartProject) project = fl_dart_project_new();
-  g_autoptr(FlEngine) engine = fl_engine_new(project);
-
-  g_autoptr(GError) error = nullptr;
-  EXPECT_TRUE(fl_engine_start(engine, &error));
-  EXPECT_EQ(error, nullptr);
-
+  g_autoptr(FlEngine) engine = make_mock_engine();
   std::vector<FlutterPointerEvent> pointer_events;
-  fl_engine_get_embedder_api(engine)->SendPointerEvent = MOCK_ENGINE_PROC(
-      SendPointerEvent,
-      ([&pointer_events](auto engine, const FlutterPointerEvent* events,
-                         size_t events_count) {
-        for (size_t i = 0; i < events_count; i++) {
-          pointer_events.push_back(events[i]);
-        }
-
-        return kSuccess;
-      }));
+  log_pointer_events(engine, pointer_events);
 
   g_autoptr(FlPointerManager) manager = fl_pointer_manager_new(42, engine);
   fl_pointer_manager_handle_motion(manager, 1234,
                                    kFlutterPointerDeviceKindMouse, 1.0, 2.0);
-  fl_pointer_manager_handle_button_press(manager, 1235,
-                                         kFlutterPointerDeviceKindMouse, 3.0,
-                                         4.0, GDK_BUTTON_PRIMARY);
+  fl_pointer_manager_handle_button_press(
+      manager, 1235, kFlutterPointerDeviceKindMouse, 3.0, 4.0,
+      kFlutterPointerButtonMousePrimary);
   fl_pointer_manager_handle_motion(manager, 1236,
                                    kFlutterPointerDeviceKindMouse, 5.0, 6.0);
-  fl_pointer_manager_handle_button_release(manager, 1237,
-                                           kFlutterPointerDeviceKindMouse, 7.0,
-                                           8.0, GDK_BUTTON_PRIMARY);
+  fl_pointer_manager_handle_button_release(
+      manager, 1237, kFlutterPointerDeviceKindMouse, 7.0, 8.0,
+      kFlutterPointerButtonMousePrimary);
   fl_pointer_manager_handle_motion(manager, 1238,
                                    kFlutterPointerDeviceKindMouse, 9.0, 10.0);
 
@@ -761,36 +420,21 @@ TEST(FlPointerManagerTest, Drag) {
 }
 
 TEST(FlPointerManagerTest, DeviceKind) {
-  g_autoptr(FlDartProject) project = fl_dart_project_new();
-  g_autoptr(FlEngine) engine = fl_engine_new(project);
-
-  g_autoptr(GError) error = nullptr;
-  EXPECT_TRUE(fl_engine_start(engine, &error));
-  EXPECT_EQ(error, nullptr);
-
+  g_autoptr(FlEngine) engine = make_mock_engine();
   std::vector<FlutterPointerEvent> pointer_events;
-  fl_engine_get_embedder_api(engine)->SendPointerEvent = MOCK_ENGINE_PROC(
-      SendPointerEvent,
-      ([&pointer_events](auto engine, const FlutterPointerEvent* events,
-                         size_t events_count) {
-        for (size_t i = 0; i < events_count; i++) {
-          pointer_events.push_back(events[i]);
-        }
-
-        return kSuccess;
-      }));
+  log_pointer_events(engine, pointer_events);
 
   g_autoptr(FlPointerManager) manager = fl_pointer_manager_new(42, engine);
   fl_pointer_manager_handle_enter(manager, 1234,
                                   kFlutterPointerDeviceKindTrackpad, 1.0, 2.0);
-  fl_pointer_manager_handle_button_press(manager, 1235,
-                                         kFlutterPointerDeviceKindTrackpad, 1.0,
-                                         2.0, GDK_BUTTON_PRIMARY);
+  fl_pointer_manager_handle_button_press(
+      manager, 1235, kFlutterPointerDeviceKindTrackpad, 1.0, 2.0,
+      kFlutterPointerButtonMousePrimary);
   fl_pointer_manager_handle_motion(manager, 1238,
                                    kFlutterPointerDeviceKindTrackpad, 3.0, 4.0);
-  fl_pointer_manager_handle_button_release(manager, 1237,
-                                           kFlutterPointerDeviceKindTrackpad,
-                                           3.0, 4.0, GDK_BUTTON_PRIMARY);
+  fl_pointer_manager_handle_button_release(
+      manager, 1237, kFlutterPointerDeviceKindTrackpad, 3.0, 4.0,
+      kFlutterPointerButtonMousePrimary);
   fl_pointer_manager_handle_leave(manager, 1235,
                                   kFlutterPointerDeviceKindTrackpad, 3.0, 4.0);
 

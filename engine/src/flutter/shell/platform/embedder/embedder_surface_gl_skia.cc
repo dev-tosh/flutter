@@ -68,10 +68,12 @@ bool EmbedderSurfaceGLSkia::GLContextFBOResetAfterPresent() const {
 }
 
 // |GPUSurfaceGLDelegate|
-DlMatrix EmbedderSurfaceGLSkia::GLContextSurfaceTransformation() const {
+SkMatrix EmbedderSurfaceGLSkia::GLContextSurfaceTransformation() const {
   auto callback = gl_dispatch_table_.gl_surface_transformation_callback;
   if (!callback) {
-    return DlMatrix();
+    SkMatrix matrix;
+    matrix.setIdentity();
+    return matrix;
   }
   return callback();
 }

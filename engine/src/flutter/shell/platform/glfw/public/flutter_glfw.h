@@ -51,8 +51,7 @@ typedef struct {
   const char* aot_library_path;
   // The switches to pass to the Flutter engine.
   //
-  // See:
-  // https://github.com/flutter/flutter/blob/main/engine/src/flutter/shell/common/switches.h
+  // See: https://github.com/flutter/engine/blob/main/shell/common/switches.h
   // for details. Not all arguments will apply to desktop.
   const char** switches;
   // The number of elements in |switches|.
@@ -121,15 +120,15 @@ FLUTTER_EXPORT bool FlutterDesktopRunWindowEventLoopWithTimeout(
 // FlutterDesktopWindowControllerRef.
 //
 // Its lifetime is the same as the |controller|'s.
-FLUTTER_EXPORT FlutterDesktopWindowRef
-FlutterDesktopGetWindow(FlutterDesktopWindowControllerRef controller);
+FLUTTER_EXPORT FlutterDesktopWindowRef FlutterDesktopGetWindow(
+    FlutterDesktopWindowControllerRef controller);
 
 // Returns the handle for the engine running in
 // FlutterDesktopWindowControllerRef.
 //
 // Its lifetime is the same as the |controller|'s.
-FLUTTER_EXPORT FlutterDesktopEngineRef
-FlutterDesktopGetEngine(FlutterDesktopWindowControllerRef controller);
+FLUTTER_EXPORT FlutterDesktopEngineRef FlutterDesktopGetEngine(
+    FlutterDesktopWindowControllerRef controller);
 
 // Returns the plugin registrar handle for the plugin with the given name.
 //
@@ -202,8 +201,8 @@ FLUTTER_EXPORT void FlutterDesktopWindowSetSizeLimits(
 // Runs an instance of a headless Flutter engine.
 //
 // Returns a null pointer in the event of an error.
-FLUTTER_EXPORT FlutterDesktopEngineRef
-FlutterDesktopRunEngine(const FlutterDesktopEngineProperties& properties);
+FLUTTER_EXPORT FlutterDesktopEngineRef FlutterDesktopRunEngine(
+    const FlutterDesktopEngineProperties& properties);
 
 // Waits for and processes the next event before |timeout_milliseconds|.
 //

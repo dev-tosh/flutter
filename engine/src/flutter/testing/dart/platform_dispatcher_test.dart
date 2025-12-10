@@ -9,7 +9,7 @@ import 'package:test/test.dart';
 
 void main() {
   test('ViewConstraints.tight', () {
-    final tightConstraints = ViewConstraints.tight(const Size(200, 300));
+    final ViewConstraints tightConstraints = ViewConstraints.tight(const Size(200, 300));
     expect(tightConstraints.minWidth, 200);
     expect(tightConstraints.maxWidth, 200);
     expect(tightConstraints.minHeight, 300);
@@ -22,7 +22,7 @@ void main() {
   });
 
   test('ViewConstraints unconstrained', () {
-    const defaultValues = ViewConstraints();
+    const ViewConstraints defaultValues = ViewConstraints();
     expect(defaultValues.minWidth, 0);
     expect(defaultValues.maxWidth, double.infinity);
     expect(defaultValues.minHeight, 0);
@@ -34,13 +34,9 @@ void main() {
     expect(defaultValues / 2, const ViewConstraints());
   });
 
+
   test('ViewConstraints', () {
-    const constraints = ViewConstraints(
-      minWidth: 100,
-      maxWidth: 200,
-      minHeight: 300,
-      maxHeight: 400,
-    );
+    const ViewConstraints constraints = ViewConstraints(minWidth: 100, maxWidth: 200, minHeight: 300, maxHeight: 400);
     expect(constraints.minWidth, 100);
     expect(constraints.maxWidth, 200);
     expect(constraints.minHeight, 300);
@@ -49,36 +45,30 @@ void main() {
     expect(constraints.isTight, false);
     expect(constraints.isSatisfiedBy(const Size(200, 300)), true);
     expect(constraints.isSatisfiedBy(const Size(400, 500)), false);
-    expect(
-      constraints / 2,
-      const ViewConstraints(minWidth: 50, maxWidth: 100, minHeight: 150, maxHeight: 200),
-    );
+    expect(constraints / 2, const ViewConstraints(minWidth: 50, maxWidth: 100, minHeight: 150, maxHeight: 200));
   });
 
   test('scheduleWarmupFrame should call both callbacks and flush microtasks', () async {
-    var microtaskFlushed = false;
-    var beginFrameCalled = false;
-    final drawFrameCalled = Completer<void>();
-    PlatformDispatcher.instance.scheduleWarmUpFrame(
-      beginFrame: () {
+    bool microtaskFlushed = false;
+    bool beginFrameCalled = false;
+    final Completer<void> drawFrameCalled = Completer<void>();
+    PlatformDispatcher.instance.scheduleWarmUpFrame(beginFrame: () {
+      expect(microtaskFlushed, false);
+      expect(drawFrameCalled.isCompleted, false);
+      expect(beginFrameCalled, false);
+      beginFrameCalled = true;
+      scheduleMicrotask(() {
         expect(microtaskFlushed, false);
         expect(drawFrameCalled.isCompleted, false);
-        expect(beginFrameCalled, false);
-        beginFrameCalled = true;
-        scheduleMicrotask(() {
-          expect(microtaskFlushed, false);
-          expect(drawFrameCalled.isCompleted, false);
-          microtaskFlushed = true;
-        });
-        expect(microtaskFlushed, false);
-      },
-      drawFrame: () {
-        expect(beginFrameCalled, true);
-        expect(microtaskFlushed, true);
-        expect(drawFrameCalled.isCompleted, false);
-        drawFrameCalled.complete();
-      },
-    );
+        microtaskFlushed = true;
+      });
+      expect(microtaskFlushed, false);
+    }, drawFrame: () {
+      expect(beginFrameCalled, true);
+      expect(microtaskFlushed, true);
+      expect(drawFrameCalled.isCompleted, false);
+      drawFrameCalled.complete();
+    });
     await drawFrameCalled.future;
     expect(beginFrameCalled, true);
     expect(drawFrameCalled.isCompleted, true);

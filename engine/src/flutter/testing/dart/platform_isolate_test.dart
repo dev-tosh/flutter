@@ -12,12 +12,14 @@ int counter = 0;
 
 void main() {
   test('PlatformIsolate isRunningOnPlatformThread, false cases', () async {
-    final bool isPlatThread = await Isolate.run(() => isRunningOnPlatformThread);
+    final bool isPlatThread =
+        await Isolate.run(() => isRunningOnPlatformThread);
     expect(isPlatThread, isFalse);
   });
 
   test('PlatformIsolate runOnPlatformThread', () async {
-    final bool isPlatThread = await runOnPlatformThread(() => isRunningOnPlatformThread);
+    final bool isPlatThread =
+        await runOnPlatformThread(() => isRunningOnPlatformThread);
     expect(isPlatThread, isTrue);
   });
 
@@ -68,7 +70,7 @@ void main() {
       switch (message) {
         case final SendPort sendPort:
           toPlatformThread = sendPort;
-          for (var i = 1; i <= 10; i++) {
+          for (int i = 1; i <= 10; i++) {
             sendPort.send(i);
           }
         case final int value:
@@ -82,7 +84,7 @@ void main() {
       }
     });
 
-    final SendPort sendPort = recvPort.sendPort;
+    final sendPort = recvPort.sendPort;
     await runOnPlatformThread(() async {
       final completer = Completer<void>();
       final recvPort = RawReceivePort((Object message) {
@@ -105,7 +107,7 @@ void main() {
   });
 
   test('PlatformIsolate runOnPlatformThread, throws', () async {
-    var throws = false;
+    bool throws = false;
     try {
       await runOnPlatformThread(() => throw 'Oh no!');
     } catch (error) {
@@ -116,7 +118,7 @@ void main() {
   });
 
   test('PlatformIsolate runOnPlatformThread, async throws', () async {
-    var throws = false;
+    bool throws = false;
     try {
       await runOnPlatformThread(() async {
         await Future<void>.delayed(const Duration(milliseconds: 100));
@@ -131,7 +133,8 @@ void main() {
     expect(throws, true);
   });
 
-  test('PlatformIsolate runOnPlatformThread, disabled on helper isolates', () async {
+  test('PlatformIsolate runOnPlatformThread, disabled on helper isolates',
+      () async {
     await expectLater(() async {
       await Isolate.run(() {
         return runOnPlatformThread(() => print('Unreachable'));
@@ -140,9 +143,8 @@ void main() {
   });
 
   test('PlatformIsolate runOnPlatformThread, on platform isolate', () async {
-    final int result = await runOnPlatformThread(
-      () => runOnPlatformThread(() => runOnPlatformThread(() => runOnPlatformThread(() => 123))),
-    );
+    final int result = await runOnPlatformThread(() => runOnPlatformThread(
+        () => runOnPlatformThread(() => runOnPlatformThread(() => 123))));
     expect(result, 123);
   });
 
@@ -151,7 +153,7 @@ void main() {
   });
 
   test('PlatformIsolate runOnPlatformThread, unsendable object', () async {
-    var throws = false;
+    bool throws = false;
     try {
       await runOnPlatformThread(() => ReceivePort());
     } catch (error) {
@@ -160,8 +162,9 @@ void main() {
     expect(throws, true);
   });
 
-  test('PlatformIsolate runOnPlatformThread, unsendable object async', () async {
-    var throws = false;
+  test('PlatformIsolate runOnPlatformThread, unsendable object async',
+      () async {
+    bool throws = false;
     try {
       await runOnPlatformThread(() async {
         await Future<void>.delayed(const Duration(milliseconds: 100));
@@ -174,7 +177,7 @@ void main() {
   });
 
   test('PlatformIsolate runOnPlatformThread, throws unsendable', () async {
-    var throws = false;
+    bool throws = false;
     try {
       await runOnPlatformThread(() => throw ReceivePort());
     } catch (error) {
@@ -183,8 +186,9 @@ void main() {
     expect(throws, true);
   });
 
-  test('PlatformIsolate runOnPlatformThread, throws unsendable async', () async {
-    var throws = false;
+  test('PlatformIsolate runOnPlatformThread, throws unsendable async',
+      () async {
+    bool throws = false;
     try {
       await runOnPlatformThread(() async {
         await Future<void>.delayed(const Duration(milliseconds: 100));

@@ -1,7 +1,3 @@
-// Copyright 2013 The Flutter Authors. All rights reserved.
-// Use of this source code is governed by a BSD-style license that can be
-// found in the LICENSE file.
-
 package io.flutter.embedding.engine.systemchannels;
 
 import androidx.annotation.NonNull;
@@ -28,7 +24,6 @@ public class AccessibilityChannel {
   @NonNull public final FlutterJNI flutterJNI;
   @Nullable private AccessibilityMessageHandler handler;
 
-  @SuppressWarnings("deprecation")
   public final BasicMessageChannel.MessageHandler<Object> parsingMessageHandler =
       new BasicMessageChannel.MessageHandler<Object>() {
         @Override
@@ -186,16 +181,7 @@ public class AccessibilityChannel {
    * {@link AccessibilityChannel#setAccessibilityMessageHandler(AccessibilityMessageHandler)}.
    */
   public interface AccessibilityMessageHandler extends FlutterJNI.AccessibilityDelegate {
-    /**
-     * The Dart application would like the given {@code message} to be announced.
-     *
-     * <p>Using AnnounceSemanticsEvent for accessibility is deprecated on Android. Migrate to using
-     * semantic properties for a more robust and accessible user experience.
-     *
-     * @see <a
-     *     href="https://developer.android.com/reference/android/view/View#announceForAccessibility(java.lang.CharSequence)">announceForAccessibility</a>"
-     */
-    @Deprecated(since = "Android API level 36")
+    /** The Dart application would like the given {@code message} to be announced. */
     void announce(@NonNull String message);
 
     /** The user has tapped on the semantics node with the given {@code nodeId}. */

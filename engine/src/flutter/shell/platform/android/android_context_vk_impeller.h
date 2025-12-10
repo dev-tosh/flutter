@@ -5,6 +5,7 @@
 #ifndef FLUTTER_SHELL_PLATFORM_ANDROID_ANDROID_CONTEXT_VK_IMPELLER_H_
 #define FLUTTER_SHELL_PLATFORM_ANDROID_ANDROID_CONTEXT_VK_IMPELLER_H_
 
+#include "flutter/fml/concurrent_message_loop.h"
 #include "flutter/fml/macros.h"
 #include "flutter/fml/native_library.h"
 #include "flutter/shell/platform/android/context/android_context.h"
@@ -20,9 +21,6 @@ class AndroidContextVKImpeller : public AndroidContext {
 
   // |AndroidContext|
   bool IsValid() const override;
-
-  // |AndroidContext|
-  AndroidRenderingAPI RenderingApi() const override;
 
  private:
   fml::RefPtr<fml::NativeLibrary> vulkan_dylib_;

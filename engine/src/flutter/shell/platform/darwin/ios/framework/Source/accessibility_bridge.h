@@ -22,6 +22,7 @@
 #import "flutter/shell/platform/darwin/ios/framework/Source/FlutterViewController_Internal.h"
 #import "flutter/shell/platform/darwin/ios/framework/Source/SemanticsObject.h"
 #import "flutter/shell/platform/darwin/ios/framework/Source/accessibility_bridge_ios.h"
+#include "third_party/skia/include/core/SkRect.h"
 
 namespace flutter {
 class PlatformViewIOS;
@@ -62,7 +63,6 @@ class AccessibilityBridge final : public AccessibilityBridgeIos {
                                fml::MallocMapping args) override;
   void AccessibilityObjectDidBecomeFocused(int32_t id) override;
   void AccessibilityObjectDidLoseFocus(int32_t id) override;
-  NSString* GetDefaultLocale() override { return view_controller_.applicationLocale; }
 
   UIView<UITextInput>* textInputView() override;
 
@@ -89,15 +89,13 @@ class AccessibilityBridge final : public AccessibilityBridgeIos {
   void VisitObjectsRecursivelyAndRemove(SemanticsObject* object,
                                         NSMutableArray<NSNumber*>* doomed_uids);
 
-  __weak FlutterViewController* view_controller_;
+  FlutterViewController* view_controller_;
   PlatformViewIOS* platform_view_;
   __weak FlutterPlatformViewsController* platform_views_controller_;
-
   // If the this id is kSemanticObjectIdInvalid, it means either nothing has
   // been focused or the focus is currently outside of the flutter application
   // (i.e. the status bar or keyboard)
-  static constexpr int32_t kSemanticObjectIdInvalid = -1;
-  int32_t last_focused_semantics_object_id_ = kSemanticObjectIdInvalid;
+  int32_t last_focused_semantics_object_id_;
 
   NSMutableDictionary<NSNumber*, SemanticsObject*>* objects_;
   FlutterBasicMessageChannel* accessibility_channel_;

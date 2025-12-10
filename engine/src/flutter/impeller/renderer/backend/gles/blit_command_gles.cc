@@ -5,38 +5,14 @@
 #include "impeller/renderer/backend/gles/blit_command_gles.h"
 
 #include "flutter/fml/closure.h"
+#include "fml/trace_event.h"
 #include "impeller/base/validation.h"
-#include "impeller/core/formats.h"
 #include "impeller/geometry/point.h"
 #include "impeller/renderer/backend/gles/device_buffer_gles.h"
-#include "impeller/renderer/backend/gles/formats_gles.h"
 #include "impeller/renderer/backend/gles/reactor_gles.h"
 #include "impeller/renderer/backend/gles/texture_gles.h"
 
 namespace impeller {
-
-namespace {
-static void FlipImage(uint8_t* buffer,
-                      size_t width,
-                      size_t height,
-                      size_t stride) {
-  if (buffer == nullptr || stride == 0) {
-    return;
-  }
-
-  const auto byte_width = width * stride;
-
-  for (size_t top = 0; top < height; top++) {
-    size_t bottom = height - top - 1;
-    if (top >= bottom) {
-      break;
-    }
-    auto* top_row = buffer + byte_width * top;
-    auto* bottom_row = buffer + byte_width * bottom;
-    std::swap_ranges(top_row, top_row + byte_width, bottom_row);
-  }
-}
-}  // namespace
 
 BlitEncodeGLES::~BlitEncodeGLES() = default;
 
@@ -74,10 +50,8 @@ static std::optional<GLuint> ConfigureFBO(
     return std::nullopt;
   }
 
-  GLenum status = gl.CheckFramebufferStatus(fbo_type);
-  if (status != GL_FRAMEBUFFER_COMPLETE) {
-    VALIDATION_LOG << "Could not create a complete framebuffer: "
-                   << DebugToFramebufferError(status);
+  if (gl.CheckFramebufferStatus(fbo_type) != GL_FRAMEBUFFER_COMPLETE) {
+    VALIDATION_LOG << "Could not create a complete framebuffer.";
     DeleteFBO(gl, fbo, fbo_type);
     return std::nullopt;
   }
@@ -176,11 +150,6 @@ struct TexImage2DData {
       case PixelFormat::kR32G32B32A32Float:
         internal_format = GL_RGBA;
         external_format = GL_RGBA;
-        type = GL_FLOAT;
-        break;
-      case PixelFormat::kR32Float:
-        internal_format = GL_RED;
-        external_format = GL_RED;
         type = GL_FLOAT;
         break;
       case PixelFormat::kR16G16B16A16Float:
@@ -345,14 +314,13 @@ bool BlitCopyTextureToBufferCommandGLES::Encode(
   }
 
   const auto& gl = reactor.GetProcTable();
-  TextureCoordinateSystem coord_system = source->GetCoordinateSystem();
 
   GLuint read_fbo = GL_NONE;
   fml::ScopedCleanupClosure delete_fbos(
-      [&gl, &read_fbo]() { DeleteFBO(gl, read_fbo, GL_FRAMEBUFFER); });
+      [&gl, &read_fbo]() { DeleteFBO(gl, read_fbo, GL_READ_FRAMEBUFFER); });
 
   {
-    auto read = ConfigureFBO(gl, source, GL_FRAMEBUFFER);
+    auto read = ConfigureFBO(gl, source, GL_READ_FRAMEBUFFER);
     if (!read.has_value()) {
       return false;
     }
@@ -360,22 +328,10 @@ bool BlitCopyTextureToBufferCommandGLES::Encode(
   }
 
   DeviceBufferGLES::Cast(*destination)
-      .UpdateBufferData([&gl, this, coord_system,
-                         rows = source->GetSize().height](uint8_t* data,
-
-                                                          size_t length) {
+      .UpdateBufferData([&gl, this](uint8_t* data, size_t length) {
         gl.ReadPixels(source_region.GetX(), source_region.GetY(),
                       source_region.GetWidth(), source_region.GetHeight(),
                       GL_RGBA, GL_UNSIGNED_BYTE, data + destination_offset);
-        switch (coord_system) {
-          case TextureCoordinateSystem::kUploadFromHost:
-            break;
-          case TextureCoordinateSystem::kRenderToTexture:
-            // The texture is upside down, and must be inverted when copying
-            // byte data out.
-            FlipImage(data + destination_offset, source_region.GetWidth(),
-                      source_region.GetHeight(), 4);
-        }
       });
 
   return true;

@@ -94,7 +94,7 @@ const vulkan::VulkanProcTable& EmbedderSurfaceVulkan::vk() {
 }
 
 // |GPUSurfaceVulkanDelegate|
-FlutterVulkanImage EmbedderSurfaceVulkan::AcquireImage(const DlISize& size) {
+FlutterVulkanImage EmbedderSurfaceVulkan::AcquireImage(const SkISize& size) {
   return vulkan_dispatch_table_.get_next_image(size);
 }
 

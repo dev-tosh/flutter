@@ -4,8 +4,6 @@
 
 #include "impeller/playground/widgets.h"
 
-#include <format>
-
 namespace impeller {
 
 Point DrawPlaygroundPoint(PlaygroundPoint& point) {
@@ -40,7 +38,8 @@ Point DrawPlaygroundPoint(PlaygroundPoint& point) {
           {point.position.x - point.radius,
            point.position.y + point.radius + 10},
           ImColor(point.color.red, point.color.green, point.color.blue, 1.0f),
-          std::format("x:{:.3f} y:{:.3f}", point.position.x, point.position.y)
+          impeller::SPrintF("x:%0.3f y:%0.3f", point.position.x,
+                            point.position.y)
               .c_str());
     }
     point.prev_mouse_pos = mouse_pos;

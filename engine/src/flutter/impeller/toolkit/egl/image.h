@@ -15,7 +15,13 @@ struct EGLImageWithDisplay {
   EGLImage image = EGL_NO_IMAGE;
   EGLDisplay display = EGL_NO_DISPLAY;
 
-  constexpr bool operator==(const EGLImageWithDisplay& other) const = default;
+  constexpr bool operator==(const EGLImageWithDisplay& other) const {
+    return image == other.image && display == other.display;
+  }
+
+  constexpr bool operator!=(const EGLImageWithDisplay& other) const {
+    return !(*this == other);
+  }
 };
 
 struct EGLImageWithDisplayTraits {
@@ -40,8 +46,13 @@ struct EGLImageKHRWithDisplay {
   EGLImageKHR image = EGL_NO_IMAGE_KHR;
   EGLDisplay display = EGL_NO_DISPLAY;
 
-  constexpr bool operator==(const EGLImageKHRWithDisplay& other) const =
-      default;
+  constexpr bool operator==(const EGLImageKHRWithDisplay& other) const {
+    return image == other.image && display == other.display;
+  }
+
+  constexpr bool operator!=(const EGLImageKHRWithDisplay& other) const {
+    return !(*this == other);
+  }
 };
 
 struct EGLImageKHRWithDisplayTraits {

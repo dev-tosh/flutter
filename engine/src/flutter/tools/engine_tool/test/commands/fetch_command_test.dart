@@ -23,55 +23,62 @@ void main() {
     return;
   }
 
-  final configs = <String, BuilderConfig>{};
+  final Map<String, BuilderConfig> configs = <String, BuilderConfig>{};
 
-  (Environment, List<FakeCommandLogEntry>) linuxEnv(Logger logger) {
-    final runHistory = <FakeCommandLogEntry>[];
+  (Environment, List<List<String>>) linuxEnv(Logger logger) {
+    final List<List<String>> runHistory = <List<String>>[];
     return (
       Environment(
         abi: ffi.Abi.linuxX64,
         engine: engine,
         platform: FakePlatform(
-          operatingSystem: Platform.linux,
-          resolvedExecutable: io.Platform.resolvedExecutable,
-          pathSeparator: '/',
-        ),
+            operatingSystem: Platform.linux,
+            resolvedExecutable: io.Platform.resolvedExecutable,
+            pathSeparator: '/'),
         processRunner: ProcessRunner(
-          processManager: FakeProcessManager(
-            onStart: (FakeCommandLogEntry entry) {
-              runHistory.add(entry);
-              return FakeProcess();
-            },
-            onRun: (FakeCommandLogEntry entry) {
-              runHistory.add(entry);
-              return io.ProcessResult(81, 0, '', '');
-            },
-          ),
+          processManager: FakeProcessManager(onStart: (List<String> command) {
+            runHistory.add(command);
+            return FakeProcess();
+          }, onRun: (List<String> command) {
+            runHistory.add(command);
+            return io.ProcessResult(81, 0, '', '');
+          }),
         ),
         logger: logger,
       ),
-      runHistory,
+      runHistory
     );
   }
 
   test('fetch command invokes gclient sync -D', () async {
-    final logger = Logger.test((_) {});
-    final (Environment env, List<FakeCommandLogEntry> runHistory) = linuxEnv(logger);
-    final runner = ToolCommandRunner(environment: env, configs: configs);
+    final Logger logger = Logger.test((_) {});
+    final (Environment env, List<List<String>> runHistory) = linuxEnv(logger);
+    final ToolCommandRunner runner = ToolCommandRunner(
+      environment: env,
+      configs: configs,
+    );
     final int result = await runner.run(<String>['fetch']);
     expect(result, equals(0));
     expect(runHistory.length, greaterThanOrEqualTo(1));
-    expect(runHistory[0].command, containsAllInOrder(<String>['gclient', 'sync', '-D']));
+    expect(
+      runHistory[0],
+      containsAllInOrder(<String>['gclient', 'sync', '-D']),
+    );
   });
 
   test('fetch command has sync alias', () async {
-    final logger = Logger.test((_) {});
-    final (Environment env, List<FakeCommandLogEntry> runHistory) = linuxEnv(logger);
-    final runner = ToolCommandRunner(environment: env, configs: configs);
+    final Logger logger = Logger.test((_) {});
+    final (Environment env, List<List<String>> runHistory) = linuxEnv(logger);
+    final ToolCommandRunner runner = ToolCommandRunner(
+      environment: env,
+      configs: configs,
+    );
     final int result = await runner.run(<String>['sync']);
     expect(result, equals(0));
     expect(runHistory.length, greaterThanOrEqualTo(1));
-    expect(runHistory[0].command, containsAllInOrder(<String>['gclient', 'sync', '-D']));
-    expect(runHistory[0].workingDirectory, env.engine.flutterDir.parent.parent.parent.path);
+    expect(
+      runHistory[0],
+      containsAllInOrder(<String>['gclient', 'sync', '-D']),
+    );
   });
 }

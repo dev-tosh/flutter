@@ -39,7 +39,7 @@ std::unique_ptr<Screenshot> ReadTexture(
   bool success = blit_pass->AddCopy(texture, device_buffer);
   FML_CHECK(success);
 
-  success = blit_pass->EncodeCommands();
+  success = blit_pass->EncodeCommands(surface_context->GetResourceAllocator());
   FML_CHECK(success);
 
   fml::AutoResetWaitableEvent latch;
@@ -62,8 +62,7 @@ std::unique_ptr<Screenshot> ReadTexture(
                               &CGColorSpaceRelease);
   CGBitmapInfo bitmap_info =
       texture->GetTextureDescriptor().format == PixelFormat::kB8G8R8A8UNormInt
-          ? static_cast<uint32_t>(kCGImageAlphaPremultipliedFirst) |
-                static_cast<uint32_t>(kCGBitmapByteOrder32Little)
+          ? kCGImageAlphaPremultipliedFirst | kCGBitmapByteOrder32Little
           : kCGImageAlphaPremultipliedLast;
   CGContextPtr context(
       CGBitmapContextCreate(
@@ -76,6 +75,25 @@ std::unique_ptr<Screenshot> ReadTexture(
   FML_CHECK(context);
   CGImagePtr image(CGBitmapContextCreateImage(context.get()), &CGImageRelease);
   FML_CHECK(image);
+
+  // TODO(142641): Perform the flip at the blit stage to avoid this slow copy.
+  if (texture->GetYCoordScale() == -1) {
+    CGContextPtr flipped_context(
+        CGBitmapContextCreate(
+            nullptr, texture->GetSize().width, texture->GetSize().height,
+            /*bitsPerComponent=*/8,
+            /*bytesPerRow=*/0, color_space.get(), bitmap_info),
+        &CGContextRelease);
+    CGContextTranslateCTM(flipped_context.get(), 0, texture->GetSize().height);
+    CGContextScaleCTM(flipped_context.get(), 1.0, -1.0);
+    CGContextDrawImage(
+        flipped_context.get(),
+        CGRectMake(0, 0, texture->GetSize().width, texture->GetSize().height),
+        image.get());
+    CGImagePtr flipped_image(CGBitmapContextCreateImage(flipped_context.get()),
+                             &CGImageRelease);
+    image.swap(flipped_image);
+  }
 
   return std::make_unique<MetalScreenshot>(image.release());
 }

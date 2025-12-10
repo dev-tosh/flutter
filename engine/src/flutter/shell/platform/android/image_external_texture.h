@@ -35,14 +35,10 @@ namespace flutter {
 ///
 class ImageExternalTexture : public flutter::Texture {
  public:
-  /// Whether the last image should be reset when the context is destroyed.
-  enum class ImageLifecycle { kReset, kKeepAlive };
-
   explicit ImageExternalTexture(
       int64_t id,
       const fml::jni::ScopedJavaGlobalRef<jobject>& image_texture_entry,
-      const std::shared_ptr<PlatformViewAndroidJNI>& jni_facade,
-      ImageLifecycle lifecycle);
+      const std::shared_ptr<PlatformViewAndroidJNI>& jni_facade);
 
   // |flutter::Texture|
   virtual ~ImageExternalTexture();
@@ -88,7 +84,7 @@ class ImageExternalTexture : public flutter::Texture {
  private:
   // |flutter::Texture|.
   void Paint(PaintContext& context,
-             const DlRect& bounds,
+             const SkRect& bounds,
              bool freeze,
              const DlImageSampling sampling) override;
 
@@ -104,7 +100,6 @@ class ImageExternalTexture : public flutter::Texture {
   // |flutter::ContextListener|
   void OnGrContextDestroyed() override;
 
-  const ImageLifecycle texture_lifecycle_;
   FML_DISALLOW_COPY_AND_ASSIGN(ImageExternalTexture);
 };
 

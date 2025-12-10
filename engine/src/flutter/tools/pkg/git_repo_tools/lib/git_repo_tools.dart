@@ -11,13 +11,13 @@ import 'package:process_runner/process_runner.dart';
 /// Utility methods for working with a git repository.
 final class GitRepo {
   /// The git repository rooted at `root`.
-  GitRepo.fromRoot(
-    this.root, {
+  GitRepo.fromRoot(this.root, {
     this.verbose = false,
     StringSink? logSink,
     ProcessManager processManager = const LocalProcessManager(),
-  }) : _processManager = processManager,
-       logSink = logSink ?? io.stdout;
+  }) :
+      _processManager = processManager,
+      logSink = logSink ?? io.stdout;
 
   /// Whether to produce verbose log output.
   ///
@@ -48,12 +48,14 @@ final class GitRepo {
     final ProcessRunnerResult result = await ProcessRunner(
       defaultWorkingDirectory: root,
       processManager: _processManager,
-    ).runProcess(<String>['git', 'rev-parse', if (short) '--short', 'HEAD']);
+    ).runProcess(
+      <String>['git', 'rev-parse', if (short) '--short' ,'HEAD'],
+    );
     return result.stdout.trim();
   }
 
   Future<List<io.File>> _changedFiles() async {
-    final processRunner = ProcessRunner(
+    final ProcessRunner processRunner = ProcessRunner(
       defaultWorkingDirectory: root,
       processManager: _processManager,
     );
@@ -62,13 +64,10 @@ final class GitRepo {
     // checked out at the time of the last fetch. The merge base is the common
     // ancestor of the two branches, and the output is the hash of the merge
     // base.
-    ProcessRunnerResult mergeBaseResult = await processRunner.runProcess(<String>[
-      'git',
-      'merge-base',
-      '--fork-point',
-      'FETCH_HEAD',
-      'HEAD',
-    ], failOk: true);
+    ProcessRunnerResult mergeBaseResult = await processRunner.runProcess(
+      <String>['git', 'merge-base', '--fork-point', 'FETCH_HEAD', 'HEAD'],
+      failOk: true,
+    );
     if (mergeBaseResult.exitCode != 0) {
       if (verbose) {
         logSink.writeln('git merge-base --fork-point failed, using default merge-base');
@@ -86,8 +85,7 @@ final class GitRepo {
       'git',
       'diff',
       '--name-only',
-      '--diff-filter=ACMRT', // Added, copied, modified, renamed, or type-changed.
-      '--relative', // _gitOutputToList will prepend the CWD so we don't want duplicate sub-paths
+      '--diff-filter=ACMRT',
       mergeBase,
     ]);
     return _gitOutputToList(masterResult);
@@ -101,37 +99,41 @@ final class GitRepo {
   late final Future<List<io.File>> changedFilesAtHead = _changedFilesAtHead();
 
   Future<List<io.File>> _changedFilesAtHead() async {
-    final processRunner = ProcessRunner(
+    final ProcessRunner processRunner = ProcessRunner(
       defaultWorkingDirectory: root,
       processManager: _processManager,
     );
     await _fetch(processRunner);
-    final ProcessRunnerResult diffTreeResult = await processRunner.runProcess(<String>[
-      'git',
-      'diff-tree',
-      '--no-commit-id',
-      '--name-only',
-      '--diff-filter=ACMRT', // Added, copied, modified, renamed, or type-changed.
-      '--relative', // _gitOutputToList will prepend the CWD so we don't want duplicate sub-paths
-      '-r',
-      'HEAD',
-    ]);
+    final ProcessRunnerResult diffTreeResult = await processRunner.runProcess(
+      <String>[
+        'git',
+        'diff-tree',
+        '--no-commit-id',
+        '--name-only',
+        '--diff-filter=ACMRT', // Added, copied, modified, renamed, or type-changed.
+        '-r',
+        'HEAD',
+      ],
+    );
     return _gitOutputToList(diffTreeResult);
   }
 
   Future<void> _fetch(ProcessRunner processRunner) async {
-    final ProcessRunnerResult fetchResult = await processRunner.runProcess(<String>[
-      'git',
-      'fetch',
-      'upstream',
-      'main',
-    ], failOk: true);
+    final ProcessRunnerResult fetchResult = await processRunner.runProcess(
+      <String>['git', 'fetch', 'upstream', 'main'],
+      failOk: true,
+    );
     if (fetchResult.exitCode != 0) {
       if (verbose) {
         logSink.writeln('git fetch upstream main failed, using origin main');
         logSink.writeln('Output:\n${fetchResult.stdout}');
       }
-      await processRunner.runProcess(<String>['git', 'fetch', 'origin', 'main']);
+      await processRunner.runProcess(<String>[
+        'git',
+        'fetch',
+        'origin',
+        'main',
+      ]);
     }
   }
 
@@ -140,10 +142,12 @@ final class GitRepo {
     if (verbose) {
       logSink.writeln('git diff output:\n$diffOutput');
     }
-    final resultMap = <String>{};
-    resultMap.addAll(diffOutput.split('\n').where((String str) => str.isNotEmpty));
-    return resultMap
-        .map<io.File>((String filePath) => io.File(path.join(root.path, filePath)))
-        .toList();
+    final Set<String> resultMap = <String>{};
+    resultMap.addAll(diffOutput.split('\n').where(
+      (String str) => str.isNotEmpty,
+    ));
+    return resultMap.map<io.File>(
+      (String filePath) => io.File(path.join(root.path, filePath)),
+    ).toList();
   }
 }

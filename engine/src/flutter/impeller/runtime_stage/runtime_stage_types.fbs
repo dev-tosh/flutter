@@ -4,13 +4,6 @@
 
 namespace impeller.fb;
 
-// This is the runtime stage format version number - it's value should be
-// incremented any time there is a change to this file which changes the
-// resulting flat buffer format.
-enum RuntimeStagesFormatVersion:uint32 {
-  kVersion = 1
-}
-
 enum Stage:byte {
   kVertex,
   kFragment,
@@ -19,7 +12,7 @@ enum Stage:byte {
 
 // The subset of impeller::ShaderType that may be used for uniform bindings.
 // kStruct is only supported for Impeller Vulkan.
-// kFloat encompasses multiple float-based types e.g. vec2.
+// kFloat encompases multiple float-based types e.g. vec2.
 enum UniformDataType:uint32 {
   kFloat,
   kSampledImage,
@@ -92,5 +85,4 @@ table RuntimeStages {
   opengles: RuntimeStage;
   opengles3: RuntimeStage;
   vulkan: RuntimeStage;
-  format_version: uint32;  // This is intended to hold RuntimeStagesFormatVersion.kVersion.
 }

@@ -74,7 +74,7 @@ std::optional<Entity> DirectionalMorphologyFilterContents::RenderFilter(
 
   ContentContext::SubpassCallback callback = [&](const ContentContext& renderer,
                                                  RenderPass& pass) {
-    auto& data_host_buffer = renderer.GetTransientsDataBuffer();
+    auto& host_buffer = renderer.GetTransientsBuffer();
 
     std::array<VS::PerVertexData, 4> vertices = {
         VS::PerVertexData{Point(0, 0), input_uvs[0]},
@@ -113,9 +113,9 @@ std::optional<Entity> DirectionalMorphologyFilterContents::RenderFilter(
     pass.SetCommandLabel("Morphology Filter");
     auto options = OptionsFromPass(pass);
     options.primitive_type = PrimitiveType::kTriangleStrip;
-    options.blend_mode = BlendMode::kSrc;
+    options.blend_mode = BlendMode::kSource;
     pass.SetPipeline(renderer.GetMorphologyFilterPipeline(options));
-    pass.SetVertexBuffer(CreateVertexBuffer(vertices, data_host_buffer));
+    pass.SetVertexBuffer(CreateVertexBuffer(vertices, host_buffer));
 
     auto sampler_descriptor = input_snapshot->sampler_descriptor;
     if (renderer.GetDeviceCapabilities().SupportsDecalSamplerAddressMode()) {
@@ -127,8 +127,8 @@ std::optional<Entity> DirectionalMorphologyFilterContents::RenderFilter(
         pass, input_snapshot->texture,
         renderer.GetContext()->GetSamplerLibrary()->GetSampler(
             sampler_descriptor));
-    VS::BindFrameInfo(pass, data_host_buffer.EmplaceUniform(frame_info));
-    FS::BindFragInfo(pass, data_host_buffer.EmplaceUniform(frag_info));
+    VS::BindFrameInfo(pass, host_buffer.EmplaceUniform(frame_info));
+    FS::BindFragInfo(pass, host_buffer.EmplaceUniform(frag_info));
 
     return pass.Draw().ok();
   };
@@ -139,13 +139,8 @@ std::optional<Entity> DirectionalMorphologyFilterContents::RenderFilter(
   }
 
   fml::StatusOr<RenderTarget> render_target =
-      renderer.MakeSubpass("Directional Morphology Filter",  //
-                           ISize(coverage.GetSize()),        //
-                           command_buffer,                   //
-                           callback,                         //
-                           /*msaa_enabled=*/false,           //
-                           /*depth_stencil_enabled=*/false   //
-      );
+      renderer.MakeSubpass("Directional Morphology Filter",
+                           ISize(coverage.GetSize()), command_buffer, callback);
   if (!render_target.ok()) {
     return std::nullopt;
   }

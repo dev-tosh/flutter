@@ -199,6 +199,10 @@ struct TRect {
            bottom_ == r.bottom_;
   }
 
+  [[nodiscard]] constexpr bool operator!=(const TRect& r) const {
+    return !(*this == r);
+  }
+
   [[nodiscard]] constexpr TRect Scale(Type scale) const {
     return TRect(left_ * scale,   //
                  top_ * scale,    //
@@ -699,13 +703,15 @@ struct TRect {
                            saturated::Cast<U, Type>(round(r.GetBottom())));
   }
 
-  [[nodiscard]] constexpr static TRect Union(const TRect& a,
-                                             const std::optional<TRect> b) {
+  [[nodiscard]] constexpr static std::optional<TRect> Union(
+      const TRect& a,
+      const std::optional<TRect> b) {
     return b.has_value() ? a.Union(b.value()) : a;
   }
 
-  [[nodiscard]] constexpr static TRect Union(const std::optional<TRect> a,
-                                             const TRect& b) {
+  [[nodiscard]] constexpr static std::optional<TRect> Union(
+      const std::optional<TRect> a,
+      const TRect& b) {
     return a.has_value() ? a->Union(b) : b;
   }
 

@@ -37,12 +37,12 @@ unsigned int DisplayListGLComplexityCalculator::GLHelper::BatchedComplexity() {
   }
 
   unsigned int draw_text_blob_complexity;
-  if (draw_text_count_ == 0) {
+  if (draw_text_blob_count_ == 0) {
     draw_text_blob_complexity = 0;
   } else {
     // m = 1/240
     // c = 0.25
-    draw_text_blob_complexity = (draw_text_count_ + 60) * 2500 / 3;
+    draw_text_blob_complexity = (draw_text_blob_count_ + 60) * 2500 / 3;
   }
 
   return save_layer_complexity + draw_text_blob_complexity;
@@ -335,12 +335,6 @@ void DisplayListGLComplexityCalculator::GLHelper::drawDiffRoundRect(
   AccumulateComplexity(complexity);
 }
 
-void DisplayListGLComplexityCalculator::GLHelper::drawRoundSuperellipse(
-    const DlRoundSuperellipse& rse) {
-  // Drawing RSEs on Skia falls back to RRect.
-  drawRoundRect(rse.ToApproximateRoundRect());
-}
-
 void DisplayListGLComplexityCalculator::GLHelper::drawPath(const DlPath& path) {
   if (IsComplex()) {
     return;
@@ -434,7 +428,7 @@ void DisplayListGLComplexityCalculator::GLHelper::drawArc(
 }
 
 void DisplayListGLComplexityCalculator::GLHelper::drawPoints(
-    DlPointMode mode,
+    DlCanvas::PointMode mode,
     uint32_t count,
     const DlPoint points[]) {
   if (IsComplex()) {
@@ -443,7 +437,7 @@ void DisplayListGLComplexityCalculator::GLHelper::drawPoints(
   unsigned int complexity;
 
   if (IsAntiAliased()) {
-    if (mode == DlPointMode::kPoints) {
+    if (mode == DlCanvas::PointMode::kPoints) {
       if (IsHairline()) {
         // This is a special case, it triggers an extremely fast path.
         // m = 1/4500
@@ -454,7 +448,7 @@ void DisplayListGLComplexityCalculator::GLHelper::drawPoints(
         // c = 0
         complexity = count * 400;
       }
-    } else if (mode == DlPointMode::kLines) {
+    } else if (mode == DlCanvas::PointMode::kLines) {
       if (IsHairline()) {
         // m = 1/750
         // c = 0
@@ -476,12 +470,12 @@ void DisplayListGLComplexityCalculator::GLHelper::drawPoints(
       }
     }
   } else {
-    if (mode == DlPointMode::kPoints) {
+    if (mode == DlCanvas::PointMode::kPoints) {
       // Hairline vs non hairline makes no difference for points without AA.
       // m = 1/18000
       // c = 0.25
       complexity = (count + 4500) * 100 / 9;
-    } else if (mode == DlPointMode::kLines) {
+    } else if (mode == DlCanvas::PointMode::kLines) {
       if (IsHairline()) {
         // m = 1/8500
         // c = 0.25
@@ -537,9 +531,9 @@ void DisplayListGLComplexityCalculator::GLHelper::drawImage(
   // If we don't need to upload, then the cost scales linearly with the
   // length of the image. If it needs uploading, the cost scales linearly
   // with the square of the area (!!!).
-  DlISize dimensions = image->GetSize();
-  unsigned int length = (dimensions.width + dimensions.height) / 2;
-  unsigned int area = dimensions.Area();
+  SkISize dimensions = image->dimensions();
+  unsigned int length = (dimensions.width() + dimensions.height()) / 2;
+  unsigned int area = dimensions.width() * dimensions.height();
 
   // m = 1/13
   // c = 0
@@ -567,7 +561,7 @@ void DisplayListGLComplexityCalculator::GLHelper::drawImage(
 }
 
 void DisplayListGLComplexityCalculator::GLHelper::ImageRect(
-    const DlISize& size,
+    const SkISize& size,
     bool texture_backed,
     bool render_with_attributes,
     bool enforce_src_edges) {
@@ -585,12 +579,12 @@ void DisplayListGLComplexityCalculator::GLHelper::ImageRect(
   unsigned int complexity;
   if (!texture_backed || (texture_backed && render_with_attributes &&
                           enforce_src_edges && IsAntiAliased())) {
-    unsigned int area = size.Area();
+    unsigned int area = size.width() * size.height();
     // m = 1/4000
     // c = 5
     complexity = (area + 20000) / 10;
   } else {
-    unsigned int length = (size.width + size.height) / 2;
+    unsigned int length = (size.width() + size.height()) / 2;
     // There's a little bit of spread here but the numbers are pretty large
     // anyway.
     //
@@ -612,8 +606,8 @@ void DisplayListGLComplexityCalculator::GLHelper::drawImageNine(
     return;
   }
 
-  DlISize dimensions = image->GetSize();
-  unsigned int area = dimensions.Area();
+  SkISize dimensions = image->dimensions();
+  unsigned int area = dimensions.width() * dimensions.height();
 
   // m = 1/3600
   // c = 3
@@ -643,8 +637,8 @@ void DisplayListGLComplexityCalculator::GLHelper::drawDisplayList(
   AccumulateComplexity(helper.ComplexityScore());
 }
 
-void DisplayListGLComplexityCalculator::GLHelper::drawText(
-    const std::shared_ptr<DlText>& text,
+void DisplayListGLComplexityCalculator::GLHelper::drawTextBlob(
+    const sk_sp<SkTextBlob> blob,
     DlScalar x,
     DlScalar y) {
   if (IsComplex()) {
@@ -655,9 +649,14 @@ void DisplayListGLComplexityCalculator::GLHelper::drawText(
   // per frame, that fixed cost is greatly reduced per subsequent call. This
   // is likely because there is batching being done in SkCanvas.
 
-  // Increment draw_text_count_ and calculate the cost at the end.
-  draw_text_count_++;
+  // Increment draw_text_blob_count_ and calculate the cost at the end.
+  draw_text_blob_count_++;
 }
+
+void DisplayListGLComplexityCalculator::GLHelper::drawTextFrame(
+    const std::shared_ptr<impeller::TextFrame>& text_frame,
+    DlScalar x,
+    DlScalar y) {}
 
 void DisplayListGLComplexityCalculator::GLHelper::drawShadow(
     const DlPath& path,

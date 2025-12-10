@@ -13,32 +13,33 @@
 #include "impeller/renderer/backend/vulkan/gpu_tracer_vk.h"
 #include "impeller/renderer/backend/vulkan/swapchain/khr/khr_swapchain_image_vk.h"
 #include "impeller/renderer/backend/vulkan/swapchain/surface_vk.h"
-#include "impeller/renderer/backend/vulkan/texture_vk.h"
 #include "impeller/renderer/context.h"
 
 namespace impeller {
 
-static constexpr size_t kMaxFramesInFlight = 2u;
+static constexpr size_t kMaxFramesInFlight = 3u;
 
 struct KHRFrameSynchronizerVK {
   vk::UniqueFence acquire;
   vk::UniqueSemaphore render_ready;
+  vk::UniqueSemaphore present_ready;
   std::shared_ptr<CommandBuffer> final_cmd_buffer;
   bool is_valid = false;
-  // Whether the renderer attached an onscreen command buffer to render to.
-  bool has_onscreen = false;
 
   explicit KHRFrameSynchronizerVK(const vk::Device& device) {
     auto acquire_res = device.createFenceUnique(
         vk::FenceCreateInfo{vk::FenceCreateFlagBits::eSignaled});
     auto render_res = device.createSemaphoreUnique({});
+    auto present_res = device.createSemaphoreUnique({});
     if (acquire_res.result != vk::Result::eSuccess ||
-        render_res.result != vk::Result::eSuccess) {
+        render_res.result != vk::Result::eSuccess ||
+        present_res.result != vk::Result::eSuccess) {
       VALIDATION_LOG << "Could not create synchronizer.";
       return;
     }
     acquire = std::move(acquire_res.value);
     render_ready = std::move(render_res.value);
+    present_ready = std::move(present_res.value);
     is_valid = true;
   }
 
@@ -182,9 +183,10 @@ KHRSwapchainImplVK::KHRSwapchainImplVK(const std::shared_ptr<Context>& context,
                      : surface_caps.maxImageCount  // max zero means no limit
       );
   swapchain_info.imageArrayLayers = 1u;
-  // Swapchain images are primarily used as color attachments (via resolve) or
-  // input attachments.
+  // Swapchain images are primarily used as color attachments (via resolve),
+  // blit targets, or input attachments.
   swapchain_info.imageUsage = vk::ImageUsageFlagBits::eColorAttachment |
+                              vk::ImageUsageFlagBits::eTransferDst |
                               vk::ImageUsageFlagBits::eInputAttachment;
   swapchain_info.preTransform = vk::SurfaceTransformFlagBitsKHR::eIdentity;
   swapchain_info.compositeAlpha = composite.value();
@@ -220,7 +222,6 @@ KHRSwapchainImplVK::KHRSwapchainImplVK(const std::shared_ptr<Context>& context,
                                     swapchain_info.imageExtent.height);
 
   std::vector<std::shared_ptr<KHRSwapchainImageVK>> swapchain_images;
-  std::vector<vk::UniqueSemaphore> present_semaphores;
   for (const auto& image : images) {
     auto swapchain_image = std::make_shared<KHRSwapchainImageVK>(
         texture_desc,            // texture descriptor
@@ -239,13 +240,6 @@ KHRSwapchainImplVK::KHRSwapchainImplVK(const std::shared_ptr<Context>& context,
         "SwapchainImageView" + std::to_string(swapchain_images.size()));
 
     swapchain_images.emplace_back(swapchain_image);
-
-    auto present_res = vk_context.GetDevice().createSemaphoreUnique({});
-    if (present_res.result != vk::Result::eSuccess) {
-      VALIDATION_LOG << "Could not create presentation semaphore.";
-      return;
-    }
-    present_semaphores.push_back(std::move(present_res.value));
   }
 
   std::vector<std::unique_ptr<KHRFrameSynchronizerVK>> synchronizers;
@@ -268,7 +262,6 @@ KHRSwapchainImplVK::KHRSwapchainImplVK(const std::shared_ptr<Context>& context,
                                                         enable_msaa);
   images_ = std::move(swapchain_images);
   synchronizers_ = std::move(synchronizers);
-  present_semaphores_ = std::move(present_semaphores);
   current_frame_ = synchronizers_.size() - 1u;
   size_ = size;
   enable_msaa_ = enable_msaa;
@@ -281,38 +274,6 @@ KHRSwapchainImplVK::~KHRSwapchainImplVK() {
 
 const ISize& KHRSwapchainImplVK::GetSize() const {
   return size_;
-}
-
-std::optional<ISize> KHRSwapchainImplVK::GetCurrentUnderlyingSurfaceSize()
-    const {
-  if (!IsValid()) {
-    return std::nullopt;
-  }
-
-  auto context = context_.lock();
-  if (!context) {
-    return std::nullopt;
-  }
-
-  auto& vk_context = ContextVK::Cast(*context);
-  const auto [result, surface_caps] =
-      vk_context.GetPhysicalDevice().getSurfaceCapabilitiesKHR(surface_.get());
-  if (result != vk::Result::eSuccess) {
-    return std::nullopt;
-  }
-
-  // From the spec: `currentExtent` is the current width and height of the
-  // surface, or the special value (0xFFFFFFFF, 0xFFFFFFFF) indicating that the
-  // surface size will be determined by the extent of a swapchain targeting the
-  // surface.
-  constexpr uint32_t kCurrentExtentsPlaceholder = 0xFFFFFFFF;
-  if (surface_caps.currentExtent.width == kCurrentExtentsPlaceholder ||
-      surface_caps.currentExtent.height == kCurrentExtentsPlaceholder) {
-    return std::nullopt;
-  }
-
-  return ISize::MakeWH(surface_caps.currentExtent.width,
-                       surface_caps.currentExtent.height);
 }
 
 bool KHRSwapchainImplVK::IsValid() const {
@@ -417,13 +378,6 @@ KHRSwapchainImplVK::AcquireResult KHRSwapchainImplVK::AcquireNextDrawable() {
       )};
 }
 
-void KHRSwapchainImplVK::AddFinalCommandBuffer(
-    std::shared_ptr<CommandBuffer> cmd_buffer) {
-  const auto& sync = synchronizers_[current_frame_];
-  sync->final_cmd_buffer = std::move(cmd_buffer);
-  sync->has_onscreen = true;
-}
-
 bool KHRSwapchainImplVK::Present(
     const std::shared_ptr<KHRSwapchainImageVK>& image,
     uint32_t index) {
@@ -439,10 +393,7 @@ bool KHRSwapchainImplVK::Present(
   //----------------------------------------------------------------------------
   /// Transition the image to color-attachment-optimal.
   ///
-  if (!sync->has_onscreen) {
-    sync->final_cmd_buffer = context.CreateCommandBuffer();
-  }
-  sync->has_onscreen = false;
+  sync->final_cmd_buffer = context.CreateCommandBuffer();
   if (!sync->final_cmd_buffer) {
     return false;
   }
@@ -476,7 +427,7 @@ bool KHRSwapchainImplVK::Present(
         vk::PipelineStageFlagBits::eColorAttachmentOutput;
     submit_info.setWaitDstStageMask(wait_stage);
     submit_info.setWaitSemaphores(*sync->render_ready);
-    submit_info.setSignalSemaphores(*present_semaphores_[index]);
+    submit_info.setSignalSemaphores(*sync->present_ready);
     submit_info.setCommandBuffers(vk_final_cmd_buffer);
     auto result =
         context.GetGraphicsQueue()->Submit(submit_info, *sync->acquire);
@@ -495,7 +446,7 @@ bool KHRSwapchainImplVK::Present(
   vk::PresentInfoKHR present_info;
   present_info.setSwapchains(*swapchain_);
   present_info.setImageIndices(indices);
-  present_info.setWaitSemaphores(*present_semaphores_[index]);
+  present_info.setWaitSemaphores(*sync->present_ready);
 
   auto result = context.GetGraphicsQueue()->Present(present_info);
 

@@ -236,7 +236,6 @@ class UniqueIncluder final : public shaderc::CompileOptions::IncluderInterface {
  public:
   static std::unique_ptr<UniqueIncluder> Make(
       std::shared_ptr<Includer> includer) {
-    // NOLINTNEXTLINE(clang-analyzer-cplusplus.NewDeleteLeaks)
     return std::unique_ptr<UniqueIncluder>(
         new UniqueIncluder(std::move(includer)));
   }
@@ -282,7 +281,6 @@ shaderc::CompileOptions SPIRVCompilerOptions::BuildShadercOptions() const {
 
   options.SetAutoBindUniforms(true);
   options.SetAutoMapLocations(true);
-  options.SetPreserveBindings(true);
 
   options.SetOptimizationLevel(optimization_level);
 

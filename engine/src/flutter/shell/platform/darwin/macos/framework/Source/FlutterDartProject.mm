@@ -68,15 +68,6 @@ static NSString* const kAppBundleIdentifier = @"io.flutter.flutter.app";
   return NO;
 }
 
-- (BOOL)enableFlutterGPU {
-  NSNumber* enableFlutterGPU =
-      [[NSBundle mainBundle] objectForInfoDictionaryKey:@"FLTEnableFlutterGPU"];
-  if (enableFlutterGPU != nil) {
-    return enableFlutterGPU.boolValue;
-  }
-  return NO;
-}
-
 - (NSString*)assetsPath {
   if (_assetsPath) {
     return _assetsPath;

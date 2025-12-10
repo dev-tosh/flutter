@@ -46,6 +46,8 @@ public class KeyChannelResponder implements KeyboardManager.Responder {
 
     final boolean isKeyUp = action != KeyEvent.ACTION_DOWN;
     keyEventChannel.sendFlutterKeyEvent(
-        flutterEvent, isKeyUp, onKeyEventHandledCallback::onKeyEventHandled);
+        flutterEvent,
+        isKeyUp,
+        (isEventHandled) -> onKeyEventHandledCallback.onKeyEventHandled(isEventHandled));
   }
 }

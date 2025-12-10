@@ -9,7 +9,6 @@
 #include "flow/surface_frame.h"
 #include "flutter/fml/logging.h"
 
-#include "third_party/skia/include/core/SkCanvas.h"
 #include "third_party/skia/include/core/SkSurface.h"
 
 namespace flutter {
@@ -29,7 +28,7 @@ bool GPUSurfaceSoftware::IsValid() {
 
 // |Surface|
 std::unique_ptr<SurfaceFrame> GPUSurfaceSoftware::AcquireFrame(
-    const DlISize& logical_size) {
+    const SkISize& logical_size) {
   SurfaceFrame::FramebufferInfo framebuffer_info;
   framebuffer_info.supports_readback = true;
 
@@ -48,7 +47,7 @@ std::unique_ptr<SurfaceFrame> GPUSurfaceSoftware::AcquireFrame(
     return nullptr;
   }
 
-  const auto size = DlISize(logical_size.width, logical_size.height);
+  const auto size = SkISize::Make(logical_size.width(), logical_size.height());
 
   sk_sp<SkSurface> backing_store = delegate_->AcquireBackingStore(size);
 
@@ -56,8 +55,7 @@ std::unique_ptr<SurfaceFrame> GPUSurfaceSoftware::AcquireFrame(
     return nullptr;
   }
 
-  if (size.width != backing_store->width() ||
-      size.height != backing_store->height()) {
+  if (size != SkISize::Make(backing_store->width(), backing_store->height())) {
     return nullptr;
   }
 
@@ -94,10 +92,12 @@ std::unique_ptr<SurfaceFrame> GPUSurfaceSoftware::AcquireFrame(
 }
 
 // |Surface|
-DlMatrix GPUSurfaceSoftware::GetRootTransformation() const {
+SkMatrix GPUSurfaceSoftware::GetRootTransformation() const {
   // This backend does not currently support root surface transformations. Just
   // return identity.
-  return DlMatrix();
+  SkMatrix matrix;
+  matrix.reset();
+  return matrix;
 }
 
 // |Surface|

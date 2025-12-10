@@ -116,20 +116,14 @@ TEST(FenceWaiterVKTest, InProgressFencesStillWaitIfTerminated) {
   raw_fence = MockFence::GetRawPointer(fence);
   waiter->AddFence(std::move(fence), [&signal]() { signal.Signal(); });
 
-  // Signal the fence after a delay.
-  std::thread thread([&]() {
-    std::this_thread::sleep_for(std::chrono::milliseconds{100u});
-    raw_fence->SetStatus(vk::Result::eSuccess);
-  });
-
-  // Terminate the waiter.  This will block until all pending fences are
-  // signalled.
+  // Terminate the waiter.
   waiter->Terminate();
+
+  // Signal the fence.
+  raw_fence->SetStatus(vk::Result::eSuccess);
 
   // This will hang if the fence was not signalled.
   signal.Wait();
-
-  thread.join();
 }
 
 }  // namespace testing

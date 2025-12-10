@@ -21,9 +21,8 @@ namespace {
 
 sk_sp<DlImage> DoMakeRasterSnapshot(
     const sk_sp<DisplayList>& display_list,
-    DlISize size,
-    const std::shared_ptr<impeller::AiksContext>& context,
-    SnapshotPixelFormat pixel_format) {
+    SkISize size,
+    const std::shared_ptr<impeller::AiksContext>& context) {
   TRACE_EVENT0("flutter", __FUNCTION__);
   if (!context) {
     return nullptr;
@@ -33,12 +32,12 @@ sk_sp<DlImage> DoMakeRasterSnapshot(
                       ->GetResourceAllocator()
                       ->GetMaxTextureSizeSupported();
   double scale_factor_x =
-      static_cast<double>(max_size.width) / static_cast<double>(size.width);
+      static_cast<double>(max_size.width) / static_cast<double>(size.width());
   double scale_factor_y =
-      static_cast<double>(max_size.height) / static_cast<double>(size.height);
+      static_cast<double>(max_size.height) / static_cast<double>(size.height());
   double scale_factor = std::min({1.0, scale_factor_x, scale_factor_y});
 
-  auto render_target_size = impeller::ISize(size.width, size.height);
+  auto render_target_size = impeller::ISize(size.width(), size.height());
 
   // Scale down the render target size to the max supported by the
   // GPU if necessary. Exceeding the max would otherwise cause a
@@ -48,33 +47,18 @@ sk_sp<DlImage> DoMakeRasterSnapshot(
     render_target_size.height *= scale_factor;
   }
 
-  std::optional<impeller::PixelFormat> impeller_pixel_format;
-  switch (pixel_format) {
-    case SnapshotPixelFormat::kDontCare:
-      impeller_pixel_format = std::nullopt;
-      break;
-    case SnapshotPixelFormat::kRGBA32Float:
-      impeller_pixel_format = impeller::PixelFormat::kR32G32B32A32Float;
-      break;
-    case SnapshotPixelFormat::kR32Float:
-      impeller_pixel_format = impeller::PixelFormat::kR32Float;
-      break;
-  }
-
   return impeller::DlImageImpeller::Make(
       impeller::DisplayListToTexture(display_list, render_target_size, *context,
                                      /*reset_host_buffer=*/false,
-                                     /*generate_mips=*/true,
-                                     impeller_pixel_format),
+                                     /*generate_mips=*/true),
       DlImage::OwningContext::kRaster);
 }
 
 sk_sp<DlImage> DoMakeRasterSnapshot(
     const sk_sp<DisplayList>& display_list,
-    DlISize size,
-    const SnapshotController::Delegate& delegate,
-    SnapshotPixelFormat pixel_format) {
-  // Ensure that the current thread has a rendering context. This must be done
+    SkISize size,
+    const SnapshotController::Delegate& delegate) {
+  // Ensure that the current thread has a rendering context.  This must be done
   // before calling GetAiksContext because constructing the AiksContext may
   // invoke graphics APIs.
   std::unique_ptr<Surface> pbuffer_surface;
@@ -88,16 +72,14 @@ sk_sp<DlImage> DoMakeRasterSnapshot(
     }
   }
 
-  return DoMakeRasterSnapshot(display_list, size, delegate.GetAiksContext(),
-                              pixel_format);
+  return DoMakeRasterSnapshot(display_list, size, delegate.GetAiksContext());
 }
 
 sk_sp<DlImage> DoMakeRasterSnapshot(
     sk_sp<DisplayList> display_list,
-    DlISize picture_size,
+    SkISize picture_size,
     const std::shared_ptr<const fml::SyncSwitch>& sync_switch,
-    const std::shared_ptr<impeller::AiksContext>& context,
-    SnapshotPixelFormat pixel_format) {
+    const std::shared_ptr<impeller::AiksContext>& context) {
   sk_sp<DlImage> result;
   sync_switch->Execute(fml::SyncSwitch::Handlers()
                            .SetIfTrue([&] {
@@ -105,8 +87,7 @@ sk_sp<DlImage> DoMakeRasterSnapshot(
                            })
                            .SetIfFalse([&] {
                              result = DoMakeRasterSnapshot(
-                                 display_list, picture_size, context,
-                                 pixel_format);
+                                 display_list, picture_size, context);
                            }));
 
   return result;
@@ -115,9 +96,8 @@ sk_sp<DlImage> DoMakeRasterSnapshot(
 
 void SnapshotControllerImpeller::MakeRasterSnapshot(
     sk_sp<DisplayList> display_list,
-    DlISize picture_size,
-    std::function<void(const sk_sp<DlImage>&)> callback,
-    SnapshotPixelFormat pixel_format) {
+    SkISize picture_size,
+    std::function<void(const sk_sp<DlImage>&)> callback) {
   std::shared_ptr<const fml::SyncSwitch> sync_switch =
       GetDelegate().GetIsGpuDisabledSyncSwitch();
   sync_switch->Execute(
@@ -128,10 +108,9 @@ void SnapshotControllerImpeller::MakeRasterSnapshot(
             if (context) {
               context->GetContext()->StoreTaskForGPU(
                   [context, sync_switch, display_list = std::move(display_list),
-                   picture_size, callback, pixel_format] {
+                   picture_size, callback] {
                     callback(DoMakeRasterSnapshot(display_list, picture_size,
-                                                  sync_switch, context,
-                                                  pixel_format));
+                                                  sync_switch, context));
                   },
                   [callback]() { callback(nullptr); });
             } else {
@@ -155,45 +134,30 @@ void SnapshotControllerImpeller::MakeRasterSnapshot(
             }
 #endif
             callback(DoMakeRasterSnapshot(display_list, picture_size,
-                                          GetDelegate(), pixel_format));
+                                          GetDelegate()));
           }));
 }
 
 sk_sp<DlImage> SnapshotControllerImpeller::MakeRasterSnapshotSync(
     sk_sp<DisplayList> display_list,
-    DlISize picture_size,
-    SnapshotPixelFormat pixel_format) {
-  return DoMakeRasterSnapshot(display_list, picture_size, GetDelegate(),
-                              pixel_format);
+    SkISize picture_size) {
+  return DoMakeRasterSnapshot(display_list, picture_size, GetDelegate());
 }
 
 void SnapshotControllerImpeller::CacheRuntimeStage(
     const std::shared_ptr<impeller::RuntimeStage>& runtime_stage) {
-  if (!GetDelegate().IsAiksContextInitialized()) {
-    return;
-  }
+  impeller::RuntimeEffectContents runtime_effect;
+  runtime_effect.SetRuntimeStage(runtime_stage);
   auto context = GetDelegate().GetAiksContext();
   if (!context) {
     return;
   }
-  impeller::RuntimeEffectContents runtime_effect;
-  runtime_effect.SetRuntimeStage(runtime_stage);
   runtime_effect.BootstrapShader(context->GetContentContext());
 }
 
 sk_sp<SkImage> SnapshotControllerImpeller::ConvertToRasterImage(
     sk_sp<SkImage> image) {
   FML_UNREACHABLE();
-}
-
-bool SnapshotControllerImpeller::MakeRenderContextCurrent() {
-  const std::unique_ptr<Surface>& surface = GetDelegate().GetSurface();
-  if (!surface) {
-    // Some backends (such as Metal) can operate without a surface and do not
-    // require MakeRenderContextCurrent.
-    return true;
-  }
-  return surface->MakeRenderContextCurrent()->GetResult();
 }
 
 }  // namespace flutter

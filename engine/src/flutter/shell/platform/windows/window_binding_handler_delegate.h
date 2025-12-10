@@ -7,7 +7,7 @@
 
 #include <functional>
 
-#include "flutter/shell/geometry/geometry.h"
+#include "flutter/shell/platform/common/geometry.h"
 #include "flutter/shell/platform/embedder/embedder.h"
 #include "flutter/shell/platform/windows/windows_lifecycle_manager.h"
 #include "flutter/third_party/accessibility/ax/platform/ax_fragment_root_delegate_win.h"
@@ -92,13 +92,6 @@ class WindowBindingHandlerDelegate {
                      bool extended,
                      bool was_down,
                      KeyEventCallback callback) = 0;
-
-  /// Notifies the delegate that the backing window has received or
-  /// lost focus.
-  ///
-  /// Typically called by currently configured WindowBindingHandler.
-  virtual void OnFocus(FlutterViewFocusState focus_state,
-                       FlutterViewFocusDirection direction) = 0;
 
   // Notifies the delegate that IME composing mode has begun.
   //

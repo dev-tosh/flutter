@@ -25,7 +25,6 @@ struct MockCommandBuffer {
       std::shared_ptr<std::vector<std::string>> called_functions)
       : called_functions_(std::move(called_functions)) {}
   std::shared_ptr<std::vector<std::string>> called_functions_;
-  std::vector<VkImageMemoryBarrier> image_memory_barriers_;
 };
 
 struct MockQueryPool {};
@@ -95,16 +94,16 @@ class MockDevice final {
   MockDevice& operator=(const MockDevice&) = delete;
 
   Mutex called_functions_mutex_;
-  std::shared_ptr<std::vector<std::string>> called_functions_
-      IPLR_GUARDED_BY(called_functions_mutex_);
+  std::shared_ptr<std::vector<std::string>> called_functions_ IPLR_GUARDED_BY(
+      called_functions_mutex_);
 
   Mutex command_buffers_mutex_;
   std::vector<std::unique_ptr<MockCommandBuffer>> command_buffers_
       IPLR_GUARDED_BY(command_buffers_mutex_);
 
   Mutex commmand_pools_mutex_;
-  std::vector<std::unique_ptr<MockCommandPool>> command_pools_
-      IPLR_GUARDED_BY(commmand_pools_mutex_);
+  std::vector<std::unique_ptr<MockCommandPool>> command_pools_ IPLR_GUARDED_BY(
+      commmand_pools_mutex_);
 };
 
 void noop() {}
@@ -271,12 +270,6 @@ VkResult vkCreateCommandPool(VkDevice device,
 VkResult vkResetCommandPool(VkDevice device,
                             VkCommandPool commandPool,
                             VkCommandPoolResetFlags flags) {
-  MockDevice* mock_device = reinterpret_cast<MockDevice*>(device);
-  if (flags & VK_COMMAND_POOL_RESET_RELEASE_RESOURCES_BIT) {
-    mock_device->AddCalledFunction("vkResetCommandPoolReleaseResources");
-  } else {
-    mock_device->AddCalledFunction("vkResetCommandPool");
-  }
   return VK_SUCCESS;
 }
 
@@ -447,27 +440,6 @@ void vkCmdBindPipeline(VkCommandBuffer commandBuffer,
   MockCommandBuffer* mock_command_buffer =
       reinterpret_cast<MockCommandBuffer*>(commandBuffer);
   mock_command_buffer->called_functions_->push_back("vkCmdBindPipeline");
-}
-
-void vkCmdPipelineBarrier(VkCommandBuffer commandBuffer,
-                          VkPipelineStageFlags srcStageMask,
-                          VkPipelineStageFlags dstStageMask,
-                          VkDependencyFlags dependencyFlags,
-                          uint32_t memoryBarrierCount,
-                          const VkMemoryBarrier* pMemoryBarriers,
-                          uint32_t bufferMemoryBarrierCount,
-                          const VkBufferMemoryBarrier* pBufferMemoryBarriers,
-                          uint32_t imageMemoryBarrierCount,
-                          const VkImageMemoryBarrier* pImageMemoryBarriers) {
-  MockCommandBuffer* mock_command_buffer =
-      reinterpret_cast<MockCommandBuffer*>(commandBuffer);
-  mock_command_buffer->called_functions_->push_back("vkCmdPipelineBarrier");
-  if (pImageMemoryBarriers) {
-    for (uint32_t i = 0; i < imageMemoryBarrierCount; ++i) {
-      mock_command_buffer->image_memory_barriers_.push_back(
-          pImageMemoryBarriers[i]);
-    }
-  }
 }
 
 void vkCmdSetStencilReference(VkCommandBuffer commandBuffer,
@@ -779,30 +751,6 @@ void vkDestroyFramebuffer(VkDevice device,
   delete reinterpret_cast<MockFramebuffer*>(framebuffer);
 }
 
-void vkTrimCommandPool(VkDevice device,
-                       VkCommandPool commandPool,
-                       VkCommandPoolTrimFlags flags) {
-  MockDevice* mock_device = reinterpret_cast<MockDevice*>(device);
-  mock_device->AddCalledFunction("vkTrimCommandPool");
-}
-
-VkResult vkGetPipelineCacheData(VkDevice device,
-                                VkPipelineCache pipelineCache,
-                                size_t* pDataSize,
-                                void* pData) {
-  if (pData) {
-    const std::array<uint8_t, 5> cache_data{1, 2, 3, 4, 5};
-    size_t dst_buffer_size = *pDataSize;
-    size_t length = std::min(dst_buffer_size, cache_data.size());
-    std::memcpy(pData, cache_data.data(), length);
-    *pDataSize = length;
-    return (dst_buffer_size >= length) ? VK_SUCCESS : VK_INCOMPLETE;
-  } else {
-    *pDataSize = 10;
-    return VK_SUCCESS;
-  }
-}
-
 PFN_vkVoidFunction GetMockVulkanProcAddress(VkInstance instance,
                                             const char* pName) {
   if (strcmp("vkEnumerateInstanceExtensionProperties", pName) == 0) {
@@ -885,8 +833,6 @@ PFN_vkVoidFunction GetMockVulkanProcAddress(VkInstance instance,
     return reinterpret_cast<PFN_vkVoidFunction>(vkDestroyPipelineCache);
   } else if (strcmp("vkCmdBindPipeline", pName) == 0) {
     return reinterpret_cast<PFN_vkVoidFunction>(vkCmdBindPipeline);
-  } else if (strcmp("vkCmdPipelineBarrier", pName) == 0) {
-    return reinterpret_cast<PFN_vkVoidFunction>(vkCmdPipelineBarrier);
   } else if (strcmp("vkCmdSetStencilReference", pName) == 0) {
     return reinterpret_cast<PFN_vkVoidFunction>(vkCmdSetStencilReference);
   } else if (strcmp("vkCmdSetScissor", pName) == 0) {
@@ -956,10 +902,6 @@ PFN_vkVoidFunction GetMockVulkanProcAddress(VkInstance instance,
     return reinterpret_cast<PFN_vkVoidFunction>(vkCreateFramebuffer);
   } else if (strcmp("vkDestroyFramebuffer", pName) == 0) {
     return reinterpret_cast<PFN_vkVoidFunction>(vkDestroyFramebuffer);
-  } else if (strcmp("vkTrimCommandPool", pName) == 0) {
-    return reinterpret_cast<PFN_vkVoidFunction>(vkTrimCommandPool);
-  } else if (strcmp("vkGetPipelineCacheData", pName) == 0) {
-    return reinterpret_cast<PFN_vkVoidFunction>(vkGetPipelineCacheData);
   }
   return noop;
 }
@@ -1010,13 +952,6 @@ std::shared_ptr<std::vector<std::string>> GetMockVulkanFunctions(
 
 void SetSwapchainImageSize(ISize size) {
   currentImageSize = size;
-}
-
-std::vector<VkImageMemoryBarrier>& GetImageMemoryBarriers(
-    VkCommandBuffer buffer) {
-  MockCommandBuffer* mock_command_buffer =
-      reinterpret_cast<MockCommandBuffer*>(buffer);
-  return mock_command_buffer->image_memory_barriers_;
 }
 
 }  // namespace testing

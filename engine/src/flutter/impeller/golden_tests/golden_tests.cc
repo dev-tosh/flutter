@@ -18,6 +18,7 @@
 #include "impeller/golden_tests/metal_screenshot.h"
 #include "impeller/golden_tests/metal_screenshotter.h"
 #include "impeller/golden_tests/working_directory.h"
+#include "third_party/skia/include/core/SkPaint.h"
 
 namespace impeller {
 namespace testing {
@@ -49,17 +50,12 @@ bool SaveScreenshot(std::unique_ptr<Screenshot> screenshot) {
       WorkingDirectory::Instance()->GetFilenamePath(filename));
 }
 
-PlaygroundSwitches GetPlaygroundSwitches() {
-  PlaygroundSwitches switches;
-  switches.enable_wide_gamut = false;
-  return switches;
-}
 }  // namespace
 
 class GoldenTests : public ::testing::Test {
  public:
   GoldenTests()
-      : screenshotter_(new MetalScreenshotter(GetPlaygroundSwitches())) {}
+      : screenshotter_(new MetalScreenshotter(/*enable_wide_gamut=*/false)) {}
 
   MetalScreenshotter& Screenshotter() { return *screenshotter_; }
 
@@ -96,7 +92,7 @@ TEST_F(GoldenTests, ConicalGradient) {
       /*tile_mode=*/flutter::DlTileMode::kClamp  //
       ));
 
-  builder.DrawRect(DlRect::MakeXYWH(10, 10, 250, 250), paint);
+  builder.DrawRect(SkRect::MakeXYWH(10, 10, 250, 250), paint);
 
   auto aiks_context =
       AiksContext(Screenshotter().GetPlayground().GetContext(), nullptr);

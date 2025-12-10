@@ -12,6 +12,7 @@
 #include "flutter/shell/platform/android/context/android_context.h"
 #include "flutter/shell/platform/android/jni/platform_view_android_jni.h"
 #include "flutter/shell/platform/android/surface/android_native_window.h"
+#include "third_party/skia/include/core/SkSize.h"
 
 namespace impeller {
 class Context;
@@ -32,21 +33,17 @@ class AndroidSurface {
   virtual std::unique_ptr<Surface> CreateGPUSurface(
       GrDirectContext* gr_context = nullptr) = 0;
 
-  virtual bool OnScreenSurfaceResize(const DlISize& size) = 0;
+  virtual bool OnScreenSurfaceResize(const SkISize& size) = 0;
 
   virtual bool ResourceContextMakeCurrent() = 0;
 
   virtual bool ResourceContextClearCurrent() = 0;
 
-  virtual bool SetNativeWindow(
-      fml::RefPtr<AndroidNativeWindow> window,
-      const std::shared_ptr<PlatformViewAndroidJNI>& jni_facade) = 0;
+  virtual bool SetNativeWindow(fml::RefPtr<AndroidNativeWindow> window) = 0;
 
   virtual std::unique_ptr<Surface> CreateSnapshotSurface();
 
   virtual std::shared_ptr<impeller::Context> GetImpellerContext();
-
-  virtual void SetupImpellerSurface();
 
  protected:
   AndroidSurface();

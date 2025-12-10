@@ -42,7 +42,7 @@ sk_sp<SkImage> DrawSnapshot(
 
   {
     TRACE_EVENT0("flutter", "DeviceHostTransfer");
-    if (auto raster_image = device_snapshot->makeRasterImage(nullptr)) {
+    if (auto raster_image = device_snapshot->makeRasterImage()) {
       return raster_image;
     }
   }
@@ -53,19 +53,18 @@ sk_sp<SkImage> DrawSnapshot(
 
 void SnapshotControllerSkia::MakeRasterSnapshot(
     sk_sp<DisplayList> display_list,
-    DlISize picture_size,
-    std::function<void(const sk_sp<DlImage>&)> callback,
-    SnapshotPixelFormat pixel_format) {
-  callback(MakeRasterSnapshotSync(display_list, picture_size, pixel_format));
+    SkISize picture_size,
+    std::function<void(const sk_sp<DlImage>&)> callback) {
+  callback(MakeRasterSnapshotSync(display_list, picture_size));
 }
 
 sk_sp<DlImage> SnapshotControllerSkia::DoMakeRasterSnapshot(
-    DlISize size,
+    SkISize size,
     std::function<void(SkCanvas*)> draw_callback) {
   TRACE_EVENT0("flutter", __FUNCTION__);
   sk_sp<SkImage> result;
-  SkImageInfo image_info = SkImageInfo::MakeN32Premul(size.width, size.height,
-                                                      SkColorSpace::MakeSRGB());
+  SkImageInfo image_info = SkImageInfo::MakeN32Premul(
+      size.width(), size.height(), SkColorSpace::MakeSRGB());
 
   std::unique_ptr<Surface> pbuffer_surface;
   Surface* snapshot_surface = nullptr;
@@ -141,8 +140,7 @@ sk_sp<DlImage> SnapshotControllerSkia::DoMakeRasterSnapshot(
 
 sk_sp<DlImage> SnapshotControllerSkia::MakeRasterSnapshotSync(
     sk_sp<DisplayList> display_list,
-    DlISize size,
-    SnapshotPixelFormat pixel_format) {
+    SkISize size) {
   return DoMakeRasterSnapshot(size, [display_list](SkCanvas* canvas) {
     DlSkCanvasAdapter(canvas).DrawDisplayList(display_list);
   });
@@ -162,7 +160,7 @@ sk_sp<SkImage> SnapshotControllerSkia::ConvertToRasterImage(
     return nullptr;
   }
 
-  DlISize image_size = ToDlISize(image->dimensions());
+  SkISize image_size = image->dimensions();
 
   auto result = DoMakeRasterSnapshot(
       image_size, [image = std::move(image)](SkCanvas* canvas) {
@@ -173,11 +171,6 @@ sk_sp<SkImage> SnapshotControllerSkia::ConvertToRasterImage(
 
 void SnapshotControllerSkia::CacheRuntimeStage(
     const std::shared_ptr<impeller::RuntimeStage>& runtime_stage) {}
-
-bool SnapshotControllerSkia::MakeRenderContextCurrent() {
-  FML_UNREACHABLE();
-  return false;
-}
 
 }  // namespace flutter
 

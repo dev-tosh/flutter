@@ -15,14 +15,10 @@
 #import "flutter/shell/platform/darwin/ios/framework/Source/FlutterDartProject_Internal.h"
 #import "flutter/shell/platform/darwin/ios/framework/Source/FlutterEngine_Internal.h"
 #import "flutter/shell/platform/darwin/ios/framework/Source/FlutterEngine_Test.h"
-#import "flutter/shell/platform/darwin/ios/framework/Source/FlutterSceneLifeCycle_Internal.h"
-#import "flutter/shell/platform/darwin/ios/framework/Source/FlutterSharedApplication.h"
 #import "flutter/shell/platform/darwin/ios/framework/Source/FlutterTextInputPlugin.h"
 #import "flutter/shell/platform/darwin/ios/platform_view_ios.h"
-FLUTTER_ASSERT_ARC
 
-@protocol TestFlutterPluginWithSceneEvents <NSObject, FlutterPlugin, FlutterSceneLifeCycleDelegate>
-@end
+FLUTTER_ASSERT_ARC
 
 @interface FlutterEngineSpy : FlutterEngine
 @property(nonatomic) BOOL ensureSemanticsEnabledCalled;
@@ -183,24 +179,14 @@ FLUTTER_ASSERT_ARC
 - (void)testNotifyPluginOfDealloc {
   id plugin = OCMProtocolMock(@protocol(FlutterPlugin));
   OCMStub([plugin detachFromEngineForRegistrar:[OCMArg any]]);
-  @autoreleasepool {
+  {
     FlutterDartProject* project = [[FlutterDartProject alloc] init];
     FlutterEngine* engine = [[FlutterEngine alloc] initWithName:@"engine" project:project];
     NSObject<FlutterPluginRegistrar>* registrar = [engine registrarForPlugin:@"plugin"];
     [registrar publish:plugin];
+    engine = nil;
   }
   OCMVerify([plugin detachFromEngineForRegistrar:[OCMArg any]]);
-}
-
-- (void)testGetViewControllerFromRegistrar {
-  FlutterDartProject* project = [[FlutterDartProject alloc] init];
-  FlutterEngine* engine = [[FlutterEngine alloc] initWithName:@"engine" project:project];
-  id mockEngine = OCMPartialMock(engine);
-  NSObject<FlutterPluginRegistrar>* registrar = [mockEngine registrarForPlugin:@"plugin"];
-
-  // Verify accessing the viewController getter calls FlutterEngine.viewController.
-  (void)[registrar viewController];
-  OCMVerify(times(1), [mockEngine viewController]);
 }
 
 - (void)testSetBinaryMessengerToSameBinaryMessenger {
@@ -285,20 +271,6 @@ FLUTTER_ASSERT_ARC
                                         initialRoute:nil
                                       entrypointArgs:nil];
   XCTAssertNotNil(spawn);
-}
-
-- (void)testEngineId {
-  FlutterEngine* engine = [[FlutterEngine alloc] initWithName:@"foobar"];
-  [engine run];
-  int64_t id1 = engine.engineIdentifier;
-  XCTAssertTrue(id1 != 0);
-  FlutterEngine* spawn = [engine spawnWithEntrypoint:nil
-                                          libraryURI:nil
-                                        initialRoute:nil
-                                      entrypointArgs:nil];
-  int64_t id2 = spawn.engineIdentifier;
-  XCTAssertEqual([FlutterEngine engineForIdentifier:id1], engine);
-  XCTAssertEqual([FlutterEngine engineForIdentifier:id2], spawn);
 }
 
 - (void)testSetHandlerAfterRun {
@@ -395,7 +367,7 @@ FLUTTER_ASSERT_ARC
   OCMVerify(times(2), [mockEngine updateDisplays]);
 }
 
-- (void)testLifeCycleNotificationDidEnterBackgroundForApplication {
+- (void)testLifeCycleNotificationDidEnterBackground {
   FlutterDartProject* project = [[FlutterDartProject alloc] init];
   FlutterEngine* engine = [[FlutterEngine alloc] initWithName:@"foobar" project:project];
   [engine run];
@@ -408,49 +380,23 @@ FLUTTER_ASSERT_ARC
                                     object:nil
                                   userInfo:nil];
   id mockEngine = OCMPartialMock(engine);
-  [NSNotificationCenter.defaultCenter postNotification:sceneNotification];
-  [NSNotificationCenter.defaultCenter postNotification:applicationNotification];
-  OCMVerify(times(1), [mockEngine applicationDidEnterBackground:[OCMArg any]]);
-  XCTAssertTrue(engine.isGpuDisabled);
-  BOOL gpuDisabled = NO;
-  [engine shell].GetIsGpuDisabledSyncSwitch()->Execute(
-      fml::SyncSwitch::Handlers().SetIfTrue([&] { gpuDisabled = YES; }).SetIfFalse([&] {
-        gpuDisabled = NO;
-      }));
-  XCTAssertTrue(gpuDisabled);
-}
-
-- (void)testLifeCycleNotificationDidEnterBackgroundForScene {
-  id mockBundle = OCMPartialMock([NSBundle mainBundle]);
-  OCMStub([mockBundle objectForInfoDictionaryKey:@"NSExtension"]).andReturn(@{
-    @"NSExtensionPointIdentifier" : @"com.apple.share-services"
-  });
-  FlutterDartProject* project = [[FlutterDartProject alloc] init];
-  FlutterEngine* engine = [[FlutterEngine alloc] initWithName:@"foobar" project:project];
-  [engine run];
-  NSNotification* sceneNotification =
-      [NSNotification notificationWithName:UISceneDidEnterBackgroundNotification
-                                    object:nil
-                                  userInfo:nil];
-  NSNotification* applicationNotification =
-      [NSNotification notificationWithName:UIApplicationDidEnterBackgroundNotification
-                                    object:nil
-                                  userInfo:nil];
-  id mockEngine = OCMPartialMock(engine);
-  [NSNotificationCenter.defaultCenter postNotification:sceneNotification];
-  [NSNotificationCenter.defaultCenter postNotification:applicationNotification];
+  [[NSNotificationCenter defaultCenter] postNotification:sceneNotification];
+  [[NSNotificationCenter defaultCenter] postNotification:applicationNotification];
+#if APPLICATION_EXTENSION_API_ONLY
   OCMVerify(times(1), [mockEngine sceneDidEnterBackground:[OCMArg any]]);
+#else
+  OCMVerify(times(1), [mockEngine applicationDidEnterBackground:[OCMArg any]]);
+#endif
   XCTAssertTrue(engine.isGpuDisabled);
-  BOOL gpuDisabled = NO;
+  bool switch_value = false;
   [engine shell].GetIsGpuDisabledSyncSwitch()->Execute(
-      fml::SyncSwitch::Handlers().SetIfTrue([&] { gpuDisabled = YES; }).SetIfFalse([&] {
-        gpuDisabled = NO;
+      fml::SyncSwitch::Handlers().SetIfTrue([&] { switch_value = true; }).SetIfFalse([&] {
+        switch_value = false;
       }));
-  XCTAssertTrue(gpuDisabled);
-  [mockBundle stopMocking];
+  XCTAssertTrue(switch_value);
 }
 
-- (void)testLifeCycleNotificationWillEnterForegroundForApplication {
+- (void)testLifeCycleNotificationWillEnterForeground {
   FlutterDartProject* project = [[FlutterDartProject alloc] init];
   FlutterEngine* engine = [[FlutterEngine alloc] initWithName:@"foobar" project:project];
   [engine run];
@@ -463,66 +409,20 @@ FLUTTER_ASSERT_ARC
                                     object:nil
                                   userInfo:nil];
   id mockEngine = OCMPartialMock(engine);
-  [NSNotificationCenter.defaultCenter postNotification:sceneNotification];
-  [NSNotificationCenter.defaultCenter postNotification:applicationNotification];
-  OCMVerify(times(1), [mockEngine applicationWillEnterForeground:[OCMArg any]]);
-  XCTAssertFalse(engine.isGpuDisabled);
-  BOOL gpuDisabled = YES;
-  [engine shell].GetIsGpuDisabledSyncSwitch()->Execute(
-      fml::SyncSwitch::Handlers().SetIfTrue([&] { gpuDisabled = YES; }).SetIfFalse([&] {
-        gpuDisabled = NO;
-      }));
-  XCTAssertFalse(gpuDisabled);
-}
-
-- (void)testLifeCycleNotificationWillEnterForegroundForScene {
-  id mockBundle = OCMPartialMock([NSBundle mainBundle]);
-  OCMStub([mockBundle objectForInfoDictionaryKey:@"NSExtension"]).andReturn(@{
-    @"NSExtensionPointIdentifier" : @"com.apple.share-services"
-  });
-  FlutterDartProject* project = [[FlutterDartProject alloc] init];
-  FlutterEngine* engine = [[FlutterEngine alloc] initWithName:@"foobar" project:project];
-  [engine run];
-  NSNotification* sceneNotification =
-      [NSNotification notificationWithName:UISceneWillEnterForegroundNotification
-                                    object:nil
-                                  userInfo:nil];
-  NSNotification* applicationNotification =
-      [NSNotification notificationWithName:UIApplicationWillEnterForegroundNotification
-                                    object:nil
-                                  userInfo:nil];
-  id mockEngine = OCMPartialMock(engine);
-  [NSNotificationCenter.defaultCenter postNotification:sceneNotification];
-  [NSNotificationCenter.defaultCenter postNotification:applicationNotification];
+  [[NSNotificationCenter defaultCenter] postNotification:sceneNotification];
+  [[NSNotificationCenter defaultCenter] postNotification:applicationNotification];
+#if APPLICATION_EXTENSION_API_ONLY
   OCMVerify(times(1), [mockEngine sceneWillEnterForeground:[OCMArg any]]);
+#else
+  OCMVerify(times(1), [mockEngine applicationWillEnterForeground:[OCMArg any]]);
+#endif
   XCTAssertFalse(engine.isGpuDisabled);
-  BOOL gpuDisabled = YES;
+  bool switch_value = true;
   [engine shell].GetIsGpuDisabledSyncSwitch()->Execute(
-      fml::SyncSwitch::Handlers().SetIfTrue([&] { gpuDisabled = YES; }).SetIfFalse([&] {
-        gpuDisabled = NO;
+      fml::SyncSwitch::Handlers().SetIfTrue([&] { switch_value = true; }).SetIfFalse([&] {
+        switch_value = false;
       }));
-  XCTAssertFalse(gpuDisabled);
-  [mockBundle stopMocking];
-}
-
-- (void)testLifeCycleNotificationSceneWillConnect {
-  FlutterDartProject* project = [[FlutterDartProject alloc] init];
-  FlutterEngine* engine = [[FlutterEngine alloc] initWithName:@"foobar" project:project];
-  [engine run];
-  id mockScene = OCMClassMock([UIWindowScene class]);
-  id mockLifecycleProvider = OCMProtocolMock(@protocol(FlutterSceneLifeCycleProvider));
-  id mockLifecycleDelegate = OCMClassMock([FlutterPluginSceneLifeCycleDelegate class]);
-  OCMStub([mockScene delegate]).andReturn(mockLifecycleProvider);
-  OCMStub([mockLifecycleProvider sceneLifeCycleDelegate]).andReturn(mockLifecycleDelegate);
-
-  NSNotification* sceneNotification =
-      [NSNotification notificationWithName:UISceneWillConnectNotification
-                                    object:mockScene
-                                  userInfo:nil];
-
-  [NSNotificationCenter.defaultCenter postNotification:sceneNotification];
-  OCMVerify(times(1), [mockLifecycleDelegate engine:engine
-                          receivedConnectNotificationFor:mockScene]);
+  XCTAssertFalse(switch_value);
 }
 
 - (void)testSpawnsShareGpuContext {
@@ -562,7 +462,7 @@ FLUTTER_ASSERT_ARC
 - (void)testCanUnMergePlatformAndUIThread {
 #if defined(TARGET_IPHONE_SIMULATOR) && TARGET_IPHONE_SIMULATOR
   auto settings = FLTDefaultSettingsForBundle();
-  settings.merged_platform_ui_thread = flutter::Settings::MergedPlatformUIThread::kDisabled;
+  settings.merged_platform_ui_thread = false;
   FlutterDartProject* project = [[FlutterDartProject alloc] initWithSettings:settings];
   FlutterEngine* engine = [[FlutterEngine alloc] initWithName:@"foobar" project:project];
   [engine run];
@@ -572,191 +472,4 @@ FLUTTER_ASSERT_ARC
 #endif  // defined(TARGET_IPHONE_SIMULATOR) && TARGET_IPHONE_SIMULATOR
 }
 
-- (void)testAddSceneDelegateToRegistrar {
-  FlutterDartProject* project = [[FlutterDartProject alloc] init];
-  FlutterEngine* engine = [[FlutterEngine alloc] initWithName:@"engine" project:project];
-  id mockEngine = OCMPartialMock(engine);
-  NSObject<FlutterPluginRegistrar>* registrar = [mockEngine registrarForPlugin:@"plugin"];
-  id mockPlugin = OCMProtocolMock(@protocol(TestFlutterPluginWithSceneEvents));
-  [registrar addSceneDelegate:mockPlugin];
-
-  OCMVerify(times(1), [mockEngine addSceneLifeCycleDelegate:[OCMArg any]]);
-}
-
-- (void)testNotifyAppDelegateOfEngineInitialization {
-  FlutterDartProject* project = [[FlutterDartProject alloc] init];
-  FlutterEngine* engine = [[FlutterEngine alloc] initWithName:@"engine" project:project];
-
-  id mockApplication = OCMClassMock([UIApplication class]);
-  OCMStub([mockApplication sharedApplication]).andReturn(mockApplication);
-  id mockAppDelegate = OCMProtocolMock(@protocol(FlutterImplicitEngineDelegate));
-  OCMStub([mockApplication delegate]).andReturn(mockAppDelegate);
-
-  [engine performImplicitEngineCallback];
-  OCMVerify(times(1), [mockAppDelegate didInitializeImplicitFlutterEngine:[OCMArg any]]);
-}
-
-- (void)testRegistrarForPlugin {
-  FlutterDartProject* project = [[FlutterDartProject alloc] init];
-  FlutterEngine* engine = [[FlutterEngine alloc] initWithName:@"engine" project:project];
-  FlutterEngine* mockEngine = OCMPartialMock(engine);
-  id mockViewController = OCMClassMock([FlutterViewController class]);
-  id mockBinaryMessenger = OCMProtocolMock(@protocol(FlutterBinaryMessenger));
-  id mockTextureRegistry = OCMProtocolMock(@protocol(FlutterTextureRegistry));
-  id mockPlatformViewController = OCMClassMock([FlutterPlatformViewsController class]);
-  OCMStub([mockEngine viewController]).andReturn(mockViewController);
-  OCMStub([mockEngine binaryMessenger]).andReturn(mockBinaryMessenger);
-  OCMStub([mockEngine textureRegistry]).andReturn(mockTextureRegistry);
-  OCMStub([mockEngine platformViewsController]).andReturn(mockPlatformViewController);
-
-  NSString* pluginKey = @"plugin";
-  NSString* assetKey = @"asset";
-  NSString* factoryKey = @"platform_view_factory";
-
-  NSObject<FlutterPluginRegistrar>* registrar = [mockEngine registrarForPlugin:pluginKey];
-
-  XCTAssertTrue([registrar respondsToSelector:@selector(messenger)]);
-  XCTAssertTrue([registrar respondsToSelector:@selector(textures)]);
-  XCTAssertTrue([registrar respondsToSelector:@selector(registerViewFactory:withId:)]);
-  XCTAssertTrue([registrar
-      respondsToSelector:@selector(registerViewFactory:withId:gestureRecognizersBlockingPolicy:)]);
-  XCTAssertTrue([registrar respondsToSelector:@selector(viewController)]);
-  XCTAssertTrue([registrar respondsToSelector:@selector(publish:)]);
-  XCTAssertTrue([registrar respondsToSelector:@selector(addMethodCallDelegate:channel:)]);
-  XCTAssertTrue([registrar respondsToSelector:@selector(addApplicationDelegate:)]);
-  XCTAssertTrue([registrar respondsToSelector:@selector(lookupKeyForAsset:)]);
-  XCTAssertTrue([registrar respondsToSelector:@selector(lookupKeyForAsset:fromPackage:)]);
-
-  // Verify messenger, textures, and viewController forwards to FlutterEngine
-  XCTAssertEqual(registrar.messenger, mockBinaryMessenger);
-  XCTAssertEqual(registrar.textures, mockTextureRegistry);
-  XCTAssertEqual(registrar.viewController, mockViewController);
-
-  // Verify registerViewFactory:withId:, registerViewFactory:withId:gestureRecognizersBlockingPolicy
-  // forwards to FlutterEngine
-  id mockPlatformViewFactory = OCMProtocolMock(@protocol(FlutterPlatformViewFactory));
-  [registrar registerViewFactory:mockPlatformViewFactory withId:factoryKey];
-  [registrar registerViewFactory:mockPlatformViewFactory
-                                withId:factoryKey
-      gestureRecognizersBlockingPolicy:FlutterPlatformViewGestureRecognizersBlockingPolicyEager];
-  OCMVerify(times(2), [mockPlatformViewController registerViewFactory:mockPlatformViewFactory
-                                                               withId:factoryKey
-                                     gestureRecognizersBlockingPolicy:
-                                         FlutterPlatformViewGestureRecognizersBlockingPolicyEager]);
-
-  // Verify publish forwards to FlutterEngine
-  id plugin = OCMProtocolMock(@protocol(FlutterPlugin));
-  [registrar publish:plugin];
-  XCTAssertEqual(mockEngine.pluginPublications[pluginKey], plugin);
-
-  // Verify lookupKeyForAsset:, lookupKeyForAsset:fromPackage forward to engine
-  [registrar lookupKeyForAsset:assetKey];
-  OCMVerify(times(1), [mockEngine lookupKeyForAsset:assetKey]);
-  [registrar lookupKeyForAsset:assetKey fromPackage:pluginKey];
-  OCMVerify(times(1), [mockEngine lookupKeyForAsset:assetKey fromPackage:pluginKey]);
-}
-
-- (void)testRegistrarForApplication {
-  FlutterDartProject* project = [[FlutterDartProject alloc] init];
-  FlutterEngine* engine = [[FlutterEngine alloc] initWithName:@"engine" project:project];
-  FlutterEngine* mockEngine = OCMPartialMock(engine);
-  id mockViewController = OCMClassMock([FlutterViewController class]);
-  id mockBinaryMessenger = OCMProtocolMock(@protocol(FlutterBinaryMessenger));
-  id mockTextureRegistry = OCMProtocolMock(@protocol(FlutterTextureRegistry));
-  id mockPlatformViewController = OCMClassMock([FlutterPlatformViewsController class]);
-  OCMStub([mockEngine viewController]).andReturn(mockViewController);
-  OCMStub([mockEngine binaryMessenger]).andReturn(mockBinaryMessenger);
-  OCMStub([mockEngine textureRegistry]).andReturn(mockTextureRegistry);
-  OCMStub([mockEngine platformViewsController]).andReturn(mockPlatformViewController);
-
-  NSString* pluginKey = @"plugin";
-  NSString* factoryKey = @"platform_view_factory";
-
-  NSObject<FlutterApplicationRegistrar>* registrar = [mockEngine registrarForApplication:pluginKey];
-
-  XCTAssertTrue([registrar respondsToSelector:@selector(messenger)]);
-  XCTAssertTrue([registrar respondsToSelector:@selector(textures)]);
-  XCTAssertTrue([registrar respondsToSelector:@selector(registerViewFactory:withId:)]);
-  XCTAssertTrue([registrar
-      respondsToSelector:@selector(registerViewFactory:withId:gestureRecognizersBlockingPolicy:)]);
-  XCTAssertFalse([registrar respondsToSelector:@selector(viewController)]);
-  XCTAssertFalse([registrar respondsToSelector:@selector(publish:)]);
-  XCTAssertFalse([registrar respondsToSelector:@selector(addMethodCallDelegate:channel:)]);
-  XCTAssertFalse([registrar respondsToSelector:@selector(addApplicationDelegate:)]);
-  XCTAssertFalse([registrar respondsToSelector:@selector(lookupKeyForAsset:)]);
-  XCTAssertFalse([registrar respondsToSelector:@selector(lookupKeyForAsset:fromPackage:)]);
-
-  // Verify messenger and textures forwards to FlutterEngine
-  XCTAssertEqual(registrar.messenger, mockBinaryMessenger);
-  XCTAssertEqual(registrar.textures, mockTextureRegistry);
-
-  // Verify registerViewFactory:withId:, registerViewFactory:withId:gestureRecognizersBlockingPolicy
-  // forwards to FlutterEngine
-  id mockPlatformViewFactory = OCMProtocolMock(@protocol(FlutterPlatformViewFactory));
-  [registrar registerViewFactory:mockPlatformViewFactory withId:factoryKey];
-  [registrar registerViewFactory:mockPlatformViewFactory
-                                withId:factoryKey
-      gestureRecognizersBlockingPolicy:FlutterPlatformViewGestureRecognizersBlockingPolicyEager];
-  OCMVerify(times(2), [mockPlatformViewController registerViewFactory:mockPlatformViewFactory
-                                                               withId:factoryKey
-                                     gestureRecognizersBlockingPolicy:
-                                         FlutterPlatformViewGestureRecognizersBlockingPolicyEager]);
-}
-
-- (void)testSendDeepLinkToFrameworkTimesOut {
-  FlutterDartProject* project = [[FlutterDartProject alloc] init];
-  FlutterEngine* engine = [[FlutterEngine alloc] initWithName:@"engine" project:project];
-  id mockEngine = OCMPartialMock(engine);
-  id mockEngineFirstFrameCallback = [OCMArg invokeBlockWithArgs:@YES, nil];
-  OCMStub([mockEngine waitForFirstFrame:3.0 callback:mockEngineFirstFrameCallback]);
-
-  NSURL* url = [NSURL URLWithString:@"example.com"];
-
-  [mockEngine sendDeepLinkToFramework:url
-                    completionHandler:^(BOOL success) {
-                      XCTAssertFalse(success);
-                    }];
-}
-
-- (void)testSendDeepLinkToFrameworkUsingNavigationChannel {
-  NSString* urlString = @"example.com";
-  NSURL* url = [NSURL URLWithString:urlString];
-  FlutterDartProject* project = [[FlutterDartProject alloc] init];
-  FlutterEngine* engine = [[FlutterEngine alloc] initWithName:@"engine" project:project];
-  id mockEngine = OCMPartialMock(engine);
-  id mockEngineFirstFrameCallback = [OCMArg invokeBlockWithArgs:@NO, nil];
-  OCMStub([mockEngine waitForFirstFrame:3.0 callback:mockEngineFirstFrameCallback]);
-  id mockNavigationChannel = OCMClassMock([FlutterMethodChannel class]);
-  OCMStub([mockEngine navigationChannel]).andReturn(mockNavigationChannel);
-  id mockNavigationChannelCallback = [OCMArg invokeBlockWithArgs:@1, nil];
-  OCMStub([mockNavigationChannel invokeMethod:@"pushRouteInformation"
-                                    arguments:@{@"location" : urlString}
-                                       result:mockNavigationChannelCallback]);
-
-  [mockEngine sendDeepLinkToFramework:url
-                    completionHandler:^(BOOL success) {
-                      XCTAssertTrue(success);
-                    }];
-}
-
-- (void)testSendDeepLinkToFrameworkUsingNavigationChannelFails {
-  NSString* urlString = @"example.com";
-  NSURL* url = [NSURL URLWithString:urlString];
-  FlutterDartProject* project = [[FlutterDartProject alloc] init];
-  FlutterEngine* engine = [[FlutterEngine alloc] initWithName:@"engine" project:project];
-  id mockEngine = OCMPartialMock(engine);
-  id mockEngineFirstFrameCallback = [OCMArg invokeBlockWithArgs:@NO, nil];
-  OCMStub([mockEngine waitForFirstFrame:3.0 callback:mockEngineFirstFrameCallback]);
-  id mockNavigationChannel = OCMClassMock([FlutterMethodChannel class]);
-  OCMStub([mockEngine navigationChannel]).andReturn(mockNavigationChannel);
-  id mockNavigationChannelCallback = [OCMArg invokeBlockWithArgs:@0, nil];
-  OCMStub([mockNavigationChannel invokeMethod:@"pushRouteInformation"
-                                    arguments:@{@"location" : urlString}
-                                       result:mockNavigationChannelCallback]);
-
-  [mockEngine sendDeepLinkToFramework:url
-                    completionHandler:^(BOOL success) {
-                      XCTAssertFalse(success);
-                    }];
-}
 @end

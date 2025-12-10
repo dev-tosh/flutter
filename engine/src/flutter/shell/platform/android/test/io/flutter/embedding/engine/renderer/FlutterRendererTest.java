@@ -9,7 +9,6 @@ import static android.content.ComponentCallbacks2.TRIM_MEMORY_COMPLETE;
 import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNotEquals;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
@@ -22,16 +21,17 @@ import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.when;
 import static org.robolectric.Shadows.shadowOf;
 
 import android.graphics.Canvas;
 import android.graphics.Rect;
 import android.graphics.SurfaceTexture;
 import android.media.Image;
-import android.media.ImageReader;
 import android.os.Looper;
 import android.view.Surface;
+import androidx.lifecycle.Lifecycle;
+import androidx.lifecycle.LifecycleRegistry;
+import androidx.lifecycle.ProcessLifecycleOwner;
 import androidx.test.ext.junit.rules.ActivityScenarioRule;
 import androidx.test.ext.junit.runners.AndroidJUnit4;
 import io.flutter.embedding.android.FlutterActivity;
@@ -44,7 +44,9 @@ import org.junit.Rule;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.mockito.ArgumentCaptor;
+import org.robolectric.annotation.Config;
 
+@Config(manifest = Config.NONE)
 @RunWith(AndroidJUnit4.class)
 public class FlutterRendererTest {
   @Rule(order = 1)
@@ -580,7 +582,6 @@ public class FlutterRendererTest {
 
     assertEquals(1, texture.numImageReaders());
     assertEquals(1, texture.numImages());
-    assertEquals(0, texture.pendingDequeuedImages());
 
     // Resize.
     texture.setSize(4, 4);
@@ -595,7 +596,6 @@ public class FlutterRendererTest {
 
     assertEquals(1, texture.numImageReaders());
     assertEquals(2, texture.numImages());
-    assertEquals(0, texture.pendingDequeuedImages());
 
     // Render a new frame with the current size.
     surface = texture.getSurface();
@@ -609,7 +609,6 @@ public class FlutterRendererTest {
 
     assertEquals(2, texture.numImageReaders());
     assertEquals(3, texture.numImages());
-    assertEquals(0, texture.pendingDequeuedImages());
 
     // Acquire first frame.
     Image produced = texture.acquireLatestImage();
@@ -618,8 +617,6 @@ public class FlutterRendererTest {
     assertEquals(1, produced.getHeight());
     assertEquals(2, texture.numImageReaders());
     assertEquals(2, texture.numImages());
-    assertEquals(1, texture.pendingDequeuedImages());
-
     // Acquire second frame. This won't result in the first reader being closed because it has
     // an active image from it.
     produced = texture.acquireLatestImage();
@@ -628,8 +625,6 @@ public class FlutterRendererTest {
     assertEquals(1, produced.getHeight());
     assertEquals(2, texture.numImageReaders());
     assertEquals(1, texture.numImages());
-    assertEquals(2, texture.pendingDequeuedImages());
-
     // Acquire third frame. We will now close the first reader.
     produced = texture.acquireLatestImage();
     assertNotNull(produced);
@@ -637,64 +632,11 @@ public class FlutterRendererTest {
     assertEquals(4, produced.getHeight());
     assertEquals(1, texture.numImageReaders());
     assertEquals(0, texture.numImages());
-    assertEquals(3, texture.pendingDequeuedImages());
 
     // Returns null image when no more images are queued.
     assertNull(texture.acquireLatestImage());
     assertEquals(1, texture.numImageReaders());
     assertEquals(0, texture.numImages());
-    assertEquals(3, texture.pendingDequeuedImages());
-  }
-
-  @Test
-  public void ImageReaderSurfaceProducerDequeueManyImages() {
-    // Demonstrates maximum dequeued image count.
-    FlutterRenderer flutterRenderer = engineRule.getFlutterEngine().getRenderer();
-    TextureRegistry.SurfaceProducer producer = flutterRenderer.createSurfaceProducer();
-    FlutterRenderer.ImageReaderSurfaceProducer texture =
-        (FlutterRenderer.ImageReaderSurfaceProducer) producer;
-    texture.disableFenceForTest();
-
-    // Give the texture an initial size.
-    texture.setSize(1, 1);
-
-    Surface surface = texture.getSurface();
-    Canvas canvas = surface.lockHardwareCanvas();
-    canvas.drawARGB(255, 255, 0, 0);
-    surface.unlockCanvasAndPost(canvas);
-    shadowOf(Looper.getMainLooper()).idle();
-
-    // Acquire first frame.
-    Image produced = texture.acquireLatestImage();
-    assertNotNull(produced);
-    assertEquals(1, texture.pendingDequeuedImages());
-
-    canvas = surface.lockHardwareCanvas();
-    canvas.drawARGB(255, 255, 0, 0);
-    surface.unlockCanvasAndPost(canvas);
-    shadowOf(Looper.getMainLooper()).idle();
-
-    // 2
-    produced = texture.acquireLatestImage();
-    assertEquals(2, texture.pendingDequeuedImages());
-
-    canvas = surface.lockHardwareCanvas();
-    canvas.drawARGB(255, 255, 0, 0);
-    surface.unlockCanvasAndPost(canvas);
-    shadowOf(Looper.getMainLooper()).idle();
-
-    // 3
-    produced = texture.acquireLatestImage();
-    assertEquals(3, texture.pendingDequeuedImages());
-
-    canvas = surface.lockHardwareCanvas();
-    canvas.drawARGB(255, 255, 0, 0);
-    surface.unlockCanvasAndPost(canvas);
-    shadowOf(Looper.getMainLooper()).idle();
-
-    // 4
-    produced = texture.acquireLatestImage();
-    assertEquals(3, texture.pendingDequeuedImages());
   }
 
   @Test
@@ -824,11 +766,9 @@ public class FlutterRendererTest {
   }
 
   @Test
-  @SuppressWarnings({"deprecation", "removal"})
-  public void ImageReaderSurfaceProducerIsCleanedUpOnTrimMemory() {
+  public void ImageReaderSurfaceProducerIsDestroyedOnTrimMemory() {
     FlutterRenderer flutterRenderer = engineRule.getFlutterEngine().getRenderer();
-    TextureRegistry.SurfaceProducer producer =
-        flutterRenderer.createSurfaceProducer(TextureRegistry.SurfaceLifecycle.resetInBackground);
+    TextureRegistry.SurfaceProducer producer = flutterRenderer.createSurfaceProducer();
 
     // Create and set a mock callback.
     TextureRegistry.SurfaceProducer.Callback callback =
@@ -839,71 +779,14 @@ public class FlutterRendererTest {
     flutterRenderer.onTrimMemory(TRIM_MEMORY_BACKGROUND);
 
     // Verify.
-    verify(callback).onSurfaceCleanup();
-  }
-
-  private static class TestSurfaceState {
-    Surface beingDestroyed;
+    verify(callback).onSurfaceDestroyed();
   }
 
   @Test
-  public void ImageReaderSurfaceProducerSignalsCleanupBeforeDestroying() throws Exception {
-    // Regression test for https://github.com/flutter/flutter/issues/160933.
-    FlutterRenderer flutterRenderer = engineRule.getFlutterEngine().getRenderer();
-    TextureRegistry.SurfaceProducer producer =
-        flutterRenderer.createSurfaceProducer(TextureRegistry.SurfaceLifecycle.resetInBackground);
-
-    // Ensure the callbacks were actually called.
-    // Note this needs to be an object in order to be accessed in the callback.
-    final TestSurfaceState state = new TestSurfaceState();
-    state.beingDestroyed = producer.getSurface();
-
-    // Create and set a callback that ensures the surface is not yet released.
-    CountDownLatch latch = new CountDownLatch(1);
-    producer.setCallback(
-        new TextureRegistry.SurfaceProducer.Callback() {
-          @Override
-          public void onSurfaceCleanup() {
-            state.beingDestroyed = producer.getSurface();
-            assertTrue("Not released yet", state.beingDestroyed.isValid());
-
-            state.beingDestroyed.release();
-            latch.countDown();
-          }
-        });
-
-    // Trim.
-    flutterRenderer.onTrimMemory(TRIM_MEMORY_BACKGROUND);
-    latch.await();
-
-    // Destroy.
-    assertFalse("Should be destroyed", state.beingDestroyed.isValid());
-  }
-
-  @Test
-  @SuppressWarnings({"deprecation", "removal"})
-  public void ImageReaderSurfaceProducerSignalsCleanupCallsDestroy() throws Exception {
-    CountDownLatch latch = new CountDownLatch(1);
-    TextureRegistry.SurfaceProducer.Callback callback =
-        new TextureRegistry.SurfaceProducer.Callback() {
-          @Override
-          public void onSurfaceDestroyed() {
-            latch.countDown();
-          }
-        };
-
-    // Tests that cleanup, if not provided, just calls destroyed.
-    callback.onSurfaceCleanup();
-    latch.await();
-  }
-
-  @Test
-  @SuppressWarnings({"deprecation", "removal"})
   public void ImageReaderSurfaceProducerUnsubscribesWhenReleased() {
     // Regression test for https://github.com/flutter/flutter/issues/156434.
     FlutterRenderer flutterRenderer = engineRule.getFlutterEngine().getRenderer();
-    TextureRegistry.SurfaceProducer producer =
-        flutterRenderer.createSurfaceProducer(TextureRegistry.SurfaceLifecycle.resetInBackground);
+    TextureRegistry.SurfaceProducer producer = flutterRenderer.createSurfaceProducer();
 
     // Create and set a mock callback.
     TextureRegistry.SurfaceProducer.Callback callback =
@@ -917,8 +800,37 @@ public class FlutterRendererTest {
     flutterRenderer.onTrimMemory(TRIM_MEMORY_BACKGROUND);
 
     // Verify was not called.
-    verify(callback, never()).onSurfaceCleanup();
     verify(callback, never()).onSurfaceDestroyed();
+  }
+
+  @Test
+  public void ImageReaderSurfaceProducerIsCreatedOnLifecycleResume() throws Exception {
+    FlutterRenderer flutterRenderer = engineRule.getFlutterEngine().getRenderer();
+    TextureRegistry.SurfaceProducer producer = flutterRenderer.createSurfaceProducer();
+
+    // Create a callback.
+    CountDownLatch latch = new CountDownLatch(1);
+    TextureRegistry.SurfaceProducer.Callback callback =
+        new TextureRegistry.SurfaceProducer.Callback() {
+          @Override
+          public void onSurfaceAvailable() {
+            latch.countDown();
+          }
+
+          @Override
+          public void onSurfaceDestroyed() {}
+        };
+    producer.setCallback(callback);
+
+    // Trim memory.
+    flutterRenderer.onTrimMemory(TRIM_MEMORY_BACKGROUND);
+
+    // Trigger a resume.
+    ((LifecycleRegistry) ProcessLifecycleOwner.get().getLifecycle())
+        .setCurrentState(Lifecycle.State.RESUMED);
+
+    // Verify.
+    latch.await();
   }
 
   @Test
@@ -958,93 +870,5 @@ public class FlutterRendererTest {
     // The dequeue should not call scheduleEngineFrame because the queue
     // is now empty.
     verify(flutterRenderer, times(3)).scheduleEngineFrame();
-  }
-
-  @Test
-  public void getSurface_doesNotReturnInvalidSurface() {
-    FlutterRenderer flutterRenderer = spy(engineRule.getFlutterEngine().getRenderer());
-    TextureRegistry.SurfaceProducer producer = flutterRenderer.createSurfaceProducer();
-    FlutterRenderer.ImageReaderSurfaceProducer spyImageReaderSurfaceProducer =
-        spy((FlutterRenderer.ImageReaderSurfaceProducer) producer);
-    ImageReader mockImageReader = mock(ImageReader.class);
-    ImageReader mockSecondImageReader = mock(ImageReader.class);
-    Surface firstMockSurface = mock(Surface.class);
-    Surface secondMockSurface = mock(Surface.class);
-
-    when(mockImageReader.getSurface()).thenReturn(firstMockSurface);
-    when(mockSecondImageReader.getSurface()).thenReturn(secondMockSurface);
-    when(firstMockSurface.isValid()).thenReturn(false);
-    when(spyImageReaderSurfaceProducer.createImageReader())
-        .thenReturn(mockImageReader)
-        .thenReturn(mockSecondImageReader);
-
-    Surface firstSurface = spyImageReaderSurfaceProducer.getSurface();
-    Surface secondSurface = spyImageReaderSurfaceProducer.getSurface();
-
-    assertNotEquals(firstSurface, secondSurface);
-    assertEquals(firstSurface, firstMockSurface);
-    assertEquals(secondSurface, secondMockSurface);
-  }
-
-  @Test
-  public void getSurface_consecutiveCallsReturnSameSurfaceIfStillValid() {
-    FlutterRenderer flutterRenderer = spy(engineRule.getFlutterEngine().getRenderer());
-    TextureRegistry.SurfaceProducer producer = flutterRenderer.createSurfaceProducer();
-    FlutterRenderer.ImageReaderSurfaceProducer spyImageReaderSurfaceProducer =
-        spy((FlutterRenderer.ImageReaderSurfaceProducer) producer);
-    ImageReader mockImageReader = mock(ImageReader.class);
-    Surface mockSurface = mock(Surface.class);
-
-    when(mockSurface.isValid()).thenReturn(true);
-    when(mockImageReader.getSurface()).thenReturn(mockSurface);
-    when(spyImageReaderSurfaceProducer.createImageReader()).thenReturn(mockImageReader);
-
-    Surface firstSurface = spyImageReaderSurfaceProducer.getSurface();
-    Surface secondSurface = spyImageReaderSurfaceProducer.getSurface();
-
-    assertEquals(firstSurface, secondSurface);
-    assertEquals(firstSurface, mockSurface);
-  }
-
-  @Test
-  public void getForcedNewSurface_returnsNewSurface() {
-    FlutterRenderer flutterRenderer = spy(engineRule.getFlutterEngine().getRenderer());
-    TextureRegistry.SurfaceProducer producer = flutterRenderer.createSurfaceProducer();
-
-    Surface firstSurface = producer.getSurface();
-    Surface secondSurface = producer.getForcedNewSurface();
-
-    assertNotEquals(firstSurface, secondSurface);
-  }
-
-  @Test
-  public void getSurface_doesNotReturnNewSurface() {
-    FlutterRenderer flutterRenderer = spy(engineRule.getFlutterEngine().getRenderer());
-    TextureRegistry.SurfaceProducer producer = flutterRenderer.createSurfaceProducer();
-
-    Surface firstSurface = producer.getSurface();
-    Surface secondSurface = producer.getSurface();
-
-    assertEquals(firstSurface, secondSurface);
-  }
-
-  @Test
-  public void restoreSurfaceProducers_restoresImageReaderSurfaceProducersAsIfApplicationResumed() {
-    FlutterRenderer flutterRenderer = engineRule.getFlutterEngine().getRenderer();
-    FlutterRenderer.ImageReaderSurfaceProducer imageReaderProducer1 =
-        (FlutterRenderer.ImageReaderSurfaceProducer) flutterRenderer.createSurfaceProducer();
-    FlutterRenderer.ImageReaderSurfaceProducer imageReaderProducer2 =
-        (FlutterRenderer.ImageReaderSurfaceProducer) flutterRenderer.createSurfaceProducer();
-    imageReaderProducer1.callback = mock(TextureRegistry.SurfaceProducer.Callback.class);
-    imageReaderProducer2.callback = mock(TextureRegistry.SurfaceProducer.Callback.class);
-    imageReaderProducer1.notifiedDestroy = true;
-    imageReaderProducer2.notifiedDestroy = true;
-
-    flutterRenderer.restoreSurfaceProducers();
-
-    verify(imageReaderProducer1.callback).onSurfaceAvailable();
-    verify(imageReaderProducer2.callback).onSurfaceAvailable();
-    assertFalse(imageReaderProducer1.notifiedDestroy);
-    assertFalse(imageReaderProducer2.notifiedDestroy);
   }
 }

@@ -66,11 +66,10 @@ void ShellTest::SendPlatformMessage(Shell* shell,
 }
 
 void ShellTest::SendSemanticsAction(Shell* shell,
-                                    int64_t view_id,
                                     int32_t node_id,
                                     SemanticsAction action,
                                     fml::MallocMapping args) {
-  shell->OnPlatformViewDispatchSemanticsAction(view_id, node_id, action,
+  shell->OnPlatformViewDispatchSemanticsAction(node_id, action,
                                                std::move(args));
 }
 
@@ -165,10 +164,6 @@ void ShellTest::SetViewportMetrics(Shell* shell, double width, double height) {
       1,                      // device pixel ratio
       width,                  // physical width
       height,                 // physical height
-      0,                      // min width constraint
-      0,                      // max width constraint
-      0,                      // min height constraint
-      0,                      // max height constraint
       0,                      // padding top
       0,                      // padding right
       0,                      // padding bottom
@@ -230,8 +225,7 @@ void ShellTest::PumpOneFrame(Shell* shell, FrameContent frame_content) {
   // tree pipeline nonempty. Without either of this, the layer tree below
   // won't be rasterized.
   fml::AutoResetWaitableEvent latch;
-  fml::TaskRunnerAffineWeakPtr<RuntimeDelegate> runtime_delegate =
-      shell->weak_engine_;
+  fml::WeakPtr<RuntimeDelegate> runtime_delegate = shell->weak_engine_;
   shell->GetTaskRunners().GetUITaskRunner()->PostTask(
       [&latch, engine = shell->weak_engine_, &frame_content,
        runtime_delegate]() {
@@ -346,14 +340,10 @@ Settings ShellTest::CreateSettingsForFixture() {
   Settings settings;
   settings.leak_vm = false;
   settings.task_observer_add = [](intptr_t key, const fml::closure& handler) {
-    fml::TaskQueueId queue_id = fml::MessageLoop::GetCurrentTaskQueueId();
-    fml::MessageLoopTaskQueues::GetInstance()->AddTaskObserver(queue_id, key,
-                                                               handler);
-    return queue_id;
+    fml::MessageLoop::GetCurrent().AddTaskObserver(key, handler);
   };
-  settings.task_observer_remove = [](fml::TaskQueueId queue_id, intptr_t key) {
-    fml::MessageLoopTaskQueues::GetInstance()->RemoveTaskObserver(queue_id,
-                                                                  key);
+  settings.task_observer_remove = [](intptr_t key) {
+    fml::MessageLoop::GetCurrent().RemoveTaskObserver(key);
   };
   settings.isolate_create_callback = [this]() {
     native_resolver_->SetNativeResolverForIsolate();
@@ -427,12 +417,6 @@ void ShellTest::DestroyShell(std::unique_ptr<Shell> shell,
 
 void ShellTest::TurnOffGPU(Shell* shell, bool value) {
   shell->is_gpu_disabled_sync_switch_->SetSwitch(value);
-}
-
-bool ShellTest::ShouldDiscardLayerTree(Shell* shell,
-                                       int64_t view_id,
-                                       const flutter::LayerTree& tree) {
-  return shell->ShouldDiscardLayerTree(view_id, tree);
 }
 
 }  // namespace testing

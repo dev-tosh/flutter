@@ -7,22 +7,19 @@
 
 #include "flutter/display_list/display_list.h"
 #include "flutter/display_list/dl_blend_mode.h"
+#include "flutter/display_list/dl_canvas.h"
 #include "flutter/display_list/dl_paint.h"
 #include "flutter/display_list/dl_sampling_options.h"
-#include "flutter/display_list/dl_types.h"
 #include "flutter/display_list/dl_vertices.h"
 #include "flutter/display_list/effects/dl_color_filter.h"
 #include "flutter/display_list/effects/dl_color_source.h"
 #include "flutter/display_list/effects/dl_image_filter.h"
 #include "flutter/display_list/effects/dl_mask_filter.h"
-#include "flutter/display_list/geometry/dl_path.h"
 #include "flutter/display_list/image/dl_image.h"
-#include "flutter/third_party/skia/include/core/SkTextBlob.h"
 
 namespace flutter {
 
 class DisplayList;
-class DlText;
 
 //------------------------------------------------------------------------------
 /// @brief      Internal API for rendering recorded display lists to backends.
@@ -88,6 +85,11 @@ class DlText;
 /// @see        impeller::DlDispatcher
 /// @see        DlOpSpy
 class DlOpReceiver {
+ protected:
+  using ClipOp = DlCanvas::ClipOp;
+  using PointMode = DlCanvas::PointMode;
+  using SrcRectConstraint = DlCanvas::SrcRectConstraint;
+
  public:
   // MaxDrawPointsCount * sizeof(DlPoint) must be less than 1 << 32
   static constexpr int kMaxDrawPointsCount = ((1 << 29) - 1);
@@ -289,15 +291,12 @@ class DlOpReceiver {
   // Clears the transformation stack.
   virtual void transformReset() = 0;
 
-  virtual void clipRect(const DlRect& rect, DlClipOp clip_op, bool is_aa) = 0;
-  virtual void clipOval(const DlRect& bounds, DlClipOp clip_op, bool is_aa) = 0;
+  virtual void clipRect(const DlRect& rect, ClipOp clip_op, bool is_aa) = 0;
+  virtual void clipOval(const DlRect& bounds, ClipOp clip_op, bool is_aa) = 0;
   virtual void clipRoundRect(const DlRoundRect& rrect,
-                             DlClipOp clip_op,
+                             ClipOp clip_op,
                              bool is_aa) = 0;
-  virtual void clipRoundSuperellipse(const DlRoundSuperellipse& rse,
-                                     DlClipOp clip_op,
-                                     bool is_aa) = 0;
-  virtual void clipPath(const DlPath& path, DlClipOp clip_op, bool is_aa) = 0;
+  virtual void clipPath(const DlPath& path, ClipOp clip_op, bool is_aa) = 0;
 
   // The following rendering methods all take their rendering attributes
   // from the last value set by the attribute methods above (regardless
@@ -319,13 +318,12 @@ class DlOpReceiver {
   virtual void drawRoundRect(const DlRoundRect& rrect) = 0;
   virtual void drawDiffRoundRect(const DlRoundRect& outer,
                                  const DlRoundRect& inner) = 0;
-  virtual void drawRoundSuperellipse(const DlRoundSuperellipse& rse) = 0;
   virtual void drawPath(const DlPath& path) = 0;
   virtual void drawArc(const DlRect& oval_bounds,
                        DlScalar start_degrees,
                        DlScalar sweep_degrees,
                        bool use_center) = 0;
-  virtual void drawPoints(DlPointMode mode,
+  virtual void drawPoints(PointMode mode,
                           uint32_t count,
                           const DlPoint points[]) = 0;
   virtual void drawVertices(const std::shared_ptr<DlVertices>& vertices,
@@ -340,14 +338,14 @@ class DlOpReceiver {
       const DlRect& dst,
       DlImageSampling sampling,
       bool render_with_attributes,
-      DlSrcRectConstraint constraint = DlSrcRectConstraint::kFast) = 0;
+      SrcRectConstraint constraint = SrcRectConstraint::kFast) = 0;
   virtual void drawImageNine(const sk_sp<DlImage> image,
                              const DlIRect& center,
                              const DlRect& dst,
                              DlFilterMode filter,
                              bool render_with_attributes) = 0;
   virtual void drawAtlas(const sk_sp<DlImage> atlas,
-                         const DlRSTransform xform[],
+                         const SkRSXform xform[],
                          const DlRect tex[],
                          const DlColor colors[],
                          int count,
@@ -357,9 +355,13 @@ class DlOpReceiver {
                          bool render_with_attributes) = 0;
   virtual void drawDisplayList(const sk_sp<DisplayList> display_list,
                                DlScalar opacity = SK_Scalar1) = 0;
-  virtual void drawText(const std::shared_ptr<DlText>& text,
-                        DlScalar x,
-                        DlScalar y) = 0;
+  virtual void drawTextBlob(const sk_sp<SkTextBlob> blob,
+                            DlScalar x,
+                            DlScalar y) = 0;
+  virtual void drawTextFrame(
+      const std::shared_ptr<impeller::TextFrame>& text_frame,
+      DlScalar x,
+      DlScalar y) = 0;
   virtual void drawShadow(const DlPath& path,
                           const DlColor color,
                           const DlScalar elevation,

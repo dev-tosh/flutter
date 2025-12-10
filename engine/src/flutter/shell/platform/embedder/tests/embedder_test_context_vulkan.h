@@ -26,7 +26,7 @@ class EmbedderTestContextVulkan : public EmbedderTestContext {
   // |EmbedderTestContext|
   size_t GetSurfacePresentCount() const override;
 
-  VkImage GetNextImage(const DlISize& size);
+  VkImage GetNextImage(const SkISize& size);
 
   bool PresentImage(VkImage image);
 
@@ -39,7 +39,7 @@ class EmbedderTestContextVulkan : public EmbedderTestContext {
 
  private:
   // |EmbedderTestContext|
-  void SetSurface(DlISize surface_size) override;
+  void SetSurface(SkISize surface_size) override;
 
   // |EmbedderTestContext|
   void SetupCompositor() override;
@@ -50,7 +50,7 @@ class EmbedderTestContextVulkan : public EmbedderTestContext {
 
   std::unique_ptr<TestVulkanSurface> surface_;
 
-  DlISize surface_size_;
+  SkISize surface_size_ = SkISize::MakeEmpty();
   size_t present_count_ = 0;
 
   FML_DISALLOW_COPY_AND_ASSIGN(EmbedderTestContextVulkan);

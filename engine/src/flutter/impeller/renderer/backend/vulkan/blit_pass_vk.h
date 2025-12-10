@@ -5,10 +5,8 @@
 #ifndef FLUTTER_IMPELLER_RENDERER_BACKEND_VULKAN_BLIT_PASS_VK_H_
 #define FLUTTER_IMPELLER_RENDERER_BACKEND_VULKAN_BLIT_PASS_VK_H_
 
-#include "flutter/fml/macros.h"
-#include "impeller/base/config.h"
+#include "flutter/impeller/base/config.h"
 #include "impeller/geometry/rect.h"
-#include "impeller/renderer/backend/vulkan/workarounds_vk.h"
 #include "impeller/renderer/blit_pass.h"
 
 namespace impeller {
@@ -23,14 +21,10 @@ class BlitPassVK final : public BlitPass {
 
  private:
   friend class CommandBufferVK;
-  FML_FRIEND_TEST(BlitPassVKTest,
-                  MipmapGenerationTransitionsAllLevelsCorrectly);
 
   std::shared_ptr<CommandBufferVK> command_buffer_;
-  const WorkaroundsVK workarounds_;
 
-  explicit BlitPassVK(std::shared_ptr<CommandBufferVK> command_buffer,
-                      const WorkaroundsVK& workarounds);
+  explicit BlitPassVK(std::shared_ptr<CommandBufferVK> command_buffer);
 
   // |BlitPass|
   bool IsValid() const override;
@@ -39,7 +33,8 @@ class BlitPassVK final : public BlitPass {
   void OnSetLabel(std::string_view label) override;
 
   // |BlitPass|
-  bool EncodeCommands() const override;
+  bool EncodeCommands(
+      const std::shared_ptr<Allocator>& transients_allocator) const override;
 
   // |BlitPass|
   bool ResizeTexture(const std::shared_ptr<Texture>& source,

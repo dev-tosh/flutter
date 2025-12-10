@@ -13,7 +13,7 @@
 #include "impeller/entity/entity_pass_target.h"
 #include "impeller/renderer/command_buffer.h"
 #include "impeller/renderer/render_pass.h"
-#include "impeller/renderer/texture_util.h"
+#include "impeller/renderer/texture_mipmap.h"
 
 namespace impeller {
 
@@ -40,7 +40,7 @@ std::shared_ptr<Texture> InlinePassContext::GetTexture() {
   return pass_target_.GetRenderTarget().GetRenderTargetTexture();
 }
 
-bool InlinePassContext::EndPass(bool is_onscreen) {
+bool InlinePassContext::EndPass() {
   if (!IsActive()) {
     return true;
   }
@@ -63,12 +63,8 @@ bool InlinePassContext::EndPass(bool is_onscreen) {
   }
 
   pass_ = nullptr;
-  if (is_onscreen) {
-    return renderer_.GetContext()->SubmitOnscreen(std::move(command_buffer_));
-  } else {
-    return renderer_.GetContext()->EnqueueCommandBuffer(
-        std::move(command_buffer_));
-  }
+  return renderer_.GetContext()->EnqueueCommandBuffer(
+      std::move(command_buffer_));
 }
 
 EntityPassTarget& InlinePassContext::GetPassTarget() const {
@@ -108,7 +104,10 @@ const std::shared_ptr<RenderPass>& InlinePassContext::GetRenderPass() {
   bool is_msaa = color0.resolve_texture != nullptr;
 
   if (pass_count_ > 0) {
-    color0.load_action = is_msaa ? LoadAction::kClear : LoadAction::kLoad;
+    // When MSAA is being used, we end up overriding the entire backdrop by
+    // drawing the previous pass texture, and so we don't have to clear it and
+    // can use kDontCare.
+    color0.load_action = is_msaa ? LoadAction::kDontCare : LoadAction::kLoad;
   } else {
     color0.load_action = LoadAction::kClear;
   }

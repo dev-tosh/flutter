@@ -78,8 +78,8 @@ CGRect ConvertRectToGlobal(SemanticsObject* reference, CGRect local_rect) {
     point = ApplyTransform(point, globalTransform);
   }
   SkRect rect;
-  NSCAssert(rect.setBoundsCheck({quad, 4}), @"Transformed points can't form a rect");
-  rect.setBounds({quad, 4});
+  NSCAssert(rect.setBoundsCheck(quad, 4), @"Transformed points can't form a rect");
+  rect.setBounds(quad, 4);
 
   // `rect` is in the physical pixel coordinate system. iOS expects the accessibility frame in
   // the logical pixel coordinate system. Therefore, we divide by the `scale` (pixel ratio) to
@@ -123,8 +123,8 @@ CGRect ConvertRectToGlobal(SemanticsObject* reference, CGRect local_rect) {
 }
 
 - (NSString*)accessibilityValue {
-  self.nativeSwitch.on = self.node.flags.isToggled == flutter::SemanticsTristate::kTrue ||
-                         self.node.flags.isChecked == flutter::SemanticsCheckState::kTrue;
+  self.nativeSwitch.on = self.node.HasFlag(flutter::SemanticsFlags::kIsToggled) ||
+                         self.node.HasFlag(flutter::SemanticsFlags::kIsChecked);
 
   if (![self isAccessibilityBridgeAlive]) {
     return nil;
@@ -134,7 +134,7 @@ CGRect ConvertRectToGlobal(SemanticsObject* reference, CGRect local_rect) {
 }
 
 - (UIAccessibilityTraits)accessibilityTraits {
-  self.nativeSwitch.enabled = self.node.flags.isEnabled == flutter::SemanticsTristate::kTrue;
+  self.nativeSwitch.enabled = self.node.HasFlag(flutter::SemanticsFlags::kIsEnabled);
 
   return self.nativeSwitch.accessibilityTraits;
 }
@@ -358,12 +358,12 @@ CGRect ConvertRectToGlobal(SemanticsObject* reference, CGRect local_rect) {
  */
 - (BOOL)nodeShouldTriggerAnnouncement:(const flutter::SemanticsNode*)node {
   // The node dropped the live region flag, if it ever had one.
-  if (!node || !node->flags.isLiveRegion) {
+  if (!node || !node->HasFlag(flutter::SemanticsFlags::kIsLiveRegion)) {
     return NO;
   }
 
   // The node has gained a new live region flag, always announce.
-  if (!self.node.flags.isLiveRegion) {
+  if (!self.node.HasFlag(flutter::SemanticsFlags::kIsLiveRegion)) {
     return YES;
   }
 
@@ -381,7 +381,7 @@ CGRect ConvertRectToGlobal(SemanticsObject* reference, CGRect local_rect) {
 - (NSString*)routeName {
   // Returns the first non-null and non-empty semantic label of a child
   // with an NamesRoute flag. Otherwise returns nil.
-  if (self.node.flags.namesRoute) {
+  if (self.node.HasFlag(flutter::SemanticsFlags::kNamesRoute)) {
     NSString* newName = self.accessibilityLabel;
     if (newName != nil && [newName length] > 0) {
       return newName;
@@ -420,10 +420,12 @@ CGRect ConvertRectToGlobal(SemanticsObject* reference, CGRect local_rect) {
         break;
       }
       case flutter::StringAttributeType::kSpellOut: {
-        NSDictionary* attributeDict = @{
-          UIAccessibilitySpeechAttributeSpellOut : @YES,
-        };
-        [attributedString setAttributes:attributeDict range:range];
+        if (@available(iOS 13.0, *)) {
+          NSDictionary* attributeDict = @{
+            UIAccessibilitySpeechAttributeSpellOut : @YES,
+          };
+          [attributedString setAttributes:attributeDict range:range];
+        }
         break;
       }
     }
@@ -447,22 +449,11 @@ CGRect ConvertRectToGlobal(SemanticsObject* reference, CGRect local_rect) {
   // entire element tree looking for such a hit.
 
   //  We enforce in the framework that no other useful semantics are merged with these nodes.
-  if (self.node.flags.scopesRoute) {
+  if (self.node.HasFlag(flutter::SemanticsFlags::kScopesRoute)) {
     return false;
   }
 
   return [self isFocusable];
-}
-
-- (NSString*)accessibilityLanguage {
-  if (![self isAccessibilityBridgeAlive]) {
-    return nil;
-  }
-
-  if (!self.node.locale.empty()) {
-    return @(self.node.locale.data());
-  }
-  return self.bridge->GetDefaultLocale();
 }
 
 - (bool)isFocusable {
@@ -474,14 +465,14 @@ CGRect ConvertRectToGlobal(SemanticsObject* reference, CGRect local_rect) {
   // hidden but still is a valid target for a11y focus in the tree, e.g. a list
   // item that is currently off screen but the a11y navigation needs to know
   // about.
-  return (self.node.flags.hasImplicitScrolling && self.node.flags.isHidden)
-
-         || !self.node.label.empty() || !self.node.value.empty() || !self.node.hint.empty() ||
+  return ((self.node.flags & flutter::kScrollableSemanticsFlags) != 0 &&
+          (self.node.flags & static_cast<int32_t>(flutter::SemanticsFlags::kIsHidden)) != 0) ||
+         !self.node.label.empty() || !self.node.value.empty() || !self.node.hint.empty() ||
          (self.node.actions & ~flutter::kScrollableSemanticsActions) != 0;
 }
 
 - (void)collectRoutes:(NSMutableArray<SemanticsObject*>*)edges {
-  if (self.node.flags.scopesRoute) {
+  if (self.node.HasFlag(flutter::SemanticsFlags::kScopesRoute)) {
     [edges addObject:self];
   }
   if ([self hasChildren]) {
@@ -620,18 +611,19 @@ CGRect ConvertRectToGlobal(SemanticsObject* reference, CGRect local_rect) {
   }
 
   // iOS does not announce values of native radio buttons.
-  if (self.node.flags.isInMutuallyExclusiveGroup) {
+  if (self.node.HasFlag(flutter::SemanticsFlags::kIsInMutuallyExclusiveGroup)) {
     return nil;
   }
 
   // FlutterSwitchSemanticsObject should supercede these conditionals.
-
-  if (self.node.flags.isToggled == flutter::SemanticsTristate::kTrue ||
-      self.node.flags.isChecked == flutter::SemanticsCheckState::kTrue) {
-    return @"1";
-  } else if (self.node.flags.isToggled == flutter::SemanticsTristate::kFalse ||
-             self.node.flags.isChecked == flutter::SemanticsCheckState::kFalse) {
-    return @"0";
+  if (self.node.HasFlag(flutter::SemanticsFlags::kHasToggledState) ||
+      self.node.HasFlag(flutter::SemanticsFlags::kHasCheckedState)) {
+    if (self.node.HasFlag(flutter::SemanticsFlags::kIsToggled) ||
+        self.node.HasFlag(flutter::SemanticsFlags::kIsChecked)) {
+      return @"1";
+    } else {
+      return @"0";
+    }
   }
 
   return nil;
@@ -650,7 +642,7 @@ CGRect ConvertRectToGlobal(SemanticsObject* reference, CGRect local_rect) {
     return CGRectMake(0, 0, 0, 0);
   }
 
-  if (self.node.flags.isHidden) {
+  if (self.node.HasFlag(flutter::SemanticsFlags::kIsHidden)) {
     return [super accessibilityFrame];
   }
   return [self globalRect];
@@ -709,7 +701,7 @@ CGRect ConvertRectToGlobal(SemanticsObject* reference, CGRect local_rect) {
     //
     // This is needed because it causes slider to select to middle if it
     // does not have a semantics tap.
-    if (self.node.flags.isSlider) {
+    if (self.node.HasFlag(flutter::SemanticsFlags::kIsSlider)) {
       return YES;
     }
     return NO;
@@ -768,7 +760,8 @@ CGRect ConvertRectToGlobal(SemanticsObject* reference, CGRect local_rect) {
     return;
   }
   self.bridge->AccessibilityObjectDidBecomeFocused(self.uid);
-  if (self.node.flags.isHidden || self.node.flags.isHeader) {
+  if (self.node.HasFlag(flutter::SemanticsFlags::kIsHidden) ||
+      self.node.HasFlag(flutter::SemanticsFlags::kIsHeader)) {
     [self showOnScreen];
   }
   if (self.node.HasAction(flutter::SemanticsAction::kDidGainAccessibilityFocus)) {
@@ -786,23 +779,6 @@ CGRect ConvertRectToGlobal(SemanticsObject* reference, CGRect local_rect) {
     self.bridge->DispatchSemanticsAction(self.uid,
                                          flutter::SemanticsAction::kDidLoseAccessibilityFocus);
   }
-}
-
-- (BOOL)accessibilityRespondsToUserInteraction {
-  if (self.node.flags.isAccessibilityFocusBlocked) {
-    return false;
-  }
-
-  // Return true only if the node contains actions other than system actions.
-  if ((self.node.actions & ~flutter::kSystemActions) != 0) {
-    return true;
-  }
-
-  if (!self.node.customAccessibilityActions.empty()) {
-    return true;
-  }
-
-  return false;
 }
 
 @end
@@ -826,33 +802,35 @@ CGRect ConvertRectToGlobal(SemanticsObject* reference, CGRect local_rect) {
     traits |= UIAccessibilityTraitAdjustable;
   }
   // This should also capture radio buttons.
-  if (self.node.flags.isToggled != flutter::SemanticsTristate::kNone ||
-      self.node.flags.isChecked != flutter::SemanticsCheckState::kNone) {
+  if (self.node.HasFlag(flutter::SemanticsFlags::kHasToggledState) ||
+      self.node.HasFlag(flutter::SemanticsFlags::kHasCheckedState)) {
     traits |= UIAccessibilityTraitButton;
   }
-  if (self.node.flags.isSelected == flutter::SemanticsTristate::kTrue) {
+  if (self.node.HasFlag(flutter::SemanticsFlags::kIsSelected)) {
     traits |= UIAccessibilityTraitSelected;
   }
-  if (self.node.flags.isButton) {
+  if (self.node.HasFlag(flutter::SemanticsFlags::kIsButton)) {
     traits |= UIAccessibilityTraitButton;
   }
-  if (self.node.flags.isEnabled == flutter::SemanticsTristate::kFalse) {
+  if (self.node.HasFlag(flutter::SemanticsFlags::kHasEnabledState) &&
+      !self.node.HasFlag(flutter::SemanticsFlags::kIsEnabled)) {
     traits |= UIAccessibilityTraitNotEnabled;
   }
-  if (self.node.flags.isHeader) {
+  if (self.node.HasFlag(flutter::SemanticsFlags::kIsHeader)) {
     traits |= UIAccessibilityTraitHeader;
   }
-  if (self.node.flags.isImage) {
+  if (self.node.HasFlag(flutter::SemanticsFlags::kIsImage)) {
     traits |= UIAccessibilityTraitImage;
   }
-  if (self.node.flags.isLiveRegion) {
+  if (self.node.HasFlag(flutter::SemanticsFlags::kIsLiveRegion)) {
     traits |= UIAccessibilityTraitUpdatesFrequently;
   }
-  if (self.node.flags.isLink) {
+  if (self.node.HasFlag(flutter::SemanticsFlags::kIsLink)) {
     traits |= UIAccessibilityTraitLink;
   }
   if (traits == UIAccessibilityTraitNone && ![self hasChildren] &&
-      self.accessibilityLabel.length != 0 && !self.node.flags.isTextField) {
+      self.accessibilityLabel.length != 0 &&
+      !self.node.HasFlag(flutter::SemanticsFlags::kIsTextField)) {
     traits = UIAccessibilityTraitStaticText;
   }
   return traits;
@@ -950,12 +928,7 @@ CGRect ConvertRectToGlobal(SemanticsObject* reference, CGRect local_rect) {
 }
 
 - (CGRect)accessibilityFrame {
-  // For OverlayPortals, the child element is sometimes outside the bounds of the parent
-  // Even if it's marked accessible, VoiceControl labels will not appear if it's too
-  // spatially distant. Set the frame to be the max screen size so all children are guaraenteed
-  // to be contained.
-
-  return UIScreen.mainScreen.bounds;
+  return self.semanticsObject.accessibilityFrame;
 }
 
 - (id)accessibilityContainer {

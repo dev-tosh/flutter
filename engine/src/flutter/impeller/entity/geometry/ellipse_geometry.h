@@ -6,18 +6,13 @@
 #define FLUTTER_IMPELLER_ENTITY_GEOMETRY_ELLIPSE_GEOMETRY_H_
 
 #include "impeller/entity/geometry/geometry.h"
-#include "impeller/entity/geometry/stroke_path_geometry.h"
 
 namespace impeller {
 
-/// @brief A Geometry class that can directly generate vertices (with or
-///        without texture coordinates) for filled ellipses.
-///
-/// Generating vertices for a stroked ellipse would require a lot more work
-/// since the line width must be applied perpendicular to the distorted
-/// ellipse shape.
-///
-/// @see |StrokeEllipseGeometry|
+// Geometry class that can generate vertices (with or without texture
+// coordinates) for filled ellipses. Generating vertices for a stroked
+// ellipse would require a lot more work since the line width must be
+// applied perpendicular to the distorted ellipse shape.
 class EllipseGeometry final : public Geometry {
  public:
   explicit EllipseGeometry(Rect bounds);
@@ -44,23 +39,6 @@ class EllipseGeometry final : public Geometry {
   EllipseGeometry(const EllipseGeometry&) = delete;
 
   EllipseGeometry& operator=(const EllipseGeometry&) = delete;
-};
-
-/// @brief A Geometry class that produces fillable vertices representing
-///        the stroked outline of an ellipse with the given bounds.
-///
-/// This class uses the |StrokePathSourceGeometry| base class to do the work
-/// by providing an |EllipsePathSoure| iterator.
-class StrokeEllipseGeometry final : public StrokePathSourceGeometry {
- public:
-  StrokeEllipseGeometry(const Rect& rect, const StrokeParameters& parameters);
-
- protected:
-  // |StrokePathSourceGeometry|
-  const PathSource& GetSource() const override;
-
- private:
-  const EllipsePathSource ellipse_source_;
 };
 
 }  // namespace impeller

@@ -46,8 +46,8 @@ std::shared_ptr<DeviceBuffer> Allocator::CreateBuffer(
   return OnCreateBuffer(desc);
 }
 
-std::shared_ptr<Texture> Allocator::CreateTexture(const TextureDescriptor& desc,
-                                                  bool threadsafe) {
+std::shared_ptr<Texture> Allocator::CreateTexture(
+    const TextureDescriptor& desc) {
   const auto max_size = GetMaxTextureSizeSupported();
   if (desc.size.width > max_size.width || desc.size.height > max_size.height) {
     VALIDATION_LOG << "Requested texture size " << desc.size
@@ -60,10 +60,10 @@ std::shared_ptr<Texture> Allocator::CreateTexture(const TextureDescriptor& desc,
                    << " exceeds maximum supported for size " << desc.size;
     TextureDescriptor corrected_desc = desc;
     corrected_desc.mip_count = desc.size.MipCount();
-    return OnCreateTexture(corrected_desc, threadsafe);
+    return OnCreateTexture(corrected_desc);
   }
 
-  return OnCreateTexture(desc, threadsafe);
+  return OnCreateTexture(desc);
 }
 
 uint16_t Allocator::MinimumBytesPerRow(PixelFormat format) const {

@@ -26,7 +26,9 @@ import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
+import org.robolectric.annotation.Config;
 
+@Config(manifest = Config.NONE)
 @RunWith(AndroidJUnit4.class)
 public class DartExecutorTest {
   @Mock FlutterLoader mockFlutterLoader;
@@ -49,7 +51,7 @@ public class DartExecutorTest {
     assertNotNull(dartExecutor.getBinaryMessenger());
 
     // Execute the behavior under test.
-    ByteBuffer fakeMessage = ByteBuffer.allocate(0);
+    ByteBuffer fakeMessage = mock(ByteBuffer.class);
     dartExecutor.getBinaryMessenger().send("fake_channel", fakeMessage);
 
     // Verify that DartExecutor sent our message to FlutterJNI.

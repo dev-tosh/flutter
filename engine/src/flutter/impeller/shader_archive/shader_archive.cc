@@ -5,7 +5,6 @@
 #include "impeller/shader_archive/shader_archive.h"
 
 #include <array>
-#include <sstream>
 #include <string>
 #include <utility>
 
@@ -26,55 +25,47 @@ constexpr ArchiveShaderType ToShaderType(fb::Stage stage) {
   FML_UNREACHABLE();
 }
 
-absl::StatusOr<ShaderArchive> ShaderArchive::Create(
-    std::shared_ptr<fml::Mapping> payload) {
-  if (!payload || payload->GetMapping() == nullptr) {
-    return absl::InvalidArgumentError("Shader mapping was absent.");
+ShaderArchive::ShaderArchive(std::shared_ptr<fml::Mapping> payload)
+    : payload_(std::move(payload)) {
+  if (!payload_ || payload_->GetMapping() == nullptr) {
+    VALIDATION_LOG << "Shader mapping was absent.";
+    return;
   }
 
-  if (!fb::ShaderArchiveBufferHasIdentifier(payload->GetMapping())) {
-    return absl::InvalidArgumentError("Invalid shader magic.");
+  if (!fb::ShaderArchiveBufferHasIdentifier(payload_->GetMapping())) {
+    VALIDATION_LOG << "Invalid shader magic.";
+    return;
   }
 
-  auto shader_archive = fb::GetShaderArchive(payload->GetMapping());
+  auto shader_archive = fb::GetShaderArchive(payload_->GetMapping());
   if (!shader_archive) {
-    return absl::InvalidArgumentError("Could not read shader archive.");
+    return;
   }
 
-  const auto version = shader_archive->format_version();
-  const auto expected =
-      static_cast<uint32_t>(fb::ShaderArchiveFormatVersion::kVersion);
-  if (version != expected) {
-    std::stringstream stream;
-    stream << "Unsupported shader archive format version. Expected: "
-           << expected << ", Got: " << version;
-    return absl::InvalidArgumentError(stream.str());
-  }
-
-  Shaders shaders;
   if (auto items = shader_archive->items()) {
     for (auto i = items->begin(), end = items->end(); i != end; i++) {
       ShaderKey key;
       key.name = i->name()->str();
       key.type = ToShaderType(i->stage());
-      shaders[key] = std::make_shared<fml::NonOwnedMapping>(
-          i->mapping()->Data(), i->mapping()->size(), [payload](auto, auto) {
+      shaders_[key] = std::make_shared<fml::NonOwnedMapping>(
+          i->mapping()->Data(), i->mapping()->size(),
+          [payload = payload_](auto, auto) {
             // The pointers are into the base payload. Instead of copying the
             // data, just hold onto the payload.
           });
     }
   }
 
-  return ShaderArchive(std::move(payload), std::move(shaders));
+  is_valid_ = true;
 }
-
-ShaderArchive::ShaderArchive(std::shared_ptr<fml::Mapping> payload,
-                             Shaders shaders)
-    : payload_(std::move(payload)), shaders_(std::move(shaders)) {}
 
 ShaderArchive::ShaderArchive(ShaderArchive&&) = default;
 
 ShaderArchive::~ShaderArchive() = default;
+
+bool ShaderArchive::IsValid() const {
+  return is_valid_;
+}
 
 size_t ShaderArchive::GetShaderCount() const {
   return shaders_.size();
@@ -95,7 +86,7 @@ size_t ShaderArchive::IterateAllShaders(
                              const std::string& name,
                              const std::shared_ptr<fml::Mapping>& mapping)>&
         callback) const {
-  if (!callback) {
+  if (!IsValid() || !callback) {
     return 0u;
   }
   size_t count = 0u;

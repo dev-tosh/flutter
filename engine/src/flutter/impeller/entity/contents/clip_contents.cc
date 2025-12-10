@@ -10,7 +10,6 @@
 #include "impeller/core/vertex_buffer.h"
 #include "impeller/entity/contents/clip_contents.h"
 #include "impeller/entity/contents/content_context.h"
-#include "impeller/entity/contents/pipelines.h"
 #include "impeller/entity/entity.h"
 #include "impeller/renderer/render_pass.h"
 #include "impeller/renderer/vertex_buffer_builder.h"
@@ -45,7 +44,7 @@ void ClipContents::SetClipOperation(Entity::ClipOperation clip_op) {
 ClipCoverage ClipContents::GetClipCoverage(
     const std::optional<Rect>& current_clip_coverage) const {
   if (!current_clip_coverage.has_value()) {
-    return ClipCoverage{.coverage = std::nullopt};
+    return {.coverage = std::nullopt};
   }
   switch (clip_op_) {
     case Entity::ClipOperation::kDifference:
@@ -57,7 +56,7 @@ ClipCoverage ClipContents::GetClipCoverage(
       };
     case Entity::ClipOperation::kIntersect:
       if (coverage_rect_.IsEmpty() || !current_clip_coverage.has_value()) {
-        return ClipCoverage{.coverage = std::nullopt};
+        return {.coverage = std::nullopt};
       }
       return {
           .is_difference_or_non_square = !is_axis_aligned_rect_,            //
@@ -80,7 +79,7 @@ bool ClipContents::Render(const ContentContext& renderer,
   info.depth = GetShaderClipDepth(clip_depth);
 
   auto options = OptionsFromPass(pass);
-  options.blend_mode = BlendMode::kDst;
+  options.blend_mode = BlendMode::kDestination;
 
   pass.SetStencilReference(0);
 
@@ -110,8 +109,7 @@ bool ClipContents::Render(const ContentContext& renderer,
   pass.SetPipeline(renderer.GetClipPipeline(options));
 
   info.mvp = clip_geometry_.transform;
-  VS::BindFrameInfo(pass,
-                    renderer.GetTransientsDataBuffer().EmplaceUniform(info));
+  VS::BindFrameInfo(pass, renderer.GetTransientsBuffer().EmplaceUniform(info));
 
   if (!pass.Draw().ok()) {
     return false;
@@ -137,13 +135,12 @@ bool ClipContents::Render(const ContentContext& renderer,
   }
   auto points = cover_area.GetPoints();
   pass.SetVertexBuffer(
-      CreateVertexBuffer(points, renderer.GetTransientsDataBuffer()));
+      CreateVertexBuffer(points, renderer.GetTransientsBuffer()));
 
   pass.SetPipeline(renderer.GetClipPipeline(options));
 
   info.mvp = pass.GetOrthographicTransform();
-  VS::BindFrameInfo(pass,
-                    renderer.GetTransientsDataBuffer().EmplaceUniform(info));
+  VS::BindFrameInfo(pass, renderer.GetTransientsBuffer().EmplaceUniform(info));
 
   return pass.Draw().ok();
 }
@@ -160,7 +157,7 @@ bool RenderClipRestore(const ContentContext& renderer,
 
   pass.SetCommandLabel("Restore Clip");
   auto options = OptionsFromPass(pass);
-  options.blend_mode = BlendMode::kDst;
+  options.blend_mode = BlendMode::kDestination;
   options.stencil_mode =
       ContentContextOptions::StencilMode::kOverdrawPreventionRestore;
   options.primitive_type = PrimitiveType::kTriangleStrip;
@@ -180,13 +177,12 @@ bool RenderClipRestore(const ContentContext& renderer,
       VS::PerVertexData{Point(ltrb[2], ltrb[3])},
   };
   pass.SetVertexBuffer(
-      CreateVertexBuffer(vertices, renderer.GetTransientsDataBuffer()));
+      CreateVertexBuffer(vertices, renderer.GetTransientsBuffer()));
 
   VS::FrameInfo info;
   info.depth = GetShaderClipDepth(clip_depth);
   info.mvp = pass.GetOrthographicTransform();
-  VS::BindFrameInfo(pass,
-                    renderer.GetTransientsDataBuffer().EmplaceUniform(info));
+  VS::BindFrameInfo(pass, renderer.GetTransientsBuffer().EmplaceUniform(info));
 
   return pass.Draw().ok();
 }

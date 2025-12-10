@@ -23,16 +23,14 @@ TEST(PlatformViewShell, UpdateSemanticsDoesFlutterViewUpdateSemantics) {
   node0.tooltip = "tooltip";
   update.insert(std::make_pair(0, node0));
 
-  std::vector<uint8_t> expected_buffer(
-      PlatformViewAndroidDelegate::kBytesPerNode);
+  std::vector<uint8_t> expected_buffer(192);
   std::vector<std::vector<uint8_t>> expected_string_attribute_args(0);
   size_t position = 0;
   int32_t* buffer_int32 = reinterpret_cast<int32_t*>(&expected_buffer[0]);
   float* buffer_float32 = reinterpret_cast<float*>(&expected_buffer[0]);
   std::vector<std::string> expected_strings;
   buffer_int32[position++] = node0.id;
-  std::memcpy(&buffer_int32[position], &node0.flags, 2);
-  position += 2;
+  buffer_int32[position++] = node0.flags;
   buffer_int32[position++] = node0.actions;
   buffer_int32[position++] = node0.maxValueLength;
   buffer_int32[position++] = node0.currentValueLength;
@@ -41,7 +39,6 @@ TEST(PlatformViewShell, UpdateSemanticsDoesFlutterViewUpdateSemantics) {
   buffer_int32[position++] = node0.platformViewId;
   buffer_int32[position++] = node0.scrollChildren;
   buffer_int32[position++] = node0.scrollIndex;
-  buffer_int32[position++] = node0.traversalParent;
   buffer_float32[position++] = static_cast<float>(node0.scrollPosition);
   buffer_float32[position++] = static_cast<float>(node0.scrollExtentMax);
   buffer_float32[position++] = static_cast<float>(node0.scrollExtentMin);
@@ -60,160 +57,12 @@ TEST(PlatformViewShell, UpdateSemanticsDoesFlutterViewUpdateSemantics) {
   buffer_int32[position++] = -1;  // node0.hintAttributes
   buffer_int32[position++] = expected_strings.size();  // node0.tooltip
   expected_strings.push_back(node0.tooltip);
-  buffer_int32[position++] = -1;  // node0.linkUrl
-  buffer_int32[position++] = -1;  // node0.locale
-  buffer_int32[position++] = node0.headingLevel;
   buffer_int32[position++] = node0.textDirection;
   buffer_float32[position++] = node0.rect.left();
   buffer_float32[position++] = node0.rect.top();
   buffer_float32[position++] = node0.rect.right();
   buffer_float32[position++] = node0.rect.bottom();
   node0.transform.getColMajor(&buffer_float32[position]);
-  position += 16;
-  node0.hitTestTransform.getColMajor(&buffer_float32[position]);
-  position += 16;
-  buffer_int32[position++] = 0;  // node0.childrenInTraversalOrder.size();
-  buffer_int32[position++] = 0;  // node0.customAccessibilityActions.size();
-  EXPECT_CALL(*jni_mock,
-              FlutterViewUpdateSemantics(expected_buffer, expected_strings,
-                                         expected_string_attribute_args));
-  // Creates empty custom actions.
-  flutter::CustomAccessibilityActionUpdates actions;
-  delegate->UpdateSemantics(update, actions);
-}
-
-TEST(PlatformViewShell, UpdateSemanticsDoesUpdateLinkUrl) {
-  auto jni_mock = std::make_shared<JNIMock>();
-  auto delegate = std::make_unique<PlatformViewAndroidDelegate>(jni_mock);
-
-  flutter::SemanticsNodeUpdates update;
-  flutter::SemanticsNode node0;
-  node0.id = 0;
-  node0.identifier = "identifier";
-  node0.label = "label";
-  node0.linkUrl = "url";
-  update.insert(std::make_pair(0, node0));
-
-  std::vector<uint8_t> expected_buffer(
-      PlatformViewAndroidDelegate::kBytesPerNode);
-  std::vector<std::vector<uint8_t>> expected_string_attribute_args(0);
-  size_t position = 0;
-  int32_t* buffer_int32 = reinterpret_cast<int32_t*>(&expected_buffer[0]);
-  float* buffer_float32 = reinterpret_cast<float*>(&expected_buffer[0]);
-  std::vector<std::string> expected_strings;
-  buffer_int32[position++] = node0.id;
-  std::memcpy(&buffer_int32[position], &node0.flags, 2);
-  position += 2;
-  buffer_int32[position++] = node0.actions;
-  buffer_int32[position++] = node0.maxValueLength;
-  buffer_int32[position++] = node0.currentValueLength;
-  buffer_int32[position++] = node0.textSelectionBase;
-  buffer_int32[position++] = node0.textSelectionExtent;
-  buffer_int32[position++] = node0.platformViewId;
-  buffer_int32[position++] = node0.scrollChildren;
-  buffer_int32[position++] = node0.scrollIndex;
-  buffer_int32[position++] = node0.traversalParent;
-  buffer_float32[position++] = static_cast<float>(node0.scrollPosition);
-  buffer_float32[position++] = static_cast<float>(node0.scrollExtentMax);
-  buffer_float32[position++] = static_cast<float>(node0.scrollExtentMin);
-  buffer_int32[position++] = expected_strings.size();  // node0.identifier
-  expected_strings.push_back(node0.identifier);
-  buffer_int32[position++] = expected_strings.size();  // node0.label
-  expected_strings.push_back(node0.label);
-  buffer_int32[position++] = -1;  // node0.labelAttributes
-  buffer_int32[position++] = -1;  // node0.value
-  buffer_int32[position++] = -1;  // node0.valueAttributes
-  buffer_int32[position++] = -1;  // node0.increasedValue
-  buffer_int32[position++] = -1;  // node0.increasedValueAttributes
-  buffer_int32[position++] = -1;  // node0.decreasedValue
-  buffer_int32[position++] = -1;  // node0.decreasedValueAttributes
-  buffer_int32[position++] = -1;  // node0.hint
-  buffer_int32[position++] = -1;  // node0.hintAttributes
-  buffer_int32[position++] = -1;  // node0.tooltip
-  buffer_int32[position++] = expected_strings.size();  // node0.linkUrl
-  expected_strings.push_back(node0.linkUrl);
-  buffer_int32[position++] = -1;  // node0.locale
-  buffer_int32[position++] = node0.headingLevel;
-  buffer_int32[position++] = node0.textDirection;
-  buffer_float32[position++] = node0.rect.left();
-  buffer_float32[position++] = node0.rect.top();
-  buffer_float32[position++] = node0.rect.right();
-  buffer_float32[position++] = node0.rect.bottom();
-  node0.transform.getColMajor(&buffer_float32[position]);
-  position += 16;
-  node0.hitTestTransform.getColMajor(&buffer_float32[position]);
-  position += 16;
-  buffer_int32[position++] = 0;  // node0.childrenInTraversalOrder.size();
-  buffer_int32[position++] = 0;  // node0.customAccessibilityActions.size();
-  EXPECT_CALL(*jni_mock,
-              FlutterViewUpdateSemantics(expected_buffer, expected_strings,
-                                         expected_string_attribute_args));
-  // Creates empty custom actions.
-  flutter::CustomAccessibilityActionUpdates actions;
-  delegate->UpdateSemantics(update, actions);
-}
-
-TEST(PlatformViewShell, UpdateSemanticsDoesUpdateLocale) {
-  auto jni_mock = std::make_shared<JNIMock>();
-  auto delegate = std::make_unique<PlatformViewAndroidDelegate>(jni_mock);
-
-  flutter::SemanticsNodeUpdates update;
-  flutter::SemanticsNode node0;
-  node0.id = 0;
-  node0.identifier = "identifier";
-  node0.label = "label";
-  node0.locale = "es-MX";
-  node0.traversalParent = -1;
-  update.insert(std::make_pair(0, node0));
-
-  std::vector<uint8_t> expected_buffer(
-      PlatformViewAndroidDelegate::kBytesPerNode);
-  std::vector<std::vector<uint8_t>> expected_string_attribute_args(0);
-  size_t position = 0;
-  int32_t* buffer_int32 = reinterpret_cast<int32_t*>(&expected_buffer[0]);
-  float* buffer_float32 = reinterpret_cast<float*>(&expected_buffer[0]);
-  std::vector<std::string> expected_strings;
-  buffer_int32[position++] = node0.id;
-  std::memcpy(&buffer_int32[position], &node0.flags, 2);
-  position += 2;
-  buffer_int32[position++] = node0.actions;
-  buffer_int32[position++] = node0.maxValueLength;
-  buffer_int32[position++] = node0.currentValueLength;
-  buffer_int32[position++] = node0.textSelectionBase;
-  buffer_int32[position++] = node0.textSelectionExtent;
-  buffer_int32[position++] = node0.platformViewId;
-  buffer_int32[position++] = node0.scrollChildren;
-  buffer_int32[position++] = node0.scrollIndex;
-  buffer_int32[position++] = node0.traversalParent;
-  buffer_float32[position++] = static_cast<float>(node0.scrollPosition);
-  buffer_float32[position++] = static_cast<float>(node0.scrollExtentMax);
-  buffer_float32[position++] = static_cast<float>(node0.scrollExtentMin);
-  buffer_int32[position++] = expected_strings.size();  // node0.identifier
-  expected_strings.push_back(node0.identifier);
-  buffer_int32[position++] = expected_strings.size();  // node0.label
-  expected_strings.push_back(node0.label);
-  buffer_int32[position++] = -1;  // node0.labelAttributes
-  buffer_int32[position++] = -1;  // node0.value
-  buffer_int32[position++] = -1;  // node0.valueAttributes
-  buffer_int32[position++] = -1;  // node0.increasedValue
-  buffer_int32[position++] = -1;  // node0.increasedValueAttributes
-  buffer_int32[position++] = -1;  // node0.decreasedValue
-  buffer_int32[position++] = -1;  // node0.decreasedValueAttributes
-  buffer_int32[position++] = -1;  // node0.hint
-  buffer_int32[position++] = -1;  // node0.hintAttributes
-  buffer_int32[position++] = -1;  // node0.tooltip
-  buffer_int32[position++] = -1;  // node0.linkUrl
-  buffer_int32[position++] = expected_strings.size();
-  expected_strings.push_back(node0.locale);  // node0.locale
-  buffer_int32[position++] = node0.headingLevel;
-  buffer_int32[position++] = node0.textDirection;
-  buffer_float32[position++] = node0.rect.left();
-  buffer_float32[position++] = node0.rect.top();
-  buffer_float32[position++] = node0.rect.right();
-  buffer_float32[position++] = node0.rect.bottom();
-  node0.transform.getColMajor(&buffer_float32[position]);
-  position += 16;
-  node0.hitTestTransform.getColMajor(&buffer_float32[position]);
   position += 16;
   buffer_int32[position++] = 0;  // node0.childrenInTraversalOrder.size();
   buffer_int32[position++] = 0;  // node0.customAccessibilityActions.size();
@@ -251,18 +100,14 @@ TEST(PlatformViewShell,
   node0.hintAttributes.push_back(locale_attribute);
   update.insert(std::make_pair(0, node0));
 
-  std::vector<uint8_t> expected_buffer(
-      PlatformViewAndroidDelegate::kBytesPerNode +
-      // 1 label attribute + 1 hint attribute.
-      2 * PlatformViewAndroidDelegate::kBytesPerStringAttribute);
+  std::vector<uint8_t> expected_buffer(224);
   std::vector<std::vector<uint8_t>> expected_string_attribute_args;
   size_t position = 0;
   int32_t* buffer_int32 = reinterpret_cast<int32_t*>(&expected_buffer[0]);
   float* buffer_float32 = reinterpret_cast<float*>(&expected_buffer[0]);
   std::vector<std::string> expected_strings;
   buffer_int32[position++] = node0.id;
-  std::memcpy(&buffer_int32[position], &node0.flags, 2);
-  position += 2;
+  buffer_int32[position++] = node0.flags;
   buffer_int32[position++] = node0.actions;
   buffer_int32[position++] = node0.maxValueLength;
   buffer_int32[position++] = node0.currentValueLength;
@@ -271,7 +116,6 @@ TEST(PlatformViewShell,
   buffer_int32[position++] = node0.platformViewId;
   buffer_int32[position++] = node0.scrollChildren;
   buffer_int32[position++] = node0.scrollIndex;
-  buffer_int32[position++] = node0.traversalParent;
   buffer_float32[position++] = static_cast<float>(node0.scrollPosition);
   buffer_float32[position++] = static_cast<float>(node0.scrollExtentMax);
   buffer_float32[position++] = static_cast<float>(node0.scrollExtentMin);
@@ -301,17 +145,12 @@ TEST(PlatformViewShell,
   expected_string_attribute_args.push_back(
       {locale_attribute->locale.begin(), locale_attribute->locale.end()});
   buffer_int32[position++] = -1;  // node0.tooltip
-  buffer_int32[position++] = -1;  // node0.linkUrl
-  buffer_int32[position++] = -1;  // node0.locale
-  buffer_int32[position++] = node0.headingLevel;
   buffer_int32[position++] = node0.textDirection;
   buffer_float32[position++] = node0.rect.left();
   buffer_float32[position++] = node0.rect.top();
   buffer_float32[position++] = node0.rect.right();
   buffer_float32[position++] = node0.rect.bottom();
   node0.transform.getColMajor(&buffer_float32[position]);
-  position += 16;
-  node0.hitTestTransform.getColMajor(&buffer_float32[position]);
   position += 16;
   buffer_int32[position++] = 0;  // node0.childrenInTraversalOrder.size();
   buffer_int32[position++] = 0;  // node0.customAccessibilityActions.size();
@@ -336,8 +175,7 @@ TEST(PlatformViewShell,
   action0.hint = "hint";
   actions.insert(std::make_pair(0, action0));
 
-  std::vector<uint8_t> expected_actions_buffer(
-      PlatformViewAndroidDelegate::kBytesPerAction);
+  std::vector<uint8_t> expected_actions_buffer(16);
   int32_t* actions_buffer_int32 =
       reinterpret_cast<int32_t*>(&expected_actions_buffer[0]);
   std::vector<std::string> expected_action_strings;

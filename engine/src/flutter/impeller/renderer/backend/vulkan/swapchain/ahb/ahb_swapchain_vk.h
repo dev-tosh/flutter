@@ -9,11 +9,8 @@
 #include "impeller/renderer/backend/vulkan/swapchain/swapchain_vk.h"
 #include "impeller/toolkit/android/native_window.h"
 #include "impeller/toolkit/android/surface_control.h"
-#include "impeller/toolkit/android/surface_transaction.h"
 
 namespace impeller {
-
-using CreateTransactionCB = std::function<android::SurfaceTransaction()>;
 
 //------------------------------------------------------------------------------
 /// @brief      The implementation of a swapchain that uses hardware buffers
@@ -49,22 +46,18 @@ class AHBSwapchainVK final : public SwapchainVK {
   // |SwapchainVK|
   void UpdateSurfaceSize(const ISize& size) override;
 
-  // |SwapchainVK|
-  void AddFinalCommandBuffer(
-      std::shared_ptr<CommandBuffer> cmd_buffer) const override;
-
  private:
   friend class SwapchainVK;
 
   std::weak_ptr<Context> context_;
   std::shared_ptr<android::SurfaceControl> surface_control_;
   const bool enable_msaa_;
-  CreateTransactionCB cb_;
+  size_t swapchain_image_count_ = 3u;
   std::shared_ptr<AHBSwapchainImplVK> impl_;
 
   explicit AHBSwapchainVK(const std::shared_ptr<Context>& context,
                           ANativeWindow* window,
-                          const CreateTransactionCB& cb,
+                          const vk::UniqueSurfaceKHR& surface,
                           const ISize& size,
                           bool enable_msaa);
 };

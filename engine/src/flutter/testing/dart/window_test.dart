@@ -12,20 +12,16 @@ void main() {
   test('window.sendPlatformMessage preserves callback zone', () {
     runZoned(() {
       final Zone innerZone = Zone.current;
-      PlatformDispatcher.instance.sendPlatformMessage(
-        'test',
-        ByteData.view(Uint8List(0).buffer),
-        expectAsync1((ByteData? data) {
-          final Zone runZone = Zone.current;
-          expect(runZone, isNotNull);
-          expect(runZone, same(innerZone));
-        }),
-      );
+      PlatformDispatcher.instance.sendPlatformMessage('test', ByteData.view(Uint8List(0).buffer), expectAsync1((ByteData? data) {
+        final Zone runZone = Zone.current;
+        expect(runZone, isNotNull);
+        expect(runZone, same(innerZone));
+      }));
     });
   });
 
   test('FrameTiming.toString has the correct format', () {
-    final timing = FrameTiming(
+    final FrameTiming timing = FrameTiming(
       vsyncStart: 500,
       buildStart: 1000,
       buildFinish: 8000,
@@ -34,22 +30,20 @@ void main() {
       rasterFinishWallTime: 19501,
       frameNumber: 23,
     );
-    expect(
-      timing.toString(),
-      'FrameTiming(buildDuration: 7.0ms, '
-      'rasterDuration: 10.5ms, '
-      'vsyncOverhead: 0.5ms, '
-      'totalSpan: 19.0ms, '
-      'layerCacheCount: 0, '
-      'layerCacheBytes: 0, '
-      'pictureCacheCount: 0, '
-      'pictureCacheBytes: 0, '
-      'frameNumber: 23)',
-    );
+    expect(timing.toString(),
+        'FrameTiming(buildDuration: 7.0ms, '
+            'rasterDuration: 10.5ms, '
+            'vsyncOverhead: 0.5ms, '
+            'totalSpan: 19.0ms, '
+            'layerCacheCount: 0, '
+            'layerCacheBytes: 0, '
+            'pictureCacheCount: 0, '
+            'pictureCacheBytes: 0, '
+            'frameNumber: 23)');
   });
 
   test('FrameTiming.toString with cache statistics has the correct format', () {
-    final timing = FrameTiming(
+    final FrameTiming timing = FrameTiming(
       vsyncStart: 500,
       buildStart: 1000,
       buildFinish: 8000,
@@ -62,31 +56,27 @@ void main() {
       pictureCacheBytes: 300000,
       frameNumber: 29,
     );
-    expect(
-      timing.toString(),
-      'FrameTiming(buildDuration: 7.0ms, '
-      'rasterDuration: 10.5ms, '
-      'vsyncOverhead: 0.5ms, '
-      'totalSpan: 19.0ms, '
-      'layerCacheCount: 5, '
-      'layerCacheBytes: 200000, '
-      'pictureCacheCount: 3, '
-      'pictureCacheBytes: 300000, '
-      'frameNumber: 29)',
-    );
+    expect(timing.toString(),
+        'FrameTiming(buildDuration: 7.0ms, '
+            'rasterDuration: 10.5ms, '
+            'vsyncOverhead: 0.5ms, '
+            'totalSpan: 19.0ms, '
+            'layerCacheCount: 5, '
+            'layerCacheBytes: 200000, '
+            'pictureCacheCount: 3, '
+            'pictureCacheBytes: 300000, '
+            'frameNumber: 29)');
   });
 
   test('computePlatformResolvedLocale basic', () {
-    final supportedLocales = <Locale>[
+    final List<Locale> supportedLocales = <Locale>[
       const Locale.fromSubtags(languageCode: 'zh', scriptCode: 'Hans', countryCode: 'CN'),
       const Locale.fromSubtags(languageCode: 'fr', countryCode: 'FR'),
       const Locale.fromSubtags(languageCode: 'en', countryCode: 'US'),
       const Locale.fromSubtags(languageCode: 'en'),
     ];
     // The default implementation returns null due to lack of a real platform.
-    final Locale? result = PlatformDispatcher.instance.computePlatformResolvedLocale(
-      supportedLocales,
-    );
+    final Locale? result = PlatformDispatcher.instance.computePlatformResolvedLocale(supportedLocales);
     expect(result, null);
   });
 

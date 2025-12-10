@@ -8,7 +8,6 @@
 #include <memory>
 #include "flutter/testing/test_vulkan_context.h"
 
-#include "flutter/display_list/geometry/dl_geometry_types.h"
 #include "third_party/skia/include/core/SkRefCnt.h"
 #include "third_party/skia/include/core/SkSize.h"
 #include "third_party/skia/include/core/SkSurface.h"
@@ -20,7 +19,7 @@ class TestVulkanSurface {
  public:
   static std::unique_ptr<TestVulkanSurface> Create(
       const TestVulkanContext& context,
-      const DlISize& surface_size);
+      const SkISize& surface_size);
 
   bool IsValid() const;
 

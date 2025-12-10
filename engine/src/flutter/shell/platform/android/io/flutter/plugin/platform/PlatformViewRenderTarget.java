@@ -13,26 +13,26 @@ import android.view.Surface;
  */
 public interface PlatformViewRenderTarget {
   // Called when the render target should be resized.
-  void resize(int width, int height);
+  public void resize(int width, int height);
 
   // Returns the currently specified width.
-  int getWidth();
+  public int getWidth();
 
   // Returns the currently specified height.
-  int getHeight();
+  public int getHeight();
 
   // The id of this render target.
-  long getId();
+  public long getId();
 
   // Releases backing resources.
-  void release();
+  public void release();
 
   // Returns true in the case that backing resource have been released.
-  boolean isReleased();
+  public boolean isReleased();
 
   // Returns the Surface to be rendered on to.
-  Surface getSurface();
+  public Surface getSurface();
 
   // Schedules a frame to be drawn.
-  default void scheduleFrame() {}
+  public default void scheduleFrame() {}
 }

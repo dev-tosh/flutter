@@ -58,10 +58,6 @@
                            fromPackage:(nonnull NSString*)package {
   return @"";
 }
-
-- (NSViewController*)viewController {
-  return nil;
-}
 @end
 
 namespace flutter::testing {

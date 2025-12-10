@@ -6,7 +6,6 @@
 
 #include <utility>
 
-#include "impeller/display_list/aiks_context.h"
 #include "impeller/entity/gles/entity_shaders_gles.h"
 #include "impeller/entity/gles/framebuffer_blend_shaders_gles.h"
 #include "impeller/entity/gles/modern_shaders_gles.h"
@@ -81,8 +80,7 @@ EmbedderSurfaceGLImpeller::EmbedderSurfaceGLImpeller(
   }
 
   impeller_context_ = impeller::ContextGLES::Create(
-      impeller::Flags{}, std::move(gl), shader_mappings,
-      /*enable_gpu_tracing=*/false);
+      std::move(gl), shader_mappings, /*enable_gpu_tracing=*/false);
 
   if (!impeller_context_) {
     FML_LOG(ERROR) << "Could not create Impeller context.";
@@ -143,10 +141,12 @@ bool EmbedderSurfaceGLImpeller::GLContextFBOResetAfterPresent() const {
 }
 
 // |GPUSurfaceGLDelegate|
-DlMatrix EmbedderSurfaceGLImpeller::GLContextSurfaceTransformation() const {
+SkMatrix EmbedderSurfaceGLImpeller::GLContextSurfaceTransformation() const {
   auto callback = gl_dispatch_table_.gl_surface_transformation_callback;
   if (!callback) {
-    return DlMatrix();
+    SkMatrix matrix;
+    matrix.setIdentity();
+    return matrix;
   }
   return callback();
 }

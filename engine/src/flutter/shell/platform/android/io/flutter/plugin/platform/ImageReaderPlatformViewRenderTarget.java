@@ -1,11 +1,8 @@
-// Copyright 2013 The Flutter Authors. All rights reserved.
-// Use of this source code is governed by a BSD-style license that can be
-// found in the LICENSE file.
-
 package io.flutter.plugin.platform;
 
 import static io.flutter.Build.API_LEVELS;
 
+import android.annotation.TargetApi;
 import android.graphics.ImageFormat;
 import android.hardware.HardwareBuffer;
 import android.media.Image;
@@ -13,10 +10,10 @@ import android.media.ImageReader;
 import android.os.Build;
 import android.os.Handler;
 import android.view.Surface;
-import androidx.annotation.RequiresApi;
 import io.flutter.Log;
 import io.flutter.view.TextureRegistry.ImageTextureEntry;
 
+@TargetApi(API_LEVELS.API_29)
 public class ImageReaderPlatformViewRenderTarget implements PlatformViewRenderTarget {
   private ImageTextureEntry textureEntry;
   private ImageReader reader;
@@ -44,7 +41,7 @@ public class ImageReaderPlatformViewRenderTarget implements PlatformViewRenderTa
           try {
             image = reader.acquireLatestImage();
           } catch (IllegalStateException e) {
-            Log.e(TAG, "onImageAvailable acquireLatestImage failed: " + e);
+            Log.e(TAG, "onImageAvailable acquireLatestImage failed: " + e.toString());
           }
           if (image == null) {
             return;
@@ -53,7 +50,7 @@ public class ImageReaderPlatformViewRenderTarget implements PlatformViewRenderTa
         }
       };
 
-  @RequiresApi(API_LEVELS.API_33)
+  @TargetApi(API_LEVELS.API_33)
   protected ImageReader createImageReader33() {
     final ImageReader.Builder builder = new ImageReader.Builder(bufferWidth, bufferHeight);
     // Allow for double buffering.
@@ -72,7 +69,7 @@ public class ImageReaderPlatformViewRenderTarget implements PlatformViewRenderTa
     return reader;
   }
 
-  @RequiresApi(API_LEVELS.API_29)
+  @TargetApi(API_LEVELS.API_29)
   protected ImageReader createImageReader29() {
     final ImageReader reader =
         ImageReader.newInstance(

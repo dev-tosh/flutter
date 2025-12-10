@@ -42,14 +42,7 @@ static const UIAccessibilityTraits kUIAccessibilityTraitUndocumentedEmptyLine = 
   NSAssert([range isKindOfClass:[FlutterTextRange class]],
            @"Expected a FlutterTextRange for range (got %@).", [range class]);
   NSRange textRange = ((FlutterTextRange*)range).range;
-  if (textRange.location == NSNotFound) {
-    // Avoids [crashes](https://github.com/flutter/flutter/issues/138464) from an assertion
-    // against NSNotFound.
-    // TODO(hellohuanlin): This is a temp workaround, but we should look into why
-    // framework is providing NSNotFound to the engine.
-    // https://github.com/flutter/flutter/issues/160100
-    return nil;
-  }
+  NSAssert(textRange.location != NSNotFound, @"Expected a valid text range.");
   return [self.text substringWithRange:textRange];
 }
 
@@ -212,7 +205,7 @@ static const UIAccessibilityTraits kUIAccessibilityTraitUndocumentedEmptyLine = 
   [super setSemanticsNode:node];
   _inactive_text_input.text = @(node->value.data());
   FlutterTextInputView* textInput = (FlutterTextInputView*)[self bridge]->textInputView();
-  if ([self node].flags.isFocused == flutter::SemanticsTristate::kTrue) {
+  if ([self node].HasFlag(flutter::SemanticsFlags::kIsFocused)) {
     textInput.backingTextInputAccessibilityObject = self;
     // The text input view must have a non-trivial size for the accessibility
     // system to send text editing events.
@@ -233,7 +226,7 @@ static const UIAccessibilityTraits kUIAccessibilityTraitUndocumentedEmptyLine = 
  * we use an FlutterInactiveTextInput.
  */
 - (UIView<UITextInput>*)textInputSurrogate {
-  if ([self node].flags.isFocused == flutter::SemanticsTristate::kTrue) {
+  if ([self node].HasFlag(flutter::SemanticsFlags::kIsFocused)) {
     return [self bridge]->textInputView();
   } else {
     return _inactive_text_input;
@@ -264,7 +257,7 @@ static const UIAccessibilityTraits kUIAccessibilityTraitUndocumentedEmptyLine = 
   if (![self isAccessibilityBridgeAlive]) {
     return false;
   }
-  return [self node].flags.isFocused == flutter::SemanticsTristate::kTrue;
+  return [self node].HasFlag(flutter::SemanticsFlags::kIsFocused);
 }
 
 - (BOOL)accessibilityActivate {

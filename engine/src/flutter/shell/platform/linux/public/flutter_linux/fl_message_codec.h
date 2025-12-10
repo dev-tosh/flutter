@@ -65,9 +65,7 @@ struct _FlMessageCodecClass {
    * @codec: an #FlMessageCodec.
    * @message: message to encode or %NULL to encode the null value.
    * @error: (allow-none): #GError location to store the error occurring, or
-   * %NULL. If `error` is not %NULL, `*error` must be initialized (typically
-   * %NULL, but an error from a previous call using GLib error handling is
-   * explicitly valid).
+   * %NULL.
    *
    * Virtual method to encode a message. A subclass must implement this method.
    * If the subclass cannot handle the type of @message then it must generate a
@@ -84,9 +82,7 @@ struct _FlMessageCodecClass {
    * @codec: an #FlMessageCodec.
    * @message: binary message to decode.
    * @error: (allow-none): #GError location to store the error occurring, or
-   * %NULL. If `error` is not %NULL, `*error` must be initialized (typically
-   * %NULL, but an error from a previous call using GLib error handling is
-   * explicitly valid).
+   * %NULL.
    *
    * Virtual method to decode a message. A subclass must implement this method.
    * If @message is too small then a #FL_MESSAGE_CODEC_ERROR_OUT_OF_DATA error
@@ -106,9 +102,7 @@ struct _FlMessageCodecClass {
  * @buffer: buffer to write to.
  * @message: message to encode or %NULL to encode the null value.
  * @error: (allow-none): #GError location to store the error occurring, or
- * %NULL. If `error` is not %NULL, `*error` must be initialized (typically
- * %NULL, but an error from a previous call using GLib error handling is
- * explicitly valid).
+ * %NULL.
  *
  * Encodes a message into a binary representation.
  *
@@ -123,9 +117,7 @@ GBytes* fl_message_codec_encode_message(FlMessageCodec* codec,
  * @codec: an #FlMessageCodec.
  * @message: binary message to decode.
  * @error: (allow-none): #GError location to store the error occurring, or
- * %NULL. If `error` is not %NULL, `*error` must be initialized (typically
- * %NULL, but an error from a previous call using GLib error handling is
- * explicitly valid).
+ * %NULL.
  *
  * Decodes a message from a binary encoding.
  *

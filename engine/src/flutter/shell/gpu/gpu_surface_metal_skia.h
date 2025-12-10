@@ -40,13 +40,13 @@ class SK_API_AVAILABLE_CA_METAL_LAYER GPUSurfaceMetalSkia : public Surface {
 
   // Accumulated damage for each framebuffer; Key is address of underlying
   // MTLTexture for each drawable
-  std::map<void*, DlIRect> damage_;
+  std::map<void*, SkIRect> damage_;
 
   // |Surface|
-  std::unique_ptr<SurfaceFrame> AcquireFrame(const DlISize& size) override;
+  std::unique_ptr<SurfaceFrame> AcquireFrame(const SkISize& size) override;
 
   // |Surface|
-  DlMatrix GetRootTransformation() const override;
+  SkMatrix GetRootTransformation() const override;
 
   // |Surface|
   GrDirectContext* GetContext() override;
@@ -58,10 +58,10 @@ class SK_API_AVAILABLE_CA_METAL_LAYER GPUSurfaceMetalSkia : public Surface {
   bool AllowsDrawingWhenGpuDisabled() const override;
 
   std::unique_ptr<SurfaceFrame> AcquireFrameFromCAMetalLayer(
-      const DlISize& frame_info);
+      const SkISize& frame_info);
 
   std::unique_ptr<SurfaceFrame> AcquireFrameFromMTLTexture(
-      const DlISize& frame_info);
+      const SkISize& frame_info);
 
   void PrecompileKnownSkSLsIfNecessary();
 

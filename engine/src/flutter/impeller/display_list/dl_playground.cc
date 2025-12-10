@@ -40,14 +40,18 @@ bool DlPlayground::OpenPlaygroundHere(DisplayListPlaygroundCallback callback) {
   }
   return Playground::OpenPlaygroundHere(
       [&context, &callback](RenderTarget& render_target) -> bool {
-        return RenderToTarget(
+        static bool wireframe = false;
+        if (ImGui::IsKeyPressed(ImGuiKey_Z)) {
+          wireframe = !wireframe;
+          context.GetContentContext().SetWireframe(wireframe);
+        }
+        return RenderToOnscreen(
             context.GetContentContext(),  //
             render_target,                //
             callback(),                   //
-            Rect::MakeWH(render_target.GetRenderTargetSize().width,
-                         render_target.GetRenderTargetSize().height),  //
-            /*reset_host_buffer=*/true,                                //
-            /*is_onscreen=*/false                                      //
+            SkIRect::MakeWH(render_target.GetRenderTargetSize().width,
+                            render_target.GetRenderTargetSize().height),  //
+            /*reset_host_buffer=*/true                                    //
         );
       });
 }
@@ -57,7 +61,7 @@ std::unique_ptr<testing::Screenshot> DlPlayground::MakeScreenshot(
   return nullptr;
 }
 
-SkFont DlPlayground::CreateTestFontOfSize(Scalar scalar) {
+SkFont DlPlayground::CreateTestFontOfSize(SkScalar scalar) {
   static constexpr const char* kTestFontFixture = "Roboto-Regular.ttf";
   auto mapping = flutter::testing::OpenFixtureAsSkData(kTestFontFixture);
   FML_CHECK(mapping);

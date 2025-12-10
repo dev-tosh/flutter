@@ -10,9 +10,8 @@
 #include <string>
 #include <variant>
 
-#include "flutter/shell/geometry/geometry.h"
 #include "flutter/shell/platform/common/alert_platform_node_delegate.h"
-#include "flutter/shell/platform/embedder/embedder.h"
+#include "flutter/shell/platform/common/geometry.h"
 #include "flutter/shell/platform/windows/public/flutter_windows.h"
 #include "flutter/shell/platform/windows/window_binding_handler_delegate.h"
 
@@ -55,6 +54,13 @@ class WindowBindingHandler {
   // Returns the bounds of the backing window in physical pixels.
   virtual PhysicalWindowBounds GetPhysicalWindowBounds() = 0;
 
+  // Sets the cursor that should be used when the mouse is over the Flutter
+  // content. See mouse_cursor.dart for the values and meanings of cursor_name.
+  virtual void UpdateFlutterCursor(const std::string& cursor_name) = 0;
+
+  // Sets the cursor directly from a cursor handle.
+  virtual void SetFlutterCursor(HCURSOR cursor) = 0;
+
   // Invoked when the cursor/composing rect has been updated in the framework.
   virtual void OnCursorRectUpdated(const Rect& rect) = 0;
 
@@ -84,14 +90,6 @@ class WindowBindingHandler {
 
   // Retrieve the alert node.
   virtual ui::AXPlatformNodeWin* GetAlert() = 0;
-
-  // Focuses the current window.
-  // Returns true if the window was successfully focused.
-  virtual bool Focus() = 0;
-
-  // Retrieve the display ID of the display that this window has the largest
-  // area of intersection with.
-  virtual FlutterEngineDisplayId GetDisplayId() = 0;
 };
 
 }  // namespace flutter

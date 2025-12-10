@@ -38,7 +38,6 @@ static constexpr char kDeltaEndKey[] = "deltaEnd";
 static constexpr char kDeltasKey[] = "deltas";
 static constexpr char kEnableDeltaModel[] = "enableDeltaModel";
 static constexpr char kTextInputAction[] = "inputAction";
-static constexpr char kViewId[] = "viewId";
 static constexpr char kTextInputType[] = "inputType";
 static constexpr char kTextInputTypeName[] = "name";
 static constexpr char kComposingBaseKey[] = "composingBase";
@@ -217,12 +216,12 @@ void TextInputPlugin::HandleMethodCall(
   if (method.compare(kShowMethod) == 0 || method.compare(kHideMethod) == 0) {
     // These methods are no-ops.
   } else if (method.compare(kClearClientMethod) == 0) {
-    FlutterWindowsView* view = engine_->view(view_id_);
+    // TODO(loicsharma): Remove implicit view assumption.
+    // https://github.com/flutter/flutter/issues/142845
+    FlutterWindowsView* view = engine_->view(kImplicitViewId);
     if (view == nullptr) {
-      std::stringstream ss;
-      ss << "Text input is not available because view with view_id=" << view_id_
-         << " cannot be found";
-      result->Error(kInternalConsistencyError, ss.str());
+      result->Error(kInternalConsistencyError,
+                    "Text input is not available in Windows headless mode");
       return;
     }
     if (active_model_ != nullptr && active_model_->composing()) {
@@ -255,15 +254,6 @@ void TextInputPlugin::HandleMethodCall(
     if (enable_delta_model_json != client_config.MemberEnd() &&
         enable_delta_model_json->value.IsBool()) {
       enable_delta_model = enable_delta_model_json->value.GetBool();
-    }
-    auto view_id_json = client_config.FindMember(kViewId);
-    if (view_id_json != client_config.MemberEnd() &&
-        view_id_json->value.IsInt()) {
-      view_id_ = view_id_json->value.GetInt();
-    } else {
-      result->Error(kBadArgumentError,
-                    "Could not set client, view ID is null.");
-      return;
     }
     input_action_ = "";
     auto input_action_json = client_config.FindMember(kTextInputAction);
@@ -338,12 +328,12 @@ void TextInputPlugin::HandleMethodCall(
           TextRange(composing_base, composing_extent), cursor_offset);
     }
   } else if (method.compare(kSetMarkedTextRect) == 0) {
-    FlutterWindowsView* view = engine_->view(view_id_);
+    // TODO(loicsharma): Remove implicit view assumption.
+    // https://github.com/flutter/flutter/issues/142845
+    FlutterWindowsView* view = engine_->view(kImplicitViewId);
     if (view == nullptr) {
-      std::stringstream ss;
-      ss << "Text input is not available because view with view_id=" << view_id_
-         << " cannot be found";
-      result->Error(kInternalConsistencyError, ss.str());
+      result->Error(kInternalConsistencyError,
+                    "Text input is not available in Windows headless mode");
       return;
     }
     if (!method_call.arguments() || method_call.arguments()->IsNull()) {
@@ -369,12 +359,12 @@ void TextInputPlugin::HandleMethodCall(
     Rect transformed_rect = GetCursorRect();
     view->OnCursorRectUpdated(transformed_rect);
   } else if (method.compare(kSetEditableSizeAndTransform) == 0) {
-    FlutterWindowsView* view = engine_->view(view_id_);
+    // TODO(loicsharma): Remove implicit view assumption.
+    // https://github.com/flutter/flutter/issues/142845
+    FlutterWindowsView* view = engine_->view(kImplicitViewId);
     if (view == nullptr) {
-      std::stringstream ss;
-      ss << "Text input is not available because view with view_id=" << view_id_
-         << " cannot be found";
-      result->Error(kInternalConsistencyError, ss.str());
+      result->Error(kInternalConsistencyError,
+                    "Text input is not available in Windows headless mode");
       return;
     }
     if (!method_call.arguments() || method_call.arguments()->IsNull()) {

@@ -9,30 +9,29 @@ import 'package:process_fakes/process_fakes.dart';
 import 'package:test/test.dart';
 
 void main() {
-  const fakeShaHash = 'fake-sha-hash';
+  const String fakeShaHash = 'fake-sha-hash';
 
   test('returns non-deleted files which differ from merge-base with main', () async {
-    final fixture = Fixture(
+    final Fixture fixture = Fixture(
       processManager: FakeProcessManager(
-        onStart: (FakeCommandLogEntry entry) {
+        onStart: (List<String> command) {
           // Succeed calling "git merge-base --fork-point FETCH_HEAD HEAD".
-          if (entry.command.join(' ').startsWith('git merge-base --fork-point')) {
+          if (command.join(' ').startsWith('git merge-base --fork-point')) {
             return FakeProcess(stdout: fakeShaHash);
           }
 
           // Succeed calling "git fetch upstream main".
-          if (entry.command.join(' ') == 'git fetch upstream main') {
+          if (command.join(' ') == 'git fetch upstream main') {
             return FakeProcess();
           }
 
           // Succeed calling "git diff --name-only --diff-filter=ACMRT fake-sha-hash".
-          if (entry.command.join(' ') ==
-              'git diff --name-only --diff-filter=ACMRT --relative $fakeShaHash') {
+          if (command.join(' ') == 'git diff --name-only --diff-filter=ACMRT $fakeShaHash') {
             return FakeProcess(stdout: 'file1\nfile2');
           }
 
           // Otherwise, fail.
-          return FakeProcessManager.unhandledStart(entry);
+          return FakeProcessManager.unhandledStart(command);
         },
       ),
     );
@@ -48,28 +47,27 @@ void main() {
   });
 
   test('returns non-deleted files which differ from default merge-base', () async {
-    final fixture = Fixture(
+    final Fixture fixture = Fixture(
       processManager: FakeProcessManager(
-        onStart: (FakeCommandLogEntry entry) {
-          if (entry.command.join(' ').startsWith('git merge-base --fork-point')) {
+        onStart: (List<String> command) {
+          if (command.join(' ').startsWith('git merge-base --fork-point')) {
             return FakeProcess(exitCode: 1);
           }
 
-          if (entry.command.join(' ').startsWith('git merge-base')) {
+          if (command.join(' ').startsWith('git merge-base')) {
             return FakeProcess(stdout: fakeShaHash);
           }
 
-          if (entry.command.join(' ') == 'git fetch upstream main') {
+          if (command.join(' ') == 'git fetch upstream main') {
             return FakeProcess();
           }
 
-          if (entry.command.join(' ') ==
-              'git diff --name-only --diff-filter=ACMRT --relative $fakeShaHash') {
+          if (command.join(' ') == 'git diff --name-only --diff-filter=ACMRT $fakeShaHash') {
             return FakeProcess(stdout: 'file1\nfile2');
           }
 
           // Otherwise, fail.
-          return FakeProcessManager.unhandledStart(entry);
+          return FakeProcessManager.unhandledStart(command);
         },
       ),
     );
@@ -85,20 +83,19 @@ void main() {
   });
 
   test('returns non-deleted files which differ from HEAD', () async {
-    final fixture = Fixture(
+    final Fixture fixture = Fixture(
       processManager: FakeProcessManager(
-        onStart: (FakeCommandLogEntry entry) {
-          if (entry.command.join(' ') == 'git fetch upstream main') {
+        onStart: (List<String> command) {
+          if (command.join(' ') == 'git fetch upstream main') {
             return FakeProcess();
           }
 
-          if (entry.command.join(' ') ==
-              'git diff-tree --no-commit-id --name-only --diff-filter=ACMRT --relative -r HEAD') {
+          if (command.join(' ') == 'git diff-tree --no-commit-id --name-only --diff-filter=ACMRT -r HEAD') {
             return FakeProcess(stdout: 'file1\nfile2');
           }
 
           // Otherwise, fail.
-          return FakeProcessManager.unhandledStart(entry);
+          return FakeProcessManager.unhandledStart(command);
         },
       ),
     );
@@ -114,28 +111,27 @@ void main() {
   });
 
   test('returns non-deleted files which differ from HEAD when merge-base fails', () async {
-    final fixture = Fixture(
+    final Fixture fixture = Fixture(
       processManager: FakeProcessManager(
-        onStart: (FakeCommandLogEntry entry) {
-          if (entry.command.join(' ') == 'git fetch upstream main') {
+        onStart: (List<String> command) {
+          if (command.join(' ') == 'git fetch upstream main') {
             return FakeProcess();
           }
 
-          if (entry.command.join(' ') ==
-              'git diff-tree --no-commit-id --name-only --diff-filter=ACMRT --relative -r HEAD') {
+          if (command.join(' ') == 'git diff-tree --no-commit-id --name-only --diff-filter=ACMRT -r HEAD') {
             return FakeProcess(stdout: 'file1\nfile2');
           }
 
-          if (entry.command.join(' ').startsWith('git merge-base --fork-point')) {
+          if (command.join(' ').startsWith('git merge-base --fork-point')) {
             return FakeProcess(exitCode: 1);
           }
 
-          if (entry.command.join(' ').startsWith('git merge-base')) {
+          if (command.join(' ').startsWith('git merge-base')) {
             return FakeProcess(stdout: fakeShaHash);
           }
 
           // Otherwise, fail.
-          return FakeProcessManager.unhandledStart(entry);
+          return FakeProcessManager.unhandledStart(command);
         },
       ),
     );
@@ -151,28 +147,27 @@ void main() {
   });
 
   test('verbose output is captured', () async {
-    final fixture = Fixture(
+    final Fixture fixture = Fixture(
       processManager: FakeProcessManager(
-        onStart: (FakeCommandLogEntry entry) {
-          if (entry.command.join(' ').startsWith('git merge-base --fork-point')) {
+        onStart: (List<String> command) {
+          if (command.join(' ').startsWith('git merge-base --fork-point')) {
             return FakeProcess(exitCode: 1);
           }
 
-          if (entry.command.join(' ').startsWith('git merge-base')) {
+          if (command.join(' ').startsWith('git merge-base')) {
             return FakeProcess(stdout: fakeShaHash);
           }
 
-          if (entry.command.join(' ') == 'git fetch upstream main') {
+          if (command.join(' ') == 'git fetch upstream main') {
             return FakeProcess();
           }
 
-          if (entry.command.join(' ') ==
-              'git diff --name-only --diff-filter=ACMRT --relative $fakeShaHash') {
+          if (command.join(' ') == 'git diff --name-only --diff-filter=ACMRT $fakeShaHash') {
             return FakeProcess(stdout: 'file1\nfile2');
           }
 
           // Otherwise, fail.
-          return FakeProcessManager.unhandledStart(entry);
+          return FakeProcessManager.unhandledStart(command);
         },
       ),
       verbose: true,
@@ -180,10 +175,7 @@ void main() {
 
     try {
       await fixture.gitRepo.changedFiles;
-      expect(
-        fixture.logSink.toString(),
-        contains('git merge-base --fork-point failed, using default merge-base'),
-      );
+      expect(fixture.logSink.toString(), contains('git merge-base --fork-point failed, using default merge-base'));
       expect(fixture.logSink.toString(), contains('git diff output:\nfile1\nfile2'));
     } finally {
       fixture.gitRepo.root.deleteSync(recursive: true);
@@ -192,13 +184,15 @@ void main() {
 }
 
 final class Fixture {
-  factory Fixture({FakeProcessManager? processManager, bool verbose = false}) {
+  factory Fixture({
+    FakeProcessManager? processManager,
+    bool verbose = false,
+  }) {
     final io.Directory root = io.Directory.systemTemp.createTempSync('git_repo_tools.test');
-    final logSink = StringBuffer();
+    final StringBuffer logSink = StringBuffer();
     processManager ??= FakeProcessManager();
     return Fixture._(
-      gitRepo: GitRepo.fromRoot(
-        root,
+      gitRepo: GitRepo.fromRoot(root,
         logSink: logSink,
         processManager: processManager,
         verbose: verbose,
@@ -207,7 +201,10 @@ final class Fixture {
     );
   }
 
-  const Fixture._({required this.gitRepo, required this.logSink});
+  const Fixture._({
+    required this.gitRepo,
+    required this.logSink,
+  });
 
   final GitRepo gitRepo;
   final StringBuffer logSink;

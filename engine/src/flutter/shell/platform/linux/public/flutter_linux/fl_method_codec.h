@@ -43,9 +43,7 @@ struct _FlMethodCodecClass {
    * @name: method name.
    * @args: (allow-none): method arguments, or %NULL.
    * @error: (allow-none): #GError location to store the error occurring, or
-   * %NULL. If `error` is not %NULL, `*error` must be initialized (typically
-   * %NULL, but an error from a previous call using GLib error handling is
-   * explicitly valid).
+   * %NULL.
    *
    * Encodes a method call.
    *
@@ -66,9 +64,7 @@ struct _FlMethodCodecClass {
    * @args: (transfer full): location to write method arguments, or %NULL if not
    * required
    * @error: (allow-none): #GError location to store the error occurring, or
-   * %NULL. If `error` is not %NULL, `*error` must be initialized (typically
-   * %NULL, but an error from a previous call using GLib error handling is
-   * explicitly valid).
+   * %NULL
    *
    * Decodes a method call.
    *
@@ -85,9 +81,7 @@ struct _FlMethodCodecClass {
    * @codec: an #FlMethodCodec.
    * @result: (allow-none): method result, or %NULL.
    * @error: (allow-none): #GError location to store the error occurring, or
-   * %NULL. If `error` is not %NULL, `*error` must be initialized (typically
-   * %NULL, but an error from a previous call using GLib error handling is
-   * explicitly valid).
+   * %NULL.
    *
    * Encodes a successful response to a method call.
    *
@@ -105,9 +99,7 @@ struct _FlMethodCodecClass {
    * @message: (allow-none): an error message, or %NULL.
    * @details: (allow-none): error details, or %NULL.
    * @error: (allow-none): #GError location to store the error occurring, or
-   * %NULL. If `error` is not %NULL, `*error` must be initialized (typically
-   * %NULL, but an error from a previous call using GLib error handling is
-   * explicitly valid).
+   * %NULL.
    *
    * Encodes an error response to a method call.
    *
@@ -125,9 +117,7 @@ struct _FlMethodCodecClass {
    * @codec: an #FlMethodCodec.
    * @message: message to decode.
    * @error: (allow-none): #GError location to store the error occurring, or
-   * %NULL. If `error` is not %NULL, `*error` must be initialized (typically
-   * %NULL, but an error from a previous call using GLib error handling is
-   * explicitly valid).
+   * %NULL.
    *
    * Decodes a response to a method call.
    *

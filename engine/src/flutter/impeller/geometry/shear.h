@@ -26,6 +26,8 @@ struct Shear {
   bool operator==(const Shear& o) const {
     return xy == o.xy && xz == o.xz && yz == o.yz;
   }
+
+  bool operator!=(const Shear& o) const { return !(*this == o); }
 };
 
 }  // namespace impeller

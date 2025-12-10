@@ -27,13 +27,11 @@
 @protocol FlutterSurfaceManagerDelegate <NSObject>
 
 /*
- * Schedules the block on the platform thread.
+ * Schedules the block on the platform thread and blocks until the block is executed.
  * Provided `frameSize` is used to unblock the platform thread if it waits for
  * a certain frame size during resizing.
  */
-- (void)onPresent:(CGSize)frameSize
-        withBlock:(nonnull dispatch_block_t)block
-            delay:(NSTimeInterval)delay;
+- (void)onPresent:(CGSize)frameSize withBlock:(nonnull dispatch_block_t)block;
 
 @end
 

@@ -29,7 +29,12 @@ class IOSSurface {
 
   virtual void UpdateStorageSizeIfNecessary() = 0;
 
-  virtual std::unique_ptr<Surface> CreateGPUSurface() = 0;
+  // Creates a GPU surface. If no GrDirectContext is supplied and the rendering mode
+  // supports one, a new one will be created; otherwise, the software backend
+  // will be used.
+  //
+  // If a GrDirectContext is supplied, creates a secondary surface.
+  virtual std::unique_ptr<Surface> CreateGPUSurface(GrDirectContext* gr_context = nullptr) = 0;
 
  protected:
   explicit IOSSurface(std::shared_ptr<IOSContext> ios_context);

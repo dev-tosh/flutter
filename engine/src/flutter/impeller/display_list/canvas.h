@@ -12,23 +12,18 @@
 #include <utility>
 #include <vector>
 
-#include "flutter/display_list/effects/dl_image_filter.h"
-#include "flutter/display_list/geometry/dl_path.h"
+#include "display_list/effects/dl_image_filter.h"
 #include "impeller/core/sampler_descriptor.h"
 #include "impeller/display_list/paint.h"
 #include "impeller/entity/contents/atlas_contents.h"
 #include "impeller/entity/contents/clip_contents.h"
-#include "impeller/entity/contents/solid_rrect_like_blur_contents.h"
-#include "impeller/entity/contents/text_contents.h"
 #include "impeller/entity/entity.h"
 #include "impeller/entity/entity_pass_clip_stack.h"
 #include "impeller/entity/geometry/geometry.h"
-#include "impeller/entity/geometry/round_rect_geometry.h"
-#include "impeller/entity/geometry/round_superellipse_geometry.h"
 #include "impeller/entity/geometry/vertices_geometry.h"
 #include "impeller/entity/inline_pass_context.h"
-#include "impeller/geometry/arc.h"
 #include "impeller/geometry/matrix.h"
+#include "impeller/geometry/path.h"
 #include "impeller/geometry/point.h"
 #include "impeller/geometry/round_rect.h"
 #include "impeller/geometry/vector.h"
@@ -96,23 +91,25 @@ enum class ContentBoundsPromise {
   kMayClipContents,
 };
 
-class LazyRenderingConfig {
- public:
-  LazyRenderingConfig(ContentContext& renderer,
-                      std::unique_ptr<EntityPassTarget> p_entity_pass_target);
-
-  LazyRenderingConfig(LazyRenderingConfig&&) = default;
+struct LazyRenderingConfig {
+  std::unique_ptr<EntityPassTarget> entity_pass_target;
+  std::unique_ptr<InlinePassContext> inline_pass_context;
 
   /// Whether or not the clear color texture can still be updated.
-  bool IsApplyingClearColor() const;
+  bool IsApplyingClearColor() const { return !inline_pass_context->IsActive(); }
 
-  EntityPassTarget* GetEntityPassTarget() const;
+  LazyRenderingConfig(ContentContext& renderer,
+                      std::unique_ptr<EntityPassTarget> p_entity_pass_target)
+      : entity_pass_target(std::move(p_entity_pass_target)) {
+    inline_pass_context =
+        std::make_unique<InlinePassContext>(renderer, *entity_pass_target);
+  }
 
-  InlinePassContext* GetInlinePassContext() const;
-
- private:
-  std::unique_ptr<EntityPassTarget> entity_pass_target_;
-  std::unique_ptr<InlinePassContext> inline_pass_context_;
+  LazyRenderingConfig(ContentContext& renderer,
+                      std::unique_ptr<EntityPassTarget> entity_pass_target,
+                      std::unique_ptr<InlinePassContext> inline_pass_context)
+      : entity_pass_target(std::move(entity_pass_target)),
+        inline_pass_context(std::move(inline_pass_context)) {}
 };
 
 class Canvas {
@@ -126,20 +123,17 @@ class Canvas {
 
   Canvas(ContentContext& renderer,
          const RenderTarget& render_target,
-         bool is_onscreen,
          bool requires_readback);
 
   explicit Canvas(ContentContext& renderer,
                   const RenderTarget& render_target,
-                  bool is_onscreen,
                   bool requires_readback,
                   Rect cull_rect);
 
   explicit Canvas(ContentContext& renderer,
                   const RenderTarget& render_target,
-                  bool is_onscreen,
                   bool requires_readback,
-                  IRect32 cull_rect);
+                  IRect cull_rect);
 
   ~Canvas() = default;
 
@@ -189,7 +183,7 @@ class Canvas {
 
   void Rotate(Radians radians);
 
-  void DrawPath(const flutter::DlPath& path, const Paint& paint);
+  void DrawPath(const Path& path, const Paint& paint);
 
   void DrawPaint(const Paint& paint);
 
@@ -198,25 +192,11 @@ class Canvas {
                 const Paint& paint,
                 bool reuse_depth = false);
 
-  void DrawDashedLine(const Point& p0,
-                      const Point& p1,
-                      Scalar on_length,
-                      Scalar off_length,
-                      const Paint& paint);
-
   void DrawRect(const Rect& rect, const Paint& paint);
 
   void DrawOval(const Rect& rect, const Paint& paint);
 
-  void DrawArc(const Arc& arc, const Paint& paint);
-
   void DrawRoundRect(const RoundRect& rect, const Paint& paint);
-
-  void DrawDiffRoundRect(const RoundRect& outer,
-                         const RoundRect& inner,
-                         const Paint& paint);
-
-  void DrawRoundSuperellipse(const RoundSuperellipse& rse, const Paint& paint);
 
   void DrawCircle(const Point& center, Scalar radius, const Paint& paint);
 
@@ -268,50 +248,9 @@ class Canvas {
   // Visible for testing.
   bool RequiresReadback() const { return requires_readback_; }
 
-  // Whether the current device has the capabilities to blit an offscreen
-  // texture into the onscreen.
-  //
-  // This requires the availibility of the blit framebuffer command, but is
-  // disabled for GLES. A simple glBlitFramebuffer does not support resolving
-  // different sample counts which may be present in GLES when using MSAA.
-  //
-  // Visible for testing.
-  bool SupportsBlitToOnscreen() const;
-
-  /// For picture snapshots we need addition steps to verify that final mipmaps
-  /// are generated.
-  bool EnsureFinalMipmapGeneration() const;
-
  private:
-  class RRectLikeBlurShape {
-   public:
-    virtual ~RRectLikeBlurShape() = default;
-    virtual std::shared_ptr<SolidRRectLikeBlurContents> BuildBlurContent() = 0;
-    virtual Geometry& BuildGeometry(Rect rect, Scalar radius) = 0;
-  };
-
-  class RRectBlurShape : public RRectLikeBlurShape {
-   public:
-    std::shared_ptr<SolidRRectLikeBlurContents> BuildBlurContent() override;
-    Geometry& BuildGeometry(Rect rect, Scalar radius) override;
-
-   private:
-    std::optional<RoundRectGeometry> geom_;  // optional stack allocation
-  };
-
-  class RSuperellipseBlurShape : public RRectLikeBlurShape {
-   public:
-    std::shared_ptr<SolidRRectLikeBlurContents> BuildBlurContent() override;
-    Geometry& BuildGeometry(Rect rect, Scalar radius) override;
-
-   private:
-    std::optional<RoundSuperellipseGeometry>
-        geom_;  // optional stack allocation
-  };
-
   ContentContext& renderer_;
   RenderTarget render_target_;
-  const bool is_onscreen_;
   bool requires_readback_;
   EntityPassClipStack clip_coverage_stack_;
 
@@ -377,10 +316,9 @@ class Canvas {
   /// supports framebuffer fetch.
   std::shared_ptr<Texture> FlipBackdrop(Point global_pass_position,
                                         bool should_remove_texture = false,
-                                        bool should_use_onscreen = false,
-                                        bool post_depth_increment = false);
+                                        bool should_use_onscreen = false);
 
-  bool BlitToOnscreen(bool is_onscreen = false);
+  bool BlitToOnscreen();
 
   size_t GetClipHeight() const;
 
@@ -395,39 +333,9 @@ class Canvas {
 
   void AddRenderEntityToCurrentPass(Entity& entity, bool reuse_depth = false);
 
-  bool AttemptDrawAntialiasedCircle(const Point& center,
-                                    Scalar radius,
-                                    const Paint& paint);
-
   bool AttemptDrawBlurredRRect(const Rect& rect,
                                Size corner_radii,
                                const Paint& paint);
-
-  bool AttemptDrawBlurredRSuperellipse(const Rect& rect,
-                                       Size corner_radii,
-                                       const Paint& paint);
-
-  bool AttemptDrawBlurredRRectLike(const Rect& rect,
-                                   Size corner_radii,
-                                   const Paint& paint,
-                                   RRectLikeBlurShape& shape);
-
-  /// For simple DrawImageRect calls, optimize any draws with a color filter
-  /// into the corresponding atlas draw.
-  ///
-  /// Returns whether not the optimization was applied.
-  bool AttemptColorFilterOptimization(const std::shared_ptr<Texture>& image,
-                                      Rect source,
-                                      Rect dest,
-                                      const Paint& paint,
-                                      const SamplerDescriptor& sampler,
-                                      SourceRectConstraint src_rect_constraint);
-
-  bool AttemptBlurredTextOptimization(
-      const std::shared_ptr<TextFrame>& text_frame,
-      const std::shared_ptr<TextContents>& text_contents,
-      Entity& entity,
-      const Paint& paint);
 
   RenderPass& GetCurrentRenderPass() const;
 

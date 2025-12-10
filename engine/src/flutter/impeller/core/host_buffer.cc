@@ -20,18 +20,13 @@ constexpr size_t kAllocatorBlockSize = 1024000;  // 1024 Kb.
 
 std::shared_ptr<HostBuffer> HostBuffer::Create(
     const std::shared_ptr<Allocator>& allocator,
-    const std::shared_ptr<const IdleWaiter>& idle_waiter,
-    size_t minimum_uniform_alignment) {
-  return std::shared_ptr<HostBuffer>(
-      new HostBuffer(allocator, idle_waiter, minimum_uniform_alignment));
+    const std::shared_ptr<const IdleWaiter>& idle_waiter) {
+  return std::shared_ptr<HostBuffer>(new HostBuffer(allocator, idle_waiter));
 }
 
 HostBuffer::HostBuffer(const std::shared_ptr<Allocator>& allocator,
-                       const std::shared_ptr<const IdleWaiter>& idle_waiter,
-                       size_t minimum_uniform_alignment)
-    : allocator_(allocator),
-      idle_waiter_(idle_waiter),
-      minimum_uniform_alignment_(minimum_uniform_alignment) {
+                       const std::shared_ptr<const IdleWaiter>& idle_waiter)
+    : allocator_(allocator), idle_waiter_(idle_waiter) {
   DeviceBufferDescriptor desc;
   desc.size = kAllocatorBlockSize;
   desc.storage_mode = StorageMode::kHostVisible;
@@ -236,10 +231,6 @@ void HostBuffer::Reset() {
   offset_ = 0u;
   current_buffer_ = 0u;
   frame_index_ = (frame_index_ + 1) % kHostBufferArenaSize;
-}
-
-size_t HostBuffer::GetMinimumUniformAlignment() const {
-  return minimum_uniform_alignment_;
 }
 
 }  // namespace impeller

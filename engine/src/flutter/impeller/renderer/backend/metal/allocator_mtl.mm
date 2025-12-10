@@ -19,7 +19,37 @@ namespace impeller {
 static bool DeviceSupportsDeviceTransientTargets(id<MTLDevice> device) {
   // Refer to the "Memoryless render targets" feature in the table below:
   // https://developer.apple.com/metal/Metal-Feature-Set-Tables.pdf
-  return [device supportsFamily:MTLGPUFamilyApple2];
+  if (@available(ios 13.0, tvos 13.0, macos 10.15, *)) {
+    return [device supportsFamily:MTLGPUFamilyApple2];
+  } else {
+#if FML_OS_IOS
+    // This is perhaps redundant. But, just in case we somehow get into a case
+    // where Impeller runs on iOS versions less than 8.0 and/or without A8
+    // GPUs, we explicitly check feature set support.
+    return [device supportsFeatureSet:MTLFeatureSet_iOS_GPUFamily2_v1];
+#else
+    // MacOS devices with Apple GPUs are only available with macos 10.15 and
+    // above. So, if we are here, it is safe to assume that memory-less targets
+    // are not supported.
+    return false;
+#endif
+  }
+  FML_UNREACHABLE();
+}
+
+static bool DeviceHasUnifiedMemoryArchitecture(id<MTLDevice> device) {
+  if (@available(ios 13.0, tvos 13.0, macOS 10.15, *)) {
+    return [device hasUnifiedMemory];
+  } else {
+#if FML_OS_IOS
+    // iOS devices where the availability check can fail always have had UMA.
+    return true;
+#else
+    // Mac devices where the availability check can fail have never had UMA.
+    return false;
+#endif
+  }
+  FML_UNREACHABLE();
 }
 
 ISize DeviceMaxTextureSizeSupported(id<MTLDevice> device) {
@@ -29,19 +59,35 @@ ISize DeviceMaxTextureSizeSupported(id<MTLDevice> device) {
   // According to the feature set table, there are two supported max sizes :
   // 16384 and 8192 for devices flutter support. The former is used on macs and
   // latest ios devices. The latter is used on old ios devices.
-  if ([device supportsFamily:MTLGPUFamilyApple3] ||
-      [device supportsFamily:MTLGPUFamilyMacCatalyst1] ||
-      [device supportsFamily:MTLGPUFamilyMac1]) {
+  if (@available(macOS 10.15, iOS 13, tvOS 13, *)) {
+    if ([device supportsFamily:MTLGPUFamilyApple3] ||
+        [device supportsFamily:MTLGPUFamilyMacCatalyst1] ||
+        [device supportsFamily:MTLGPUFamilyMac1]) {
+      return {16384, 16384};
+    }
+    return {8192, 8192};
+  } else {
+#if FML_OS_IOS
+    if ([device supportsFeatureSet:MTLFeatureSet_iOS_GPUFamily4_v1] ||
+        [device supportsFeatureSet:MTLFeatureSet_iOS_GPUFamily3_v1]) {
+      return {16384, 16384};
+    }
+#endif
+#if FML_OS_MACOSX
     return {16384, 16384};
+#endif
+    return {8192, 8192};
   }
-  return {8192, 8192};
 }
 
 static bool SupportsLossyTextureCompression(id<MTLDevice> device) {
 #ifdef FML_OS_IOS_SIMULATOR
   return false;
 #else
-  return [device supportsFamily:MTLGPUFamilyApple8];
+  if (@available(macOS 10.15, iOS 13, tvOS 13, *)) {
+    return [device supportsFamily:MTLGPUFamilyApple8];
+  }
+  return false;
 #endif
 }
 
@@ -64,7 +110,7 @@ AllocatorMTL::AllocatorMTL(id<MTLDevice> device, std::string label)
   }
 
   supports_memoryless_targets_ = DeviceSupportsDeviceTransientTargets(device_);
-  supports_uma_ = device_.hasUnifiedMemory;
+  supports_uma_ = DeviceHasUnifiedMemoryArchitecture(device_);
   max_texture_supported_ = DeviceMaxTextureSizeSupported(device_);
 
   is_valid_ = true;
@@ -159,8 +205,7 @@ std::shared_ptr<DeviceBuffer> AllocatorMTL::OnCreateBuffer(
 }
 
 std::shared_ptr<Texture> AllocatorMTL::OnCreateTexture(
-    const TextureDescriptor& desc,
-    bool threadsafe) {
+    const TextureDescriptor& desc) {
   if (!IsValid()) {
     return nullptr;
   }
@@ -208,10 +253,6 @@ uint16_t AllocatorMTL::MinimumBytesPerRow(PixelFormat format) const {
 
 ISize AllocatorMTL::GetMaxTextureSizeSupported() const {
   return max_texture_supported_;
-}
-
-void AllocatorMTL::DebugSetSupportsUMA(bool value) {
-  supports_uma_ = value;
 }
 
 Bytes AllocatorMTL::DebugGetHeapUsage() const {

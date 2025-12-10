@@ -82,8 +82,8 @@ bool _isAscii(int charCode) {
 
 /// Returns whether the `char` is a single character of a letter or a digit.
 bool isLetter(int charCode) {
-  return (charCode >= _kLowerA && charCode <= _kLowerZ) ||
-      (charCode >= _kUpperA && charCode <= _kUpperZ);
+  return (charCode >= _kLowerA && charCode <= _kLowerZ)
+      || (charCode >= _kUpperA && charCode <= _kUpperZ);
 }
 
 /// A set of rules that can derive a large number of logical keys simply from
@@ -119,10 +119,10 @@ class _StringStream {
 
   final String _data;
   final Map<int, String> _goalToEventCode = Map<int, String>.fromEntries(
-    kLayoutGoals.entries.map(
-      (MapEntry<String, String> beforeEntry) =>
-          MapEntry<int, String>(beforeEntry.value.codeUnitAt(0), beforeEntry.key),
-    ),
+    kLayoutGoals
+      .entries
+      .map((MapEntry<String, String> beforeEntry) =>
+          MapEntry<int, String>(beforeEntry.value.codeUnitAt(0), beforeEntry.key))
   );
 
   int get offest => _offset;
@@ -142,7 +142,7 @@ class _StringStream {
   }
 
   String readEventKey() {
-    final char = String.fromCharCode(readIntAsChar());
+    final String char = String.fromCharCode(readIntAsChar());
     if (char == _kUseDead) {
       return _kEventKeyDead;
     } else {
@@ -160,16 +160,18 @@ class _StringStream {
 Map<String, int> _unmarshallCodeMap(_StringStream stream) {
   final int entryNum = stream.readIntAsVerbatim();
   return <String, int>{
-    for (int i = 0; i < entryNum; i++) stream.readEventKey(): stream.readIntAsChar(),
+    for (int i = 0; i < entryNum; i++)
+      stream.readEventKey(): stream.readIntAsChar(),
   };
 }
 
 /// Decode a key mapping data out of the string.
 Map<String, Map<String, int>> unmarshallMappingData(String compressed) {
-  final stream = _StringStream(compressed);
+  final _StringStream stream = _StringStream(compressed);
   final int eventCodeNum = stream.readIntAsVerbatim();
   return <String, Map<String, int>>{
-    for (int i = 0; i < eventCodeNum; i++) stream.readEventCode(): _unmarshallCodeMap(stream),
+    for (int i = 0; i < eventCodeNum; i++)
+      stream.readEventCode() : _unmarshallCodeMap(stream),
   };
 }
 
@@ -177,8 +179,8 @@ Map<String, Map<String, int>> unmarshallMappingData(String compressed) {
 
 /// Whether the given charCode is a ASCII letter.
 bool isLetterChar(int charCode) {
-  return (charCode >= _kLowerA && charCode <= _kLowerZ) ||
-      (charCode >= _kUpperA && charCode <= _kUpperZ);
+  return (charCode >= _kLowerA && charCode <= _kLowerZ)
+      || (charCode >= _kUpperA && charCode <= _kUpperZ);
 }
 
 bool _isPrintableEascii(int charCode) {
@@ -187,7 +189,9 @@ bool _isPrintableEascii(int charCode) {
 
 typedef _ForEachAction<V> = void Function(String key, V value);
 void _sortedForEach<V>(Map<String, V> map, _ForEachAction<V> action) {
-  map.entries.toList()
+  map
+    .entries
+    .toList()
     ..sort((MapEntry<String, V> a, MapEntry<String, V> b) => a.key.compareTo(b.key))
     ..forEach((MapEntry<String, V> entry) {
       action(entry.key, entry.value);
@@ -241,7 +245,7 @@ void _marshallEventKey(StringBuffer builder, String value) {
 /// string can be multi-byte, which means the decoder should parse the string
 /// using substr instead of as a binary stream.
 List<String> marshallMappingData(Map<String, Map<String, int>> mappingData) {
-  final builder = StringBuffer();
+  final StringBuffer builder = StringBuffer();
   _marshallIntAsVerbatim(builder, mappingData.length);
   _sortedForEach(mappingData, (String eventCode, Map<String, int> codeMap) {
     builder.write('\n');

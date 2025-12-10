@@ -25,14 +25,14 @@ class TestGPUSurfaceMetalDelegate : public GPUSurfaceMetalDelegate {
 
   ~TestGPUSurfaceMetalDelegate() = default;
 
-  GPUCAMetalLayerHandle GetCAMetalLayer(const DlISize& frame_info) const override {
-    layer_.drawableSize = CGSizeMake(frame_info.width, frame_info.height);
+  GPUCAMetalLayerHandle GetCAMetalLayer(const SkISize& frame_info) const override {
+    layer_.drawableSize = CGSizeMake(frame_info.width(), frame_info.height());
     return (__bridge GPUCAMetalLayerHandle)(layer_);
   }
 
   bool PresentDrawable(GrMTLHandle drawable) const override { return true; }
 
-  GPUMTLTextureInfo GetMTLTexture(const DlISize& frame_info) const override { return {}; }
+  GPUMTLTextureInfo GetMTLTexture(const SkISize& frame_info) const override { return {}; }
 
   bool PresentTexture(GPUMTLTextureInfo texture) const override { return true; }
 
@@ -54,8 +54,7 @@ static std::shared_ptr<impeller::ContextMTL> CreateImpellerContext() {
                                              impeller_framebuffer_blend_shaders_length),
   };
   auto sync_switch = std::make_shared<fml::SyncSwitch>(false);
-  return impeller::ContextMTL::Create(impeller::Flags{}, shader_mappings, sync_switch,
-                                      "Impeller Library");
+  return impeller::ContextMTL::Create(shader_mappings, sync_switch, "Impeller Library");
 }
 
 TEST(GPUSurfaceMetalImpeller, InvalidImpellerContextCreatesCausesSurfaceToBeInvalid) {
@@ -80,7 +79,7 @@ TEST(GPUSurfaceMetalImpeller, AcquireFrameFromCAMetalLayerNullChecksDrawable) {
 
   ASSERT_TRUE(surface->IsValid());
 
-  auto frame = surface->AcquireFrame(DlISize(100, 100));
+  auto frame = surface->AcquireFrame(SkISize::Make(100, 100));
   ASSERT_EQ(frame, nullptr);
 }
 
@@ -92,7 +91,7 @@ TEST(GPUSurfaceMetalImpeller, AcquireFrameFromCAMetalLayerDoesNotRetainThis) {
 
   ASSERT_TRUE(surface->IsValid());
 
-  auto frame = surface->AcquireFrame(DlISize(100, 100));
+  auto frame = surface->AcquireFrame(SkISize::Make(100, 100));
   ASSERT_TRUE(frame);
 
   // Simulate a rasterizer teardown, e.g. due to going to the background.
@@ -111,21 +110,21 @@ TEST(GPUSurfaceMetalImpeller, ResetHostBufferBasedOnFrameBoundary) {
 
   ASSERT_TRUE(surface->IsValid());
 
-  auto& data_host_buffer = surface->GetAiksContext()->GetContentContext().GetTransientsDataBuffer();
+  auto& host_buffer = surface->GetAiksContext()->GetContentContext().GetTransientsBuffer();
 
-  EXPECT_EQ(data_host_buffer.GetStateForTest().current_frame, 0u);
+  EXPECT_EQ(host_buffer.GetStateForTest().current_frame, 0u);
 
-  auto frame = surface->AcquireFrame(DlISize(100, 100));
+  auto frame = surface->AcquireFrame(SkISize::Make(100, 100));
   frame->set_submit_info({.frame_boundary = false});
 
   ASSERT_TRUE(frame->Submit());
-  EXPECT_EQ(data_host_buffer.GetStateForTest().current_frame, 0u);
+  EXPECT_EQ(host_buffer.GetStateForTest().current_frame, 0u);
 
-  frame = surface->AcquireFrame(DlISize(100, 100));
+  frame = surface->AcquireFrame(SkISize::Make(100, 100));
   frame->set_submit_info({.frame_boundary = true});
 
   ASSERT_TRUE(frame->Submit());
-  EXPECT_EQ(data_host_buffer.GetStateForTest().current_frame, 1u);
+  EXPECT_EQ(host_buffer.GetStateForTest().current_frame, 1u);
 }
 
 #ifdef IMPELLER_DEBUG
@@ -140,14 +139,14 @@ TEST(GPUSurfaceMetalImpeller, CreatesImpellerCaptureScope) {
 
   std::unique_ptr<Surface> surface =
       std::make_unique<GPUSurfaceMetalImpeller>(delegate.get(), aiks_context);
-  auto frame_1 = surface->AcquireFrame(DlISize(100, 100));
+  auto frame_1 = surface->AcquireFrame(SkISize::Make(100, 100));
   frame_1->set_submit_info({.frame_boundary = false});
 
   EXPECT_TRUE(context->GetCaptureManager()->CaptureScopeActive());
 
   std::unique_ptr<Surface> surface_2 =
       std::make_unique<GPUSurfaceMetalImpeller>(delegate.get(), aiks_context);
-  auto frame_2 = surface->AcquireFrame(DlISize(100, 100));
+  auto frame_2 = surface->AcquireFrame(SkISize::Make(100, 100));
   frame_2->set_submit_info({.frame_boundary = true});
 
   EXPECT_TRUE(context->GetCaptureManager()->CaptureScopeActive());

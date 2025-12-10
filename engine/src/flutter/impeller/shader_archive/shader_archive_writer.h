@@ -22,8 +22,6 @@ class ShaderArchiveWriter {
 
   [[nodiscard]] bool AddShaderAtPath(const std::string& path);
 
-  void SetEntryPointPrefix(std::string prefix);
-
   [[nodiscard]] bool AddShader(ArchiveShaderType type,
                                std::string name,
                                std::shared_ptr<fml::Mapping> mapping);
@@ -38,7 +36,6 @@ class ShaderArchiveWriter {
   };
 
   std::vector<ShaderDescription> shader_descriptions_;
-  std::string prefix_;
 
   ShaderArchiveWriter(const ShaderArchiveWriter&) = delete;
 

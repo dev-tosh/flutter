@@ -23,8 +23,7 @@ static std::string GetIntermediatesPath() {
       {flutter::testing::GetFixturesPath(), dir_name.str()});
 }
 
-CompilerTestBase::CompilerTestBase()
-    : intermediates_path_(GetIntermediatesPath()) {
+CompilerTest::CompilerTest() : intermediates_path_(GetIntermediatesPath()) {
   intermediates_directory_ =
       fml::OpenDirectory(intermediates_path_.c_str(),
                          true,  // create if necessary
@@ -32,7 +31,7 @@ CompilerTestBase::CompilerTestBase()
   FML_CHECK(intermediates_directory_.is_valid());
 }
 
-CompilerTestBase::~CompilerTestBase() {
+CompilerTest::~CompilerTest() {
   intermediates_directory_.reset();
 
   std::filesystem::remove_all(std::filesystem::path(intermediates_path_));
@@ -69,14 +68,14 @@ static std::string SLFileName(const char* fixture_name,
   return stream.str();
 }
 
-std::unique_ptr<fml::FileMapping> CompilerTestBase::GetReflectionJson(
+std::unique_ptr<fml::FileMapping> CompilerTest::GetReflectionJson(
     const char* fixture_name) const {
   auto filename = ReflectionJSONName(fixture_name);
   auto fd = fml::OpenFileReadOnly(intermediates_directory_, filename.c_str());
   return fml::FileMapping::CreateReadOnly(fd);
 }
 
-std::unique_ptr<fml::FileMapping> CompilerTestBase::GetShaderFile(
+std::unique_ptr<fml::FileMapping> CompilerTest::GetShaderFile(
     const char* fixture_name,
     TargetPlatform platform) const {
   auto filename = SLFileName(fixture_name, platform);
@@ -84,11 +83,10 @@ std::unique_ptr<fml::FileMapping> CompilerTestBase::GetShaderFile(
   return fml::FileMapping::CreateReadOnly(fd);
 }
 
-bool CompilerTestBase::CanCompileAndReflect(
-    const char* fixture_name,
-    SourceType source_type,
-    SourceLanguage source_language,
-    const char* entry_point_name) const {
+bool CompilerTest::CanCompileAndReflect(const char* fixture_name,
+                                        SourceType source_type,
+                                        SourceLanguage source_language,
+                                        const char* entry_point_name) const {
   std::shared_ptr<fml::Mapping> fixture =
       flutter::testing::OpenFixtureAsMapping(fixture_name);
   if (!fixture || !fixture->GetMapping()) {

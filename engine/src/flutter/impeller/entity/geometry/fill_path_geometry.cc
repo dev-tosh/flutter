@@ -12,20 +12,20 @@
 
 namespace impeller {
 
-FillPathSourceGeometry::FillPathSourceGeometry(std::optional<Rect> inner_rect)
-    : inner_rect_(inner_rect) {}
+FillPathGeometry::FillPathGeometry(const Path& path,
+                                   std::optional<Rect> inner_rect)
+    : path_(path), inner_rect_(inner_rect) {}
 
-FillPathSourceGeometry::~FillPathSourceGeometry() {}
+FillPathGeometry::~FillPathGeometry() {}
 
-GeometryResult FillPathSourceGeometry::GetPositionBuffer(
+GeometryResult FillPathGeometry::GetPositionBuffer(
     const ContentContext& renderer,
     const Entity& entity,
     RenderPass& pass) const {
-  auto& data_host_buffer = renderer.GetTransientsDataBuffer();
-  auto& indexes_host_buffer = renderer.GetTransientsIndexesBuffer();
+  auto& host_buffer = renderer.GetTransientsBuffer();
 
-  const auto& bounding_box = GetSource().GetBounds();
-  if (bounding_box.IsEmpty()) {
+  const auto& bounding_box = path_.GetBoundingBox();
+  if (bounding_box.has_value() && bounding_box->IsEmpty()) {
     return GeometryResult{
         .type = PrimitiveType::kTriangle,
         .vertex_buffer =
@@ -44,8 +44,7 @@ GeometryResult FillPathSourceGeometry::GetPositionBuffer(
       renderer.GetDeviceCapabilities().SupportsTriangleFan() &&
       supports_primitive_restart;
   VertexBuffer vertex_buffer = renderer.GetTessellator().TessellateConvex(
-      GetSource(), data_host_buffer, indexes_host_buffer,
-      entity.GetTransform().GetMaxBasisLengthXY(),
+      path_, host_buffer, entity.GetTransform().GetMaxBasisLengthXY(),
       /*supports_primitive_restart=*/supports_primitive_restart,
       /*supports_triangle_fan=*/supports_triangle_fan);
 
@@ -58,14 +57,14 @@ GeometryResult FillPathSourceGeometry::GetPositionBuffer(
   };
 }
 
-GeometryResult::Mode FillPathSourceGeometry::GetResultMode() const {
-  const PathSource& source = GetSource();
-  const auto& bounding_box = source.GetBounds();
-  if (source.IsConvex() || bounding_box.IsEmpty()) {
+GeometryResult::Mode FillPathGeometry::GetResultMode() const {
+  const auto& bounding_box = path_.GetBoundingBox();
+  if (path_.IsConvex() ||
+      (bounding_box.has_value() && bounding_box->IsEmpty())) {
     return GeometryResult::Mode::kNormal;
   }
 
-  switch (source.GetFillType()) {
+  switch (path_.GetFillType()) {
     case FillType::kNonZero:
       return GeometryResult::Mode::kNonZero;
     case FillType::kOdd:
@@ -75,13 +74,13 @@ GeometryResult::Mode FillPathSourceGeometry::GetResultMode() const {
   FML_UNREACHABLE();
 }
 
-std::optional<Rect> FillPathSourceGeometry::GetCoverage(
+std::optional<Rect> FillPathGeometry::GetCoverage(
     const Matrix& transform) const {
-  return GetSource().GetBounds().TransformAndClipBounds(transform);
+  return path_.GetTransformedBoundingBox(transform);
 }
 
-bool FillPathSourceGeometry::CoversArea(const Matrix& transform,
-                                        const Rect& rect) const {
+bool FillPathGeometry::CoversArea(const Matrix& transform,
+                                  const Rect& rect) const {
   if (!inner_rect_.has_value()) {
     return false;
   }
@@ -90,22 +89,6 @@ bool FillPathSourceGeometry::CoversArea(const Matrix& transform,
   }
   Rect coverage = inner_rect_->TransformBounds(transform);
   return coverage.Contains(rect);
-}
-
-FillPathGeometry::FillPathGeometry(const flutter::DlPath& path,
-                                   std::optional<Rect> inner_rect)
-    : FillPathSourceGeometry(inner_rect), path_(path) {}
-
-const PathSource& FillPathGeometry::GetSource() const {
-  return path_;
-}
-
-FillDiffRoundRectGeometry::FillDiffRoundRectGeometry(const RoundRect& outer,
-                                                     const RoundRect& inner)
-    : FillPathSourceGeometry(std::nullopt), source_(outer, inner) {}
-
-const PathSource& FillDiffRoundRectGeometry::GetSource() const {
-  return source_;
 }
 
 }  // namespace impeller

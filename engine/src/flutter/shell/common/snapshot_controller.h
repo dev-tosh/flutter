@@ -10,12 +10,11 @@
 #include "flutter/flow/surface.h"
 #include "flutter/fml/synchronization/sync_switch.h"
 #include "flutter/lib/ui/snapshot_delegate.h"
-#include "flutter/shell/common/snapshot_pixel_format.h"
 #include "flutter/shell/common/snapshot_surface_producer.h"
 
 namespace impeller {
 class AiksContext;
-}  // namespace impeller
+}
 
 namespace flutter {
 
@@ -25,7 +24,6 @@ class SnapshotController {
    public:
     virtual ~Delegate() = default;
     virtual const std::unique_ptr<Surface>& GetSurface() const = 0;
-    virtual bool IsAiksContextInitialized() const = 0;
     virtual std::shared_ptr<impeller::AiksContext> GetAiksContext() const = 0;
     virtual const std::unique_ptr<SnapshotSurfaceProducer>&
     GetSnapshotSurfaceProducer() const = 0;
@@ -40,24 +38,19 @@ class SnapshotController {
 
   virtual void MakeRasterSnapshot(
       sk_sp<DisplayList> display_list,
-      DlISize picture_size,
-      std::function<void(const sk_sp<DlImage>&)> callback,
-      SnapshotPixelFormat pixel_format) = 0;
+      SkISize picture_size,
+      std::function<void(const sk_sp<DlImage>&)> callback) = 0;
 
   // Note that this image is not guaranteed to be UIThreadSafe and must
   // be converted to a DlImageGPU if it is to be handed back to the UI
   // thread.
-  virtual sk_sp<DlImage> MakeRasterSnapshotSync(
-      sk_sp<DisplayList> display_list,
-      DlISize picture_size,
-      SnapshotPixelFormat pixel_format) = 0;
+  virtual sk_sp<DlImage> MakeRasterSnapshotSync(sk_sp<DisplayList> display_list,
+                                                SkISize picture_size) = 0;
 
   virtual sk_sp<SkImage> ConvertToRasterImage(sk_sp<SkImage> image) = 0;
 
   virtual void CacheRuntimeStage(
       const std::shared_ptr<impeller::RuntimeStage>& runtime_stage) = 0;
-
-  virtual bool MakeRenderContextCurrent() = 0;
 
  protected:
   explicit SnapshotController(const Delegate& delegate);

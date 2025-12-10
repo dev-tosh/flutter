@@ -8,19 +8,16 @@
 #import "flutter/shell/platform/darwin/ios/framework/Headers/FlutterAppDelegate.h"
 #import "flutter/shell/platform/darwin/ios/framework/Headers/FlutterEngine.h"
 #import "flutter/shell/platform/darwin/ios/framework/Headers/FlutterViewController.h"
-#import "flutter/shell/platform/darwin/ios/framework/Source/FlutterAppDelegate_Internal.h"
 #import "flutter/shell/platform/darwin/ios/framework/Source/FlutterAppDelegate_Test.h"
-#import "flutter/shell/platform/darwin/ios/framework/Source/FlutterEngine_Internal.h"
 #import "flutter/shell/platform/darwin/ios/framework/Source/FlutterEngine_Test.h"
 
 FLUTTER_ASSERT_ARC
 
 @interface FlutterAppDelegateTest : XCTestCase
 @property(strong) FlutterAppDelegate* appDelegate;
-@property(strong) FlutterViewController* viewController;
+
 @property(strong) id mockMainBundle;
 @property(strong) id mockNavigationChannel;
-@property(strong) FlutterEngine* engine;
 
 // Retain callback until the tests are done.
 // https://github.com/flutter/flutter/issues/74267
@@ -40,15 +37,12 @@ FLUTTER_ASSERT_ARC
   self.appDelegate = appDelegate;
 
   FlutterViewController* viewController = OCMClassMock([FlutterViewController class]);
-  self.viewController = viewController;
-
   FlutterMethodChannel* navigationChannel = OCMClassMock([FlutterMethodChannel class]);
   self.mockNavigationChannel = navigationChannel;
 
   FlutterEngine* engine = OCMClassMock([FlutterEngine class]);
   OCMStub([engine navigationChannel]).andReturn(navigationChannel);
   OCMStub([viewController engine]).andReturn(engine);
-  self.engine = engine;
 
   id mockEngineFirstFrameCallback = [OCMArg invokeBlockWithArgs:@NO, nil];
   self.mockEngineFirstFrameCallback = mockEngineFirstFrameCallback;
@@ -158,20 +152,6 @@ FLUTTER_ASSERT_ARC
   XCTAssertNil(weakWindow);
 }
 
-- (void)testGrabLaunchEngine {
-  // Clear out the mocking of the root view controller.
-  [self.mockMainBundle stopMocking];
-  self.appDelegate.rootFlutterViewControllerGetter = nil;
-  // Working with plugins forces the creation of an engine.
-  XCTAssertFalse([self.appDelegate hasPlugin:@"hello"]);
-  XCTAssertNotNil([self.appDelegate takeLaunchEngine]);
-  XCTAssertNil([self.appDelegate takeLaunchEngine]);
-}
-
-- (void)testGrabLaunchEngineWithoutPlugins {
-  XCTAssertNil([self.appDelegate takeLaunchEngine]);
-}
-
 #pragma mark - Deep linking
 
 - (void)testUniversalLinkPushRouteInformation {
@@ -190,46 +170,6 @@ FLUTTER_ASSERT_ARC
         }];
   XCTAssertTrue(result);
   OCMVerifyAll(self.mockNavigationChannel);
-}
-
-- (void)testUseNonDeprecatedOpenURLAPI {
-  OCMStub([self.mockMainBundle objectForInfoDictionaryKey:@"FlutterDeepLinkingEnabled"])
-      .andReturn(@YES);
-  NSUserActivity* userActivity = [[NSUserActivity alloc] initWithActivityType:@"com.example.test"];
-  userActivity.webpageURL = [NSURL URLWithString:@"http://myApp/custom/route?query=nonexist"];
-  OCMStub([self.engine sendDeepLinkToFramework:[OCMArg any] completionHandler:[OCMArg any]])
-      .andDo(^(NSInvocation* invocation) {
-        void (^handler)(BOOL success);
-        [invocation getArgument:&handler atIndex:3];
-        handler(NO);
-      });
-  id mockApplication = OCMClassMock([UIApplication class]);
-  OCMStub([mockApplication sharedApplication]).andReturn(mockApplication);
-  BOOL result = [self.appDelegate
-               application:[UIApplication sharedApplication]
-      continueUserActivity:userActivity
-        restorationHandler:^(NSArray<id<UIUserActivityRestoring>>* __nullable restorableObjects){
-        }];
-  XCTAssertTrue(result);
-  OCMVerify([mockApplication openURL:[OCMArg any]
-                             options:[OCMArg any]
-                   completionHandler:[OCMArg any]]);
-}
-
-- (void)testSetGetPluginRegistrant {
-  id mockRegistrant = OCMProtocolMock(@protocol(FlutterPluginRegistrant));
-  self.appDelegate.pluginRegistrant = mockRegistrant;
-  XCTAssertEqual(self.appDelegate.pluginRegistrant, mockRegistrant);
-}
-
-- (void)testSetGetPluginRegistrantSelf {
-  __weak FlutterAppDelegate* appDelegate = self.appDelegate;
-  @autoreleasepool {
-    appDelegate.pluginRegistrant = (id)appDelegate;
-    self.appDelegate = nil;
-  }
-  // A retain cycle would keep this alive.
-  XCTAssertNil(appDelegate);
 }
 
 @end

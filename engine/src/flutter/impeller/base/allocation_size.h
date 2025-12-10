@@ -6,7 +6,6 @@
 #define FLUTTER_IMPELLER_BASE_ALLOCATION_SIZE_H_
 
 #include <cmath>
-#include <compare>
 #include <cstddef>
 #include <cstdint>
 #include <type_traits>
@@ -92,9 +91,32 @@ class AllocationSize {
     return AllocationSize{GetByteSize(), FromBytesTag::kFromBytes};
   }
 
-  // Comparison operators.
+  // The following relational operators can be replaced with a defaulted
+  // spaceship operator post C++20.
 
-  constexpr auto operator<=>(const AllocationSize& other) const = default;
+  constexpr bool operator<(const AllocationSize& other) const {
+    return bytes_ < other.bytes_;
+  }
+
+  constexpr bool operator>(const AllocationSize& other) const {
+    return bytes_ > other.bytes_;
+  }
+
+  constexpr bool operator>=(const AllocationSize& other) const {
+    return bytes_ >= other.bytes_;
+  }
+
+  constexpr bool operator<=(const AllocationSize& other) const {
+    return bytes_ <= other.bytes_;
+  }
+
+  constexpr bool operator==(const AllocationSize& other) const {
+    return bytes_ == other.bytes_;
+  }
+
+  constexpr bool operator!=(const AllocationSize& other) const {
+    return bytes_ != other.bytes_;
+  }
 
   // Explicit casts.
 
@@ -139,37 +161,37 @@ using GibiBytes = AllocationSize<1'024u * 1'024u * 1'024u>;
 inline namespace allocation_size_literals {
 
 // NOLINTNEXTLINE
-constexpr Bytes operator""_bytes(unsigned long long int size) {
+constexpr Bytes operator"" _bytes(unsigned long long int size) {
   return Bytes{size};
 }
 
 // NOLINTNEXTLINE
-constexpr KiloBytes operator""_kb(unsigned long long int size) {
+constexpr KiloBytes operator"" _kb(unsigned long long int size) {
   return KiloBytes{size};
 }
 
 // NOLINTNEXTLINE
-constexpr MegaBytes operator""_mb(unsigned long long int size) {
+constexpr MegaBytes operator"" _mb(unsigned long long int size) {
   return MegaBytes{size};
 }
 
 // NOLINTNEXTLINE
-constexpr GigaBytes operator""_gb(unsigned long long int size) {
+constexpr GigaBytes operator"" _gb(unsigned long long int size) {
   return GigaBytes{size};
 }
 
 // NOLINTNEXTLINE
-constexpr KibiBytes operator""_kib(unsigned long long int size) {
+constexpr KibiBytes operator"" _kib(unsigned long long int size) {
   return KibiBytes{size};
 }
 
 // NOLINTNEXTLINE
-constexpr MebiBytes operator""_mib(unsigned long long int size) {
+constexpr MebiBytes operator"" _mib(unsigned long long int size) {
   return MebiBytes{size};
 }
 
 // NOLINTNEXTLINE
-constexpr GibiBytes operator""_gib(unsigned long long int size) {
+constexpr GibiBytes operator"" _gib(unsigned long long int size) {
   return GibiBytes{size};
 }
 

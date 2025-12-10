@@ -34,13 +34,13 @@ bool GPUSurfaceVulkan::IsValid() {
 }
 
 std::unique_ptr<SurfaceFrame> GPUSurfaceVulkan::AcquireFrame(
-    const DlISize& frame_size) {
+    const SkISize& frame_size) {
   if (!IsValid()) {
     FML_LOG(ERROR) << "Vulkan surface was invalid.";
     return nullptr;
   }
 
-  if (frame_size.IsEmpty()) {
+  if (frame_size.isEmpty()) {
     FML_LOG(ERROR) << "Vulkan surface was asked for an empty frame.";
     return nullptr;
   }
@@ -92,10 +92,12 @@ std::unique_ptr<SurfaceFrame> GPUSurfaceVulkan::AcquireFrame(
                                         std::move(submit_callback), frame_size);
 }
 
-DlMatrix GPUSurfaceVulkan::GetRootTransformation() const {
+SkMatrix GPUSurfaceVulkan::GetRootTransformation() const {
   // This backend does not support delegating to the underlying platform to
   // query for root surface transformations. Just return identity.
-  return DlMatrix();
+  SkMatrix matrix;
+  matrix.reset();
+  return matrix;
 }
 
 GrDirectContext* GPUSurfaceVulkan::GetContext() {
@@ -105,7 +107,7 @@ GrDirectContext* GPUSurfaceVulkan::GetContext() {
 sk_sp<SkSurface> GPUSurfaceVulkan::CreateSurfaceFromVulkanImage(
     const VkImage image,
     const VkFormat format,
-    const DlISize& size) {
+    const SkISize& size) {
 #ifdef SK_VULKAN
   GrVkImageInfo image_info = {
       .fImage = image,
@@ -120,7 +122,7 @@ sk_sp<SkSurface> GPUSurfaceVulkan::CreateSurfaceFromVulkanImage(
       .fLevelCount = 1,
   };
   auto backend_texture =
-      GrBackendTextures::MakeVk(size.width, size.height, image_info);
+      GrBackendTextures::MakeVk(size.width(), size.height(), image_info);
 
   SkSurfaceProps surface_properties(0, kUnknown_SkPixelGeometry);
 

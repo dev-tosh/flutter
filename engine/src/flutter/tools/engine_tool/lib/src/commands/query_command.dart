@@ -38,12 +38,21 @@ final class QueryCommand extends CommandBase {
         ],
         allowedHelp: <String, String>{
           for (final MapEntry<String, BuilderConfig> entry in configs.entries)
-            if (entry.value.canRunOn(environment.platform)) entry.key: entry.value.path,
+            if (entry.value.canRunOn(environment.platform))
+              entry.key: entry.value.path,
         },
       );
 
-    addSubcommand(QueryBuildersCommand(environment: environment, configs: configs, help: help));
-    addSubcommand(QueryTargetsCommand(environment: environment, configs: configs, help: help));
+    addSubcommand(QueryBuildersCommand(
+      environment: environment,
+      configs: configs,
+      help: help,
+    ));
+    addSubcommand(QueryTargetsCommand(
+      environment: environment,
+      configs: configs,
+      help: help,
+    ));
   }
 
   /// Build configurations loaded from the engine from under ci/builders.
@@ -53,15 +62,18 @@ final class QueryCommand extends CommandBase {
   String get name => 'query';
 
   @override
-  String get description =>
-      'Provides information about build configurations '
+  String get description => 'Provides information about build configurations '
       'and tests.';
 }
 
 /// The 'query builders' command.
 final class QueryBuildersCommand extends CommandBase {
   /// Constructs the 'query builders' command.
-  QueryBuildersCommand({required super.environment, required this.configs, super.help = false});
+  QueryBuildersCommand({
+    required super.environment,
+    required this.configs,
+    super.help = false,
+  });
 
   /// Build configurations loaded from the engine from under ci/builders.
   final Map<String, BuilderConfig> configs;
@@ -70,18 +82,19 @@ final class QueryBuildersCommand extends CommandBase {
   String get name => 'builders';
 
   @override
-  String get description =>
-      'Provides information about CI builder '
+  String get description => 'Provides information about CI builder '
       'configurations';
 
   @override
   Future<int> run() async {
     // Loop through all configs, and log those that are compatible with the
     // current platform.
-    final all = parent!.argResults![allFlag]! as bool;
-    final builderName = parent!.argResults![builderFlag] as String?;
+    final bool all = parent!.argResults![allFlag]! as bool;
+    final String? builderName = parent!.argResults![builderFlag] as String?;
     if (!environment.verbose) {
-      environment.logger.status('Add --verbose to see detailed information about each builder');
+      environment.logger.status(
+        'Add --verbose to see detailed information about each builder',
+      );
       environment.logger.status('');
     }
     for (final String key in configs.keys) {
@@ -122,8 +135,17 @@ final class QueryBuildersCommand extends CommandBase {
 /// The query targets command.
 final class QueryTargetsCommand extends CommandBase {
   /// Constructs the 'query targets' command.
-  QueryTargetsCommand({required super.environment, required this.configs, super.help = false}) {
-    builds = BuildPlan.configureArgParser(argParser, environment, configs: configs, help: help);
+  QueryTargetsCommand({
+    required super.environment,
+    required this.configs,
+    super.help = false,
+  }) {
+    builds = BuildPlan.configureArgParser(
+      argParser,
+      environment,
+      configs: configs,
+      help: help,
+    );
     argParser.addFlag(
       testOnlyFlag,
       abbr: 't',
@@ -150,9 +172,17 @@ et query targets //flutter/fml/...  # List all targets under `//flutter/fml`
 
   @override
   Future<int> run() async {
-    final plan = BuildPlan.fromArgResults(argResults!, environment, builds: builds);
+    final plan = BuildPlan.fromArgResults(
+      argResults!,
+      environment,
+      builds: builds,
+    );
 
-    if (!await ensureBuildDir(environment, plan.build, enableRbe: plan.useRbe)) {
+    if (!await ensureBuildDir(
+      environment,
+      plan.build,
+      enableRbe: plan.useRbe,
+    )) {
       return 1;
     }
 
@@ -162,15 +192,18 @@ et query targets //flutter/fml/...  # List all targets under `//flutter/fml`
 
     // TODO(matanlurey): Discuss if we want to just require '//...'.
     // For now this retains the existing behavior.
-    List<String> patterns = argResults!.rest;
+    var patterns = argResults!.rest;
     if (patterns.isEmpty) {
       patterns = ['//...'];
     }
 
     final allTargets = <BuildTarget>{};
     for (final pattern in patterns) {
-      final TargetPattern target = TargetPattern.parse(pattern);
-      final List<BuildTarget> targets = await gn.desc('out/${plan.build.ninja.config}', target);
+      final target = TargetPattern.parse(pattern);
+      final targets = await gn.desc(
+        'out/${plan.build.ninja.config}',
+        target,
+      );
       allTargets.addAll(targets);
     }
 
@@ -179,7 +212,7 @@ et query targets //flutter/fml/...  # List all targets under `//flutter/fml`
       return 1;
     }
 
-    final bool testOnly = argResults!.flag(testOnlyFlag);
+    final testOnly = argResults!.flag(testOnlyFlag);
     for (final target in allTargets) {
       if (testOnly && (!target.testOnly || target is! ExecutableBuildTarget)) {
         continue;

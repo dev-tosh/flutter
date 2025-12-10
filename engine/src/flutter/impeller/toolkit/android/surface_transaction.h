@@ -18,21 +18,6 @@ namespace impeller::android {
 class SurfaceControl;
 class HardwareBuffer;
 
-/// @brief A wrapper class that indicates whether a SurfaceTransaction was
-/// created by the flutter engine or was borrowed from Java for platform
-/// interop.
-struct WrappedSurfaceTransaction {
-  ASurfaceTransaction* tx = nullptr;
-
-  /// Whether this SurfaceTransaction was created by the engine or imported from
-  /// Java.
-  bool owned = true;
-
-  constexpr bool operator==(const WrappedSurfaceTransaction& other) const {
-    return other.tx == tx;
-  }
-};
-
 //------------------------------------------------------------------------------
 /// @brief      A wrapper for ASurfaceTransaction.
 ///             https://developer.android.com/ndk/reference/group/native-activity#asurfacetransaction
@@ -62,8 +47,6 @@ class SurfaceTransaction {
   SurfaceTransaction(const SurfaceTransaction&) = delete;
 
   SurfaceTransaction& operator=(const SurfaceTransaction&) = delete;
-
-  explicit SurfaceTransaction(ASurfaceTransaction* transaction);
 
   bool IsValid() const;
 
@@ -136,20 +119,18 @@ class SurfaceTransaction {
 
  private:
   struct UniqueASurfaceTransactionTraits {
-    static WrappedSurfaceTransaction InvalidValue() { return {}; }
+    static ASurfaceTransaction* InvalidValue() { return nullptr; }
 
-    static bool IsValid(const WrappedSurfaceTransaction& value) {
-      return value.tx != nullptr;
+    static bool IsValid(ASurfaceTransaction* value) {
+      return value != InvalidValue();
     }
 
-    static void Free(const WrappedSurfaceTransaction& value) {
-      if (value.owned && value.tx) {
-        GetProcTable().ASurfaceTransaction_delete(value.tx);
-      }
+    static void Free(ASurfaceTransaction* value) {
+      GetProcTable().ASurfaceTransaction_delete(value);
     }
   };
 
-  fml::UniqueObject<WrappedSurfaceTransaction, UniqueASurfaceTransactionTraits>
+  fml::UniqueObject<ASurfaceTransaction*, UniqueASurfaceTransactionTraits>
       transaction_;
 };
 

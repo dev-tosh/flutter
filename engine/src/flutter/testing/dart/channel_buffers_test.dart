@@ -23,19 +23,15 @@ void _resize(ui.ChannelBuffers buffers, String name, int newSize) {
 
 void main() {
   test('push drain', () async {
-    const channel = 'foo';
+    const String channel = 'foo';
     final ByteData data = _makeByteData('bar');
-    final buffers = ui.ChannelBuffers();
-    var called = false;
+    final ui.ChannelBuffers buffers = ui.ChannelBuffers();
+    bool called = false;
     void callback(ByteData? responseData) {
       called = true;
     }
-
     buffers.push(channel, data, callback);
-    await buffers.drain(channel, (
-      ByteData? drainedData,
-      ui.PlatformMessageResponseCallback drainedCallback,
-    ) async {
+    await buffers.drain(channel, (ByteData? drainedData, ui.PlatformMessageResponseCallback drainedCallback) async {
       expect(drainedData, equals(data));
       expect(called, isFalse);
       drainedCallback(drainedData);
@@ -44,22 +40,17 @@ void main() {
   });
 
   test('drain is sync', () async {
-    const channel = 'foo';
+    const String channel = 'foo';
     final ByteData data = _makeByteData('message');
-    final buffers = ui.ChannelBuffers();
+    final ui.ChannelBuffers buffers = ui.ChannelBuffers();
     void callback(ByteData? responseData) {}
     buffers.push(channel, data, callback);
-    final log = <String>[];
-    final completer = Completer<void>();
-    scheduleMicrotask(() {
-      log.add('before drain, microtask');
-    });
+    final List<String> log = <String>[];
+    final Completer<void> completer = Completer<void>();
+    scheduleMicrotask(() { log.add('before drain, microtask'); });
     log.add('before drain');
 
-    buffers.drain(channel, (
-      ByteData? drainedData,
-      ui.PlatformMessageResponseCallback drainedCallback,
-    ) async {
+    buffers.drain(channel, (ByteData? drainedData, ui.PlatformMessageResponseCallback drainedCallback) async {
       log.add('callback');
       completer.complete();
     });
@@ -71,58 +62,50 @@ void main() {
       'callback',
       'after drain, before await',
       'before drain, microtask',
-      'after await',
+      'after await'
     ]);
   });
 
   test('push drain zero', () async {
-    const channel = 'foo';
+    const String channel = 'foo';
     final ByteData data = _makeByteData('bar');
-    final buffers = ui.ChannelBuffers();
+    final
+    ui.ChannelBuffers buffers = ui.ChannelBuffers();
     void callback(ByteData? responseData) {}
     _resize(buffers, channel, 0);
     buffers.push(channel, data, callback);
-    var didCall = false;
-    await buffers.drain(channel, (
-      ByteData? drainedData,
-      ui.PlatformMessageResponseCallback drainedCallback,
-    ) async {
+    bool didCall = false;
+    await buffers.drain(channel, (ByteData? drainedData, ui.PlatformMessageResponseCallback drainedCallback) async {
       didCall = true;
     });
     expect(didCall, equals(false));
   });
 
   test('drain when empty', () async {
-    const channel = 'foo';
-    final buffers = ui.ChannelBuffers();
-    var didCall = false;
-    await buffers.drain(channel, (
-      ByteData? drainedData,
-      ui.PlatformMessageResponseCallback drainedCallback,
-    ) async {
+    const String channel = 'foo';
+    final ui.ChannelBuffers buffers = ui.ChannelBuffers();
+    bool didCall = false;
+    await buffers.drain(channel, (ByteData? drainedData, ui.PlatformMessageResponseCallback drainedCallback) async {
       didCall = true;
     });
     expect(didCall, equals(false));
   });
 
   test('overflow', () async {
-    const channel = 'foo';
+    const String channel = 'foo';
     final ByteData one = _makeByteData('one');
     final ByteData two = _makeByteData('two');
     final ByteData three = _makeByteData('three');
     final ByteData four = _makeByteData('four');
-    final buffers = ui.ChannelBuffers();
+    final ui.ChannelBuffers buffers = ui.ChannelBuffers();
     void callback(ByteData? responseData) {}
     _resize(buffers, channel, 3);
     buffers.push(channel, one, callback);
     buffers.push(channel, two, callback);
     buffers.push(channel, three, callback);
     buffers.push(channel, four, callback);
-    var counter = 0;
-    await buffers.drain(channel, (
-      ByteData? drainedData,
-      ui.PlatformMessageResponseCallback drainedCallback,
-    ) async {
+    int counter = 0;
+    await buffers.drain(channel, (ByteData? drainedData, ui.PlatformMessageResponseCallback drainedCallback) async {
       switch (counter) {
         case 0:
           expect(drainedData, equals(two));
@@ -137,20 +120,17 @@ void main() {
   });
 
   test('resize drop', () async {
-    const channel = 'foo';
+    const String channel = 'foo';
     final ByteData one = _makeByteData('one');
     final ByteData two = _makeByteData('two');
-    final buffers = ui.ChannelBuffers();
+    final ui.ChannelBuffers buffers = ui.ChannelBuffers();
     _resize(buffers, channel, 100);
     void callback(ByteData? responseData) {}
     buffers.push(channel, one, callback);
     buffers.push(channel, two, callback);
     _resize(buffers, channel, 1);
-    var counter = 0;
-    await buffers.drain(channel, (
-      ByteData? drainedData,
-      ui.PlatformMessageResponseCallback drainedCallback,
-    ) async {
+    int counter = 0;
+    await buffers.drain(channel, (ByteData? drainedData, ui.PlatformMessageResponseCallback drainedCallback) async {
       switch (counter) {
         case 0:
           expect(drainedData, equals(two));
@@ -161,20 +141,18 @@ void main() {
   });
 
   test('resize dropping calls callback', () async {
-    const channel = 'foo';
+    const String channel = 'foo';
     final ByteData one = _makeByteData('one');
     final ByteData two = _makeByteData('two');
-    final buffers = ui.ChannelBuffers();
-    var didCallCallback = false;
+    final ui.ChannelBuffers buffers = ui.ChannelBuffers();
+    bool didCallCallback = false;
     void oneCallback(ByteData? responseData) {
       expect(responseData, isNull);
       didCallCallback = true;
     }
-
     void twoCallback(ByteData? responseData) {
       fail('wrong callback called');
     }
-
     _resize(buffers, channel, 100);
     buffers.push(channel, one, oneCallback);
     buffers.push(channel, two, twoCallback);
@@ -184,20 +162,18 @@ void main() {
   });
 
   test('overflow calls callback', () async {
-    const channel = 'foo';
+    const String channel = 'foo';
     final ByteData one = _makeByteData('one');
     final ByteData two = _makeByteData('two');
-    final buffers = ui.ChannelBuffers();
-    var didCallCallback = false;
+    final ui.ChannelBuffers buffers = ui.ChannelBuffers();
+    bool didCallCallback = false;
     void oneCallback(ByteData? responseData) {
       expect(responseData, isNull);
       didCallCallback = true;
     }
-
     void twoCallback(ByteData? responseData) {
       fail('wrong callback called');
     }
-
     _resize(buffers, channel, 1);
     buffers.push(channel, one, oneCallback);
     buffers.push(channel, two, twoCallback);
@@ -205,18 +181,20 @@ void main() {
   });
 
   test('handle garbage', () async {
-    final buffers = ui.ChannelBuffers();
-    expect(() => buffers.handleMessage(_makeByteData('asdfasdf')), throwsException);
+    final ui.ChannelBuffers buffers = ui.ChannelBuffers();
+    expect(() => buffers.handleMessage(_makeByteData('asdfasdf')),
+           throwsException);
   });
 
   test('handle resize garbage', () async {
-    final buffers = ui.ChannelBuffers();
-    expect(() => buffers.handleMessage(_makeByteData('resize\rfoo\rbar')), throwsException);
+    final ui.ChannelBuffers buffers = ui.ChannelBuffers();
+    expect(() => buffers.handleMessage(_makeByteData('resize\rfoo\rbar')),
+           throwsException);
   });
 
   test('ChannelBuffers.setListener', () async {
-    final log = <String>[];
-    final buffers = ui.ChannelBuffers();
+    final List<String> log = <String>[];
+    final ui.ChannelBuffers buffers = ui.ChannelBuffers();
     final ByteData one = _makeByteData('one');
     final ByteData two = _makeByteData('two');
     final ByteData three = _makeByteData('three');
@@ -224,9 +202,9 @@ void main() {
     final ByteData five = _makeByteData('five');
     final ByteData six = _makeByteData('six');
     final ByteData seven = _makeByteData('seven');
-    buffers.push('a', one, (ByteData? data) {});
-    buffers.push('b', two, (ByteData? data) {});
-    buffers.push('a', three, (ByteData? data) {});
+    buffers.push('a', one, (ByteData? data) { });
+    buffers.push('b', two, (ByteData? data) { });
+    buffers.push('a', three, (ByteData? data) { });
     log.add('top');
     buffers.setListener('a', (ByteData? data, ui.PlatformMessageResponseCallback callback) {
       expect(data, isNotNull);
@@ -250,14 +228,14 @@ void main() {
     await null; // first microtask after setting listener drains the first message
     await null; // second microtask ends the draining.
     log.add('-6');
-    buffers.push('b', four, (ByteData? data) {});
-    buffers.push('a', five, (ByteData? data) {});
+    buffers.push('b', four, (ByteData? data) { });
+    buffers.push('a', five, (ByteData? data) { });
     log.add('-7');
     await null;
     log.add('-8');
     buffers.clearListener('a');
-    buffers.push('a', six, (ByteData? data) {});
-    buffers.push('b', seven, (ByteData? data) {});
+    buffers.push('a', six, (ByteData? data) { });
+    buffers.push('b', seven, (ByteData? data) { });
     await null;
     log.add('-9');
     expect(log, <String>[
@@ -280,16 +258,16 @@ void main() {
   });
 
   test('ChannelBuffers.clearListener', () async {
-    final log = <String>[];
-    final buffers = ui.ChannelBuffers();
+    final List<String> log = <String>[];
+    final ui.ChannelBuffers buffers = ui.ChannelBuffers();
     final ByteData one = _makeByteData('one');
     final ByteData two = _makeByteData('two');
     final ByteData three = _makeByteData('three');
     final ByteData four = _makeByteData('four');
     buffers.handleMessage(_makeByteData('resize\ra\r10'));
-    buffers.push('a', one, (ByteData? data) {});
-    buffers.push('a', two, (ByteData? data) {});
-    buffers.push('a', three, (ByteData? data) {});
+    buffers.push('a', one, (ByteData? data) { });
+    buffers.push('a', two, (ByteData? data) { });
+    buffers.push('a', three, (ByteData? data) { });
     log.add('-1');
     buffers.setListener('a', (ByteData? data, ui.PlatformMessageResponseCallback callback) {
       expect(data, isNotNull);
@@ -306,7 +284,7 @@ void main() {
     });
     log.add('-4');
     await null;
-    buffers.push('a', four, (ByteData? data) {});
+    buffers.push('a', four, (ByteData? data) { });
     log.add('-5');
     await null;
     log.add('-6');
@@ -329,118 +307,28 @@ void main() {
   });
 
   test('ChannelBuffers.handleMessage for resize', () async {
-    final log = <String>[];
+    final List<String> log = <String>[];
     final ui.ChannelBuffers buffers = _TestChannelBuffers(log);
     // Created as follows:
     //   print(StandardMethodCodec().encodeMethodCall(MethodCall('resize', ['abcdef', 12345])).buffer.asUint8List());
     // ...with three 0xFF bytes on either side to ensure the method works with an offset on the underlying buffer.
-    buffers.handleMessage(
-      ByteData.sublistView(
-        Uint8List.fromList(<int>[
-          255,
-          255,
-          255,
-          7,
-          6,
-          114,
-          101,
-          115,
-          105,
-          122,
-          101,
-          12,
-          2,
-          7,
-          6,
-          97,
-          98,
-          99,
-          100,
-          101,
-          102,
-          3,
-          57,
-          48,
-          0,
-          0,
-          0,
-          0,
-          0,
-          0,
-          0,
-          0,
-          0,
-          0,
-          0,
-          255,
-          255,
-          255,
-        ]),
-        3,
-        27,
-      ),
-    );
+    buffers.handleMessage(ByteData.sublistView(Uint8List.fromList(<int>[255, 255, 255, 7, 6, 114, 101, 115, 105, 122, 101, 12, 2, 7, 6, 97, 98, 99, 100, 101, 102, 3, 57, 48, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 255, 255, 255]), 3, 27));
     expect(log, const <String>['resize abcdef 12345']);
   });
 
   test('ChannelBuffers.handleMessage for overflow', () async {
-    final log = <String>[];
+    final List<String> log = <String>[];
     final ui.ChannelBuffers buffers = _TestChannelBuffers(log);
     // Created as follows:
     //   print(StandardMethodCodec().encodeMethodCall(MethodCall('overflow', ['abcdef', false])).buffer.asUint8List());
     // ...with three 0xFF bytes on either side to ensure the method works with an offset on the underlying buffer.
-    buffers.handleMessage(
-      ByteData.sublistView(
-        Uint8List.fromList(<int>[
-          255,
-          255,
-          255,
-          7,
-          8,
-          111,
-          118,
-          101,
-          114,
-          102,
-          108,
-          111,
-          119,
-          12,
-          2,
-          7,
-          6,
-          97,
-          98,
-          99,
-          100,
-          101,
-          102,
-          2,
-          0,
-          0,
-          0,
-          0,
-          0,
-          0,
-          0,
-          0,
-          0,
-          0,
-          0,
-          255,
-          255,
-          255,
-        ]),
-        3,
-        24,
-      ),
-    );
+    buffers.handleMessage(ByteData.sublistView(Uint8List.fromList(<int>[255, 255, 255, 7, 8, 111, 118, 101, 114, 102, 108, 111, 119, 12, 2, 7, 6, 97, 98, 99, 100, 101, 102, 2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 255, 255, 255]), 3, 24));
     expect(log, const <String>['allowOverflow abcdef false']);
   });
 
   test('ChannelBuffers uses the right zones', () async {
-    final log = <String>[];
-    final buffers = ui.ChannelBuffers();
+    final List<String> log = <String>[];
+    final ui.ChannelBuffers buffers = ui.ChannelBuffers();
     final Zone zone1 = Zone.current.fork();
     final Zone zone2 = Zone.current.fork();
     zone1.run(() {
@@ -466,33 +354,18 @@ void main() {
   });
 
   test('ChannelBufferspush rejects names with nulls', () async {
-    const channel = 'foo\u0000bar';
+    const String channel = 'foo\u0000bar';
     final ByteData blabla = _makeByteData('blabla');
-    final buffers = ui.ChannelBuffers();
+    final ui.ChannelBuffers buffers = ui.ChannelBuffers();
 
     expect(
-      () => buffers.push(channel, blabla, (ByteData? data) {}),
-      throwsA(
-        isA<AssertionError>().having(
-          (AssertionError e) => e.toString(),
-          'toString',
-          contains('U+0000 NULL'),
-        ),
-      ),
+      () => buffers.push(channel, blabla, (ByteData? data) { }),
+      throwsA(isA<AssertionError>().having((AssertionError e) => e.toString(), 'toString', contains('U+0000 NULL'))),
     );
 
     expect(
-      () => buffers.setListener(
-        channel,
-        (ByteData? data, ui.PlatformMessageResponseCallback callback) {},
-      ),
-      throwsA(
-        isA<AssertionError>().having(
-          (AssertionError e) => e.toString(),
-          'toString',
-          contains('U+0000 NULL'),
-        ),
-      ),
+      () => buffers.setListener(channel, (ByteData? data, ui.PlatformMessageResponseCallback callback) { }),
+      throwsA(isA<AssertionError>().having((AssertionError e) => e.toString(), 'toString', contains('U+0000 NULL'))),
     );
   });
 }

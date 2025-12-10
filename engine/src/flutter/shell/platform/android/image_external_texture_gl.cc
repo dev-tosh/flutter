@@ -24,9 +24,8 @@ namespace flutter {
 ImageExternalTextureGL::ImageExternalTextureGL(
     int64_t id,
     const fml::jni::ScopedJavaGlobalRef<jobject>& image_texture_entry,
-    const std::shared_ptr<PlatformViewAndroidJNI>& jni_facade,
-    ImageExternalTexture::ImageLifecycle lifecycle)
-    : ImageExternalTexture(id, image_texture_entry, jni_facade, lifecycle) {}
+    const std::shared_ptr<PlatformViewAndroidJNI>& jni_facade)
+    : ImageExternalTexture(id, image_texture_entry, jni_facade) {}
 
 void ImageExternalTextureGL::Attach(PaintContext& context) {
   if (state_ == AttachmentState::kUninitialized) {

@@ -58,7 +58,8 @@ void BlitPassMTL::OnSetLabel(std::string_view label) {
   [encoder_ setLabel:@(label.data())];
 }
 
-bool BlitPassMTL::EncodeCommands() const {
+bool BlitPassMTL::EncodeCommands(
+    const std::shared_ptr<Allocator>& transients_allocator) const {
   [encoder_ endEncoding];
   did_finish_encoding_ = true;
   return true;

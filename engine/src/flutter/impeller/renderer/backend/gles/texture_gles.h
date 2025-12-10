@@ -75,9 +75,7 @@ class TextureGLES final : public Texture,
       std::shared_ptr<ReactorGLES> reactor,
       TextureDescriptor desc);
 
-  TextureGLES(std::shared_ptr<ReactorGLES> reactor,
-              TextureDescriptor desc,
-              bool threadsafe = false);
+  TextureGLES(std::shared_ptr<ReactorGLES> reactor, TextureDescriptor desc);
 
   // |Texture|
   ~TextureGLES() override;
@@ -103,10 +101,6 @@ class TextureGLES final : public Texture,
   Type GetType() const;
 
   bool IsWrapped() const;
-
-  /// @brief Reset the internal texture state so that the reactor will not free
-  ///        the associated handle.
-  void Leak();
 
   std::optional<GLuint> GetFBO() const;
 
@@ -142,16 +136,13 @@ class TextureGLES final : public Texture,
   ///
   /// The color0 texture used by the 2D renderer will use this texture
   /// object to store the associated FBO the first time it is used.
-  void SetCachedFBO(HandleGLES fbo);
+  void SetCachedFBO(GLuint fbo);
 
-  /// Retrieve the cached FBO object, or a dead handle if there is no object.
-  const HandleGLES& GetCachedFBO() const;
+  /// Retrieve the cached FBO object, or GL_NONE if there is no object.
+  GLuint GetCachedFBO() const;
 
   // Visible for testing.
   std::optional<HandleGLES> GetSyncFence() const;
-
-  // visible for testing
-  Type ComputeTypeForBinding(GLenum target) const;
 
  private:
   std::shared_ptr<ReactorGLES> reactor_;
@@ -161,12 +152,11 @@ class TextureGLES final : public Texture,
   mutable std::bitset<6> slices_initialized_ = 0;
   const bool is_wrapped_;
   const std::optional<GLuint> wrapped_fbo_;
-  HandleGLES cached_fbo_ = HandleGLES::DeadHandle();
+  GLuint cached_fbo_ = GL_NONE;
   bool is_valid_ = false;
 
   TextureGLES(std::shared_ptr<ReactorGLES> reactor,
               TextureDescriptor desc,
-              bool threadsafe,
               std::optional<GLuint> fbo,
               std::optional<HandleGLES> external_handle);
 

@@ -44,9 +44,8 @@ static void InsertImageMemoryBarrier(const vk::CommandBuffer& cmd,
   cmd.pipelineBarrier(src_stage, dst_stage, {}, nullptr, nullptr, barrier);
 }
 
-BlitPassVK::BlitPassVK(std::shared_ptr<CommandBufferVK> command_buffer,
-                       const WorkaroundsVK& workarounds)
-    : command_buffer_(std::move(command_buffer)), workarounds_(workarounds) {}
+BlitPassVK::BlitPassVK(std::shared_ptr<CommandBufferVK> command_buffer)
+    : command_buffer_(std::move(command_buffer)) {}
 
 BlitPassVK::~BlitPassVK() = default;
 
@@ -58,7 +57,8 @@ bool BlitPassVK::IsValid() const {
 }
 
 // |BlitPass|
-bool BlitPassVK::EncodeCommands() const {
+bool BlitPassVK::EncodeCommands(
+    const std::shared_ptr<Allocator>& transients_allocator) const {
   return true;
 }
 
@@ -478,10 +478,6 @@ bool BlitPassVK::OnGenerateMipmapCommand(std::shared_ptr<Texture> texture,
 
     width = width / 2;
     height = height / 2;
-    if (width <= 1 || height <= 1) {
-      // Continue to make sure everything is placed into eTransferSrcOptimal.
-      continue;
-    }
 
     // offsets[0] is origin.
     blit.dstOffsets[1].x = std::max<int32_t>(width, 1u);
@@ -496,27 +492,24 @@ bool BlitPassVK::OnGenerateMipmapCommand(std::shared_ptr<Texture> texture,
                   &blit,                                 // regions
                   vk::Filter::eLinear                    // filter
     );
+
+    barrier.oldLayout = vk::ImageLayout::eTransferSrcOptimal;
+    barrier.newLayout = vk::ImageLayout::eShaderReadOnlyOptimal;
+    barrier.srcAccessMask = vk::AccessFlagBits::eTransferRead;
+    barrier.dstAccessMask = vk::AccessFlagBits::eShaderRead;
+
+    // Now that the blit is done, the image at the previous level (N-1)
+    // is done reading from (TransferSrc)/ Now we must prepare it to be read
+    // from a shader (ShaderReadOnly).
+    cmd.pipelineBarrier(vk::PipelineStageFlagBits::eTransfer,
+                        vk::PipelineStageFlagBits::eFragmentShader, {}, {}, {},
+                        {barrier});
   }
 
-  // Switch the last one to eTransferSrcOptimal.
   barrier.subresourceRange.baseMipLevel = mip_count - 1;
-  barrier.subresourceRange.levelCount = 1;
   barrier.oldLayout = vk::ImageLayout::eTransferDstOptimal;
-  barrier.newLayout = vk::ImageLayout::eTransferSrcOptimal;
-  barrier.srcAccessMask = vk::AccessFlagBits::eTransferWrite;
-  barrier.dstAccessMask = vk::AccessFlagBits::eTransferRead;
-
-  cmd.pipelineBarrier(vk::PipelineStageFlagBits::eTransfer,
-                      vk::PipelineStageFlagBits::eTransfer, {}, {}, {},
-                      {barrier});
-
-  // Now everything is in eTransferSrcOptimal, switch everything to
-  // eShaderReadOnlyOptimal.
-  barrier.subresourceRange.baseMipLevel = 0;
-  barrier.subresourceRange.levelCount = mip_count;
-  barrier.oldLayout = vk::ImageLayout::eTransferSrcOptimal;
   barrier.newLayout = vk::ImageLayout::eShaderReadOnlyOptimal;
-  barrier.srcAccessMask = vk::AccessFlagBits::eTransferRead;
+  barrier.srcAccessMask = vk::AccessFlagBits::eTransferWrite;
   barrier.dstAccessMask = vk::AccessFlagBits::eShaderRead;
 
   cmd.pipelineBarrier(vk::PipelineStageFlagBits::eTransfer,

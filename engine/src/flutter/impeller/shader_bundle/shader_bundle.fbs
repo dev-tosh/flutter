@@ -4,13 +4,6 @@
 
 namespace impeller.fb.shaderbundle;
 
-// This is the shader bundle format version number - it's value should be
-// incremented any time there is a change to this file which changes the
-// resulting flat buffer format.
-enum ShaderBundleFormatVersion:uint32 {
-  kVersion = 1
-}
-
 enum ShaderStage:byte {
   kVertex,
   kFragment,
@@ -109,7 +102,6 @@ table Shader {
 
 table ShaderBundle {
   shaders: [Shader];
-  format_version: uint32;  // This is intended to hold ShaderBundleFormatVersion.kVersion.
 }
 
 root_type ShaderBundle;

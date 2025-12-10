@@ -37,7 +37,7 @@ class AndroidSurfaceGLSkia final : public GPUSurfaceGLDelegate,
   void TeardownOnScreenContext() override;
 
   // |AndroidSurface|
-  bool OnScreenSurfaceResize(const DlISize& size) override;
+  bool OnScreenSurfaceResize(const SkISize& size) override;
 
   // |AndroidSurface|
   bool ResourceContextMakeCurrent() override;
@@ -46,9 +46,7 @@ class AndroidSurfaceGLSkia final : public GPUSurfaceGLDelegate,
   bool ResourceContextClearCurrent() override;
 
   // |AndroidSurface|
-  bool SetNativeWindow(
-      fml::RefPtr<AndroidNativeWindow> window,
-      const std::shared_ptr<PlatformViewAndroidJNI>& jni_facade) override;
+  bool SetNativeWindow(fml::RefPtr<AndroidNativeWindow> window) override;
 
   // |AndroidSurface|
   virtual std::unique_ptr<Surface> CreateSnapshotSurface() override;
@@ -63,7 +61,7 @@ class AndroidSurfaceGLSkia final : public GPUSurfaceGLDelegate,
   SurfaceFrame::FramebufferInfo GLContextFramebufferInfo() const override;
 
   // |GPUSurfaceGLDelegate|
-  void GLContextSetDamageRegion(const std::optional<DlIRect>& region) override;
+  void GLContextSetDamageRegion(const std::optional<SkIRect>& region) override;
 
   // |GPUSurfaceGLDelegate|
   bool GLContextPresent(const GLPresentInfo& present_info) override;

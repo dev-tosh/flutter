@@ -25,6 +25,7 @@
 #include "impeller/entity/contents/filters/yuv_to_rgb_filter_contents.h"
 #include "impeller/entity/contents/texture_contents.h"
 #include "impeller/entity/entity.h"
+#include "impeller/geometry/path_builder.h"
 #include "impeller/renderer/command_buffer.h"
 #include "impeller/renderer/render_pass.h"
 #include "impeller/runtime_stage/runtime_stage.h"
@@ -236,36 +237,37 @@ std::optional<Entity> FilterContents::GetEntity(
   Entity entity_with_local_transform = entity.Clone();
   entity_with_local_transform.SetTransform(GetTransform(entity.GetTransform()));
 
-  std::optional<Rect> coverage = GetLocalCoverage(entity_with_local_transform);
+  auto coverage = GetLocalCoverage(entity_with_local_transform);
   if (!coverage.has_value() || coverage->IsEmpty()) {
     return std::nullopt;
   }
 
-  return RenderFilter(inputs_,                      //
-                      renderer,                     //
-                      entity_with_local_transform,  //
-                      effect_transform_,            //
-                      coverage.value(),             //
-                      coverage_hint                 //
-  );
+  return RenderFilter(inputs_, renderer, entity_with_local_transform,
+                      effect_transform_, coverage.value(), coverage_hint);
 }
 
 std::optional<Snapshot> FilterContents::RenderToSnapshot(
     const ContentContext& renderer,
     const Entity& entity,
-    const SnapshotOptions& options) const {
+    std::optional<Rect> coverage_limit,
+    const std::optional<SamplerDescriptor>& sampler_descriptor,
+    bool msaa_enabled,
+    int32_t mip_count,
+    std::string_view label) const {
   // Resolve the render instruction (entity) from the filter and render it to a
   // snapshot.
   if (std::optional<Entity> result =
-          GetEntity(renderer, entity, options.coverage_limit);
+          GetEntity(renderer, entity, coverage_limit);
       result.has_value()) {
     return result->GetContents()->RenderToSnapshot(
-        renderer, result.value(),
-        {.coverage_limit = options.coverage_limit,
-         .sampler_descriptor = std::nullopt,
-         .msaa_enabled = true,
-         .mip_count = options.mip_count,
-         .label = options.label});
+        renderer,        // renderer
+        result.value(),  // entity
+        coverage_limit,  // coverage_limit
+        std::nullopt,    // sampler_descriptor
+        true,            // msaa_enabled
+        /*mip_count=*/mip_count,
+        label  // label
+    );
   }
 
   return std::nullopt;

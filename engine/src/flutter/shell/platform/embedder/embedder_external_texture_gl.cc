@@ -38,15 +38,15 @@ EmbedderExternalTextureGL::~EmbedderExternalTextureGL() = default;
 
 // |flutter::Texture|
 void EmbedderExternalTextureGL::Paint(PaintContext& context,
-                                      const DlRect& bounds,
+                                      const SkRect& bounds,
                                       bool freeze,
                                       const DlImageSampling sampling) {
   if (last_image_ == nullptr) {
     last_image_ =
-        ResolveTexture(Id(),                                                 //
-                       context.gr_context,                                   //
-                       context.aiks_context,                                 //
-                       SkISize::Make(bounds.GetWidth(), bounds.GetHeight())  //
+        ResolveTexture(Id(),                                           //
+                       context.gr_context,                             //
+                       context.aiks_context,                           //
+                       SkISize::Make(bounds.width(), bounds.height())  //
         );
   }
 
@@ -54,11 +54,12 @@ void EmbedderExternalTextureGL::Paint(PaintContext& context,
   const DlPaint* paint = context.paint;
 
   if (last_image_) {
-    DlRect image_bounds = DlRect::Make(last_image_->GetBounds());
+    SkRect image_bounds = SkRect::Make(last_image_->bounds());
     if (bounds != image_bounds) {
       canvas->DrawImageRect(last_image_, image_bounds, bounds, sampling, paint);
     } else {
-      canvas->DrawImage(last_image_, bounds.GetOrigin(), sampling, paint);
+      canvas->DrawImage(last_image_, SkPoint{bounds.x(), bounds.y()}, sampling,
+                        paint);
     }
   }
 }

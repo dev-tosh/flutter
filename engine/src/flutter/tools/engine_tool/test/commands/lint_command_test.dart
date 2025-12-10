@@ -29,28 +29,27 @@ void main() {
           pathSeparator: '/',
         ),
         processRunner: ProcessRunner(
-          processManager: FakeProcessManager(
-            onStart: (FakeCommandLogEntry entry) {
-              runHistory.add(entry.command);
-              return FakeProcess();
-            },
-            onRun: (_) {
-              // Should not be executed.
-              assert(false);
-              return io.ProcessResult(81, 1, '', '');
-            },
-          ),
-        ),
+            processManager: FakeProcessManager(onStart: (command) {
+          runHistory.add(command);
+          return FakeProcess();
+        }, onRun: (command) {
+          // Should not be executed.
+          assert(false);
+          return io.ProcessResult(81, 1, '', '');
+        })),
         logger: logger,
       ),
-      runHistory,
+      runHistory
     );
   }
 
   test('invoked linters', () async {
-    final logger = Logger.test((_) {});
+    final Logger logger = Logger.test((_) {});
     final (Environment env, List<List<String>> runHistory) = macEnv(logger);
-    final runner = ToolCommandRunner(environment: env, configs: {});
+    final ToolCommandRunner runner = ToolCommandRunner(
+      environment: env,
+      configs: {},
+    );
     final int result = await runner.run(<String>['lint']);
     expect(result, equals(0));
     expect(runHistory.length, greaterThanOrEqualTo(4));

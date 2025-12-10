@@ -150,37 +150,14 @@ class Engine final : public RuntimeDelegate, PointerDataDispatcher::Delegate {
     ///             `CustomAccessibilityActionUpdates`,
     ///             `PlatformView::UpdateSemantics`
     ///
-    /// @param[in]  view_id  The ID of the view that this update is for
     /// @param[in]  updates  A map with the stable semantics node identifier as
     ///                      key and the node properties as the value.
     /// @param[in]  actions  A map with the stable semantics node identifier as
     ///                      key and the custom node action as the value.
     ///
     virtual void OnEngineUpdateSemantics(
-        int64_t view_id,
         SemanticsNodeUpdates updates,
         CustomAccessibilityActionUpdates actions) = 0;
-
-    //--------------------------------------------------------------------------
-    /// @brief      Framework sets the application locale.
-    ///
-    /// @param[in]  locale  The application locale in BCP 47 format.
-    ///
-    virtual void OnEngineSetApplicationLocale(std::string locale) = 0;
-
-    //--------------------------------------------------------------------------
-    /// @brief      When the Framework starts or stops generating semantics
-    /// tree,
-    ///             this new information needs to be conveyed to the underlying
-    ///             platform so that they can prepare to accept semantics
-    ///             update. The engine delegates this task to the shell via this
-    ///             call.
-    ///
-    /// @see        `OnEngineUpdateSemantics`
-    ///
-    /// @param[in]  enabled  whether Framework starts generating semantics tree.
-    ///
-    virtual void OnEngineSetSemanticsTreeEnabled(bool enabled) = 0;
 
     //--------------------------------------------------------------------------
     /// @brief      When the Flutter application has a message to send to the
@@ -346,14 +323,6 @@ class Engine final : public RuntimeDelegate, PointerDataDispatcher::Delegate {
     ///
     virtual double GetScaledFontSize(double unscaled_font_size,
                                      int configuration_id) const = 0;
-
-    //--------------------------------------------------------------------------
-    /// @brief      Notifies the client that the Flutter view focus state has
-    ///             changed and the platform view should be updated.
-    ///
-    /// @param[in]  request  The request to change the focus state of the view.
-    virtual void RequestViewFocusChange(
-        const ViewFocusChangeRequest& request) = 0;
   };
 
   //----------------------------------------------------------------------------
@@ -427,8 +396,8 @@ class Engine final : public RuntimeDelegate, PointerDataDispatcher::Delegate {
          const fml::RefPtr<SkiaUnrefQueue>& unref_queue,
          fml::TaskRunnerAffineWeakPtr<SnapshotDelegate> snapshot_delegate,
          const std::shared_ptr<fml::SyncSwitch>& gpu_disabled_switch,
-         const std::shared_future<impeller::RuntimeStageBackend>&
-             runtime_stage_backend);
+         impeller::RuntimeStageBackend runtime_stage_type =
+             impeller::RuntimeStageBackend::kSkSL);
 
   //----------------------------------------------------------------------------
   /// @brief      Create a Engine that shares as many resources as
@@ -462,7 +431,7 @@ class Engine final : public RuntimeDelegate, PointerDataDispatcher::Delegate {
   /// @return     The pointer to this instance of the engine. The engine may
   ///             only be accessed safely on the UI task runner.
   ///
-  fml::TaskRunnerAffineWeakPtr<Engine> GetWeakPtr() const;
+  fml::WeakPtr<Engine> GetWeakPtr() const;
 
   //----------------------------------------------------------------------------
   /// @brief      Moves the root isolate to the `DartIsolate::Phase::Running`
@@ -620,6 +589,13 @@ class Engine final : public RuntimeDelegate, PointerDataDispatcher::Delegate {
   void NotifyIdle(fml::TimeDelta deadline);
 
   //----------------------------------------------------------------------------
+  /// @brief      Notifies the engine that the attached flutter view has been
+  ///             destroyed.
+  ///             This enables the engine to notify the Dart VM so it can do
+  ///             some cleanp activities.
+  void NotifyDestroyed();
+
+  //----------------------------------------------------------------------------
   /// @brief      Dart code cannot fully measure the time it takes for a
   ///             specific frame to be rendered. This is because Dart code only
   ///             runs on the UI task runner. That is only a small part of the
@@ -772,13 +748,6 @@ class Engine final : public RuntimeDelegate, PointerDataDispatcher::Delegate {
   bool RemoveView(int64_t view_id);
 
   //----------------------------------------------------------------------------
-  /// @brief      Notify the Flutter application that the focus state of a
-  ///             native view has changed.
-  ///
-  /// @param[in]  event  The focus event describing the change.
-  bool SendViewFocusEvent(const ViewFocusEvent& event);
-
-  //----------------------------------------------------------------------------
   /// @brief      Updates the viewport metrics for a view. The viewport metrics
   ///             detail the size of the rendering viewport in texels as well as
   ///             edge insets if present.
@@ -835,14 +804,12 @@ class Engine final : public RuntimeDelegate, PointerDataDispatcher::Delegate {
   ///             originates on the platform view and has been forwarded to the
   ///             engine here on the UI task runner by the shell.
   ///
-  /// @param[in]  view_id The identifier of the view.
   /// @param[in]  node_id The identifier of the accessibility node.
   /// @param[in]  action  The accessibility related action performed on the
   ///                     node of the specified ID.
   /// @param[in]  args    Optional data that applies to the specified action.
   ///
-  void DispatchSemanticsAction(int64_t view_id,
-                               int node_id,
+  void DispatchSemanticsAction(int node_id,
                                SemanticsAction action,
                                fml::MallocMapping args);
 
@@ -891,7 +858,7 @@ class Engine final : public RuntimeDelegate, PointerDataDispatcher::Delegate {
   std::shared_ptr<AssetManager> GetAssetManager() override;
 
   // Return the weak_ptr of ImageDecoder.
-  fml::TaskRunnerAffineWeakPtr<ImageDecoder> GetImageDecoderWeakPtr();
+  fml::WeakPtr<ImageDecoder> GetImageDecoderWeakPtr();
 
   //----------------------------------------------------------------------------
   /// @brief      Get the `ImageGeneratorRegistry` associated with the current
@@ -899,8 +866,7 @@ class Engine final : public RuntimeDelegate, PointerDataDispatcher::Delegate {
   ///
   /// @return     The engine's `ImageGeneratorRegistry`.
   ///
-  fml::TaskRunnerAffineWeakPtr<ImageGeneratorRegistry>
-  GetImageGeneratorRegistry();
+  fml::WeakPtr<ImageGeneratorRegistry> GetImageGeneratorRegistry();
 
   // |PointerDataDispatcher::Delegate|
   void DoDispatchPacket(std::unique_ptr<PointerDataPacket> packet,
@@ -915,11 +881,6 @@ class Engine final : public RuntimeDelegate, PointerDataDispatcher::Delegate {
   ///             when |Engine::Run| was called.
   ///
   const std::string& GetLastEntrypoint() const;
-
-  //----------------------------------------------------------------------------
-  /// @brief      Get the last Engine Id that was used in the RunConfiguration
-  ///             when |Engine::Run| was called.
-  std::optional<int64_t> GetLastEngineId() const;
 
   //----------------------------------------------------------------------------
   /// @brief      Get the last Entrypoint Library that was used in the
@@ -1017,11 +978,6 @@ class Engine final : public RuntimeDelegate, PointerDataDispatcher::Delegate {
   ///
   void ShutdownPlatformIsolates();
 
-  //--------------------------------------------------------------------------
-  /// @brief      Flushes the microtask queue of the root isolate.
-  ///
-  void FlushMicrotaskQueue();
-
  private:
   // |RuntimeDelegate|
   std::string DefaultRouteName() override;
@@ -1032,15 +988,8 @@ class Engine final : public RuntimeDelegate, PointerDataDispatcher::Delegate {
               float device_pixel_ratio) override;
 
   // |RuntimeDelegate|
-  void UpdateSemantics(int64_t view_id,
-                       SemanticsNodeUpdates update,
+  void UpdateSemantics(SemanticsNodeUpdates update,
                        CustomAccessibilityActionUpdates actions) override;
-
-  // |RuntimeDelegate|
-  void SetApplicationLocale(std::string locale) override;
-
-  // |RuntimeDelegate|
-  void SetSemanticsTreeEnabled(bool enabled) override;
 
   // |RuntimeDelegate|
   void HandlePlatformMessage(std::unique_ptr<PlatformMessage> message) override;
@@ -1069,9 +1018,6 @@ class Engine final : public RuntimeDelegate, PointerDataDispatcher::Delegate {
   // |RuntimeDelegate|
   double GetScaledFontSize(double unscaled_font_size,
                            int configuration_id) const override;
-
-  // |RuntimeDelegate|
-  void RequestViewFocusChange(const ViewFocusChangeRequest& request) override;
 
   void SetNeedsReportTimings(bool value) override;
 
@@ -1103,7 +1049,6 @@ class Engine final : public RuntimeDelegate, PointerDataDispatcher::Delegate {
   std::string last_entry_point_;
   std::string last_entry_point_library_;
   std::vector<std::string> last_entry_point_args_;
-  std::optional<int64_t> last_engine_id_;
   std::string initial_route_;
   std::shared_ptr<AssetManager> asset_manager_;
   std::shared_ptr<FontCollection> font_collection_;
@@ -1111,8 +1056,7 @@ class Engine final : public RuntimeDelegate, PointerDataDispatcher::Delegate {
   const std::unique_ptr<ImageDecoder> image_decoder_;
   ImageGeneratorRegistry image_generator_registry_;
   TaskRunners task_runners_;
-  fml::TaskRunnerAffineWeakPtrFactory<Engine>
-      weak_factory_;  // Must be the last member.
+  fml::WeakPtrFactory<Engine> weak_factory_;  // Must be the last member.
   FML_DISALLOW_COPY_AND_ASSIGN(Engine);
 };
 

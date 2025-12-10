@@ -39,8 +39,6 @@ class MockAccessibilityBridge : public AccessibilityBridgeIos {
   bool isVoiceOverRunning() const override { return isVoiceOverRunningValue; }
   UIView* view() const override { return view_; }
   UIView<UITextInput>* textInputView() override { return nil; }
-
-  NSString* GetDefaultLocale() override { return mockedLocale; }
   void DispatchSemanticsAction(int32_t id, SemanticsAction action) override {
     SemanticsActionObservation observation(id, action);
     observations.push_back(observation);
@@ -56,7 +54,6 @@ class MockAccessibilityBridge : public AccessibilityBridgeIos {
   FlutterPlatformViewsController* GetPlatformViewsController() const override { return nil; }
   std::vector<SemanticsActionObservation> observations;
   bool isVoiceOverRunningValue;
-  NSString* mockedLocale;
 
  private:
   UIView* view_;
@@ -83,7 +80,6 @@ class MockAccessibilityBridgeNoWindow : public AccessibilityBridgeIos {
   }
   void AccessibilityObjectDidBecomeFocused(int32_t id) override {}
   void AccessibilityObjectDidLoseFocus(int32_t id) override {}
-  NSString* GetDefaultLocale() override { return nil; }
   FlutterPlatformViewsController* GetPlatformViewsController() const override { return nil; }
   std::vector<SemanticsActionObservation> observations;
   bool isVoiceOverRunningValue;

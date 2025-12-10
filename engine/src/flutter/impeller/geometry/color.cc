@@ -6,11 +6,11 @@
 
 #include <algorithm>
 #include <cmath>
-#include <format>
 #include <functional>
 #include <sstream>
 #include <type_traits>
 
+#include "impeller/base/strings.h"
 #include "impeller/geometry/constants.h"
 #include "impeller/geometry/scalar.h"
 #include "impeller/geometry/vector.h"
@@ -31,7 +31,7 @@ static constexpr inline bool ValidateBlendModes() {
   IMPELLER_FOR_EACH_BLEND_MODE(_IMPELLER_ASSERT_BLEND_MODE)
   // Ensure the total number of blend modes match.
   if (i - 1 !=
-      static_cast<std::underlying_type_t<BlendMode>>(BlendMode::kLastMode)) {
+      static_cast<std::underlying_type_t<BlendMode>>(BlendMode::kLast)) {
     return false;
   }
   return true;
@@ -136,7 +136,7 @@ static constexpr inline Color ApplyBlendedColor(Color dst,
   return src + dst * (1.0f - src.alpha);
 }
 
-static inline Color DoColorBlend(
+static constexpr inline Color DoColorBlend(
     Color dst,
     Color src,
     const std::function<Vector3(Vector3, Vector3)>& blend_rgb_func) {
@@ -144,7 +144,7 @@ static inline Color DoColorBlend(
   return ApplyBlendedColor(dst, src, blend_result).Unpremultiply();
 }
 
-static inline Color DoColorBlendComponents(
+static constexpr inline Color DoColorBlendComponents(
     Color dst,
     Color src,
     const std::function<Scalar(Scalar, Scalar)>& blend_func) {
@@ -160,36 +160,36 @@ Color Color::Blend(Color src, BlendMode blend_mode) const {
   switch (blend_mode) {
     case BlendMode::kClear:
       return Color::BlackTransparent();
-    case BlendMode::kSrc:
+    case BlendMode::kSource:
       return src;
-    case BlendMode::kDst:
+    case BlendMode::kDestination:
       return dst;
-    case BlendMode::kSrcOver:
+    case BlendMode::kSourceOver:
       // r = s + (1-sa)*d
       return (src.Premultiply() + dst.Premultiply() * (1 - src.alpha))
           .Unpremultiply();
-    case BlendMode::kDstOver:
+    case BlendMode::kDestinationOver:
       // r = d + (1-da)*s
       return (dst.Premultiply() + src.Premultiply() * (1 - dst.alpha))
           .Unpremultiply();
-    case BlendMode::kSrcIn:
+    case BlendMode::kSourceIn:
       // r = s * da
       return (src.Premultiply() * dst.alpha).Unpremultiply();
-    case BlendMode::kDstIn:
+    case BlendMode::kDestinationIn:
       // r = d * sa
       return (dst.Premultiply() * src.alpha).Unpremultiply();
-    case BlendMode::kSrcOut:
+    case BlendMode::kSourceOut:
       // r = s * ( 1- da)
       return (src.Premultiply() * (1 - dst.alpha)).Unpremultiply();
-    case BlendMode::kDstOut:
+    case BlendMode::kDestinationOut:
       // r = d * (1-sa)
       return (dst.Premultiply() * (1 - src.alpha)).Unpremultiply();
-    case BlendMode::kSrcATop:
+    case BlendMode::kSourceATop:
       // r = s*da + d*(1-sa)
       return (src.Premultiply() * dst.alpha +
               dst.Premultiply() * (1 - src.alpha))
           .Unpremultiply();
-    case BlendMode::kDstATop:
+    case BlendMode::kDestinationATop:
       // r = d*sa + s*(1-da)
       return (dst.Premultiply() * src.alpha +
               src.Premultiply() * (1 - dst.alpha))
@@ -331,8 +331,12 @@ Color Color::SRGBToLinear() const {
 }
 
 std::string ColorToString(const Color& color) {
-  return std::format("R={:.1f},G={:.1f},B={:.1f},A={:.1f}", color.red,
-                     color.green, color.blue, color.alpha);
+  return SPrintF("R=%.1f,G=%.1f,B=%.1f,A=%.1f",  //
+                 color.red,                      //
+                 color.green,                    //
+                 color.blue,                     //
+                 color.alpha                     //
+  );
 }
 
 }  // namespace impeller

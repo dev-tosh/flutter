@@ -11,7 +11,6 @@
 #include "flutter/testing/testing.h"
 #include "impeller/playground/playground.h"
 #include "impeller/playground/switches.h"
-#include "third_party/abseil-cpp/absl/status/statusor.h"
 
 #if FML_OS_MACOSX
 #include "flutter/fml/platform/darwin/scoped_nsautorelease_pool.h"
@@ -36,8 +35,7 @@ class PlaygroundTest : public Playground,
   std::unique_ptr<fml::Mapping> OpenAssetAsMapping(
       std::string asset_name) const override;
 
-  absl::StatusOr<RuntimeStage::Map> OpenAssetAsRuntimeStage(
-      const char* asset_name) const;
+  RuntimeStage::Map OpenAssetAsRuntimeStage(const char* asset_name) const;
 
   // |Playground|
   std::string GetWindowTitle() const override;

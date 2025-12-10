@@ -10,7 +10,7 @@ import android.os.Build;
 import android.os.Handler;
 import android.os.Looper;
 
-/** Compatibility wrapper over {@link Handler}. */
+/** Compatability wrapper over {@link Handler}. */
 public final class HandlerCompat {
   /**
    * Create a new Handler whose posted messages and runnables are not subject to synchronization

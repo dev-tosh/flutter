@@ -18,7 +18,7 @@ namespace testing {
 class EmbedderTestCompositorGL : public EmbedderTestCompositor {
  public:
   EmbedderTestCompositorGL(std::shared_ptr<TestEGLContext> egl_context,
-                           DlISize surface_size,
+                           SkISize surface_size,
                            sk_sp<GrDirectContext> context);
 
   ~EmbedderTestCompositorGL() override;

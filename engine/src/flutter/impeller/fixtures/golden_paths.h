@@ -7,6 +7,7 @@
 
 #include <vector>
 
+#include "impeller/geometry/path_component.h"
 #include "impeller/geometry/point.h"
 
 namespace impeller {

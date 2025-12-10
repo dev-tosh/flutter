@@ -35,11 +35,10 @@ void PlatformView::DispatchPointerDataPacket(
   delegate_.OnPlatformViewDispatchPointerDataPacket(std::move(packet));
 }
 
-void PlatformView::DispatchSemanticsAction(int64_t view_id,
-                                           int32_t node_id,
+void PlatformView::DispatchSemanticsAction(int32_t node_id,
                                            SemanticsAction action,
                                            fml::MallocMapping args) {
-  delegate_.OnPlatformViewDispatchSemanticsAction(view_id, node_id, action,
+  delegate_.OnPlatformViewDispatchSemanticsAction(node_id, action,
                                                   std::move(args));
 }
 
@@ -98,10 +97,6 @@ void PlatformView::RemoveView(int64_t view_id, RemoveViewCallback callback) {
   delegate_.OnPlatformViewRemoveView(view_id, std::move(callback));
 }
 
-void PlatformView::SendViewFocusEvent(const ViewFocusEvent& event) {
-  delegate_.OnPlatformViewSendViewFocusEvent(event);
-}
-
 sk_sp<GrDirectContext> PlatformView::CreateResourceContext() const {
   FML_DLOG(WARNING) << "This platform does not set up the resource "
                        "context on the IO thread for async texture uploads.";
@@ -125,18 +120,9 @@ fml::WeakPtr<PlatformView> PlatformView::GetWeakPtr() const {
 }
 
 void PlatformView::UpdateSemantics(
-    int64_t view_id,
     SemanticsNodeUpdates update,  // NOLINT(performance-unnecessary-value-param)
     // NOLINTNEXTLINE(performance-unnecessary-value-param)
     CustomAccessibilityActionUpdates actions) {}
-
-void PlatformView::SetApplicationLocale(
-    std::string locale  // NOLINT(performance-unnecessary-value-param)
-) {}
-
-void PlatformView::SetSemanticsTreeEnabled(
-    bool enabled  // NOLINT(performance-unnecessary-value-param)
-) {}
 
 void PlatformView::SendChannelUpdate(const std::string& name, bool listening) {}
 
@@ -231,11 +217,6 @@ double PlatformView::GetScaledFontSize(double unscaled_font_size,
   // and the Flutter application never invokes this method.
   FML_UNREACHABLE();
   return -1;
-}
-
-void PlatformView::RequestViewFocusChange(
-    const ViewFocusChangeRequest& request) {
-  // No-op by default.
 }
 
 }  // namespace flutter

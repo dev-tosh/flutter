@@ -73,7 +73,7 @@ class RenderPassMTL final : public RenderPass {
   void SetViewport(Viewport viewport) override;
 
   // |RenderPass|
-  void SetScissor(IRect32 scissor) override;
+  void SetScissor(IRect scissor) override;
 
   // |RenderPass|
   void SetElementCount(size_t count) override;

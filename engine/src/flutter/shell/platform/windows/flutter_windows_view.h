@@ -13,8 +13,8 @@
 #include <vector>
 
 #include "flutter/fml/macros.h"
-#include "flutter/shell/geometry/geometry.h"
 #include "flutter/shell/platform/common/client_wrapper/include/flutter/plugin_registrar.h"
+#include "flutter/shell/platform/common/geometry.h"
 #include "flutter/shell/platform/embedder/embedder.h"
 #include "flutter/shell/platform/windows/accessibility_bridge_windows.h"
 #include "flutter/shell/platform/windows/flutter_windows_engine.h"
@@ -125,6 +125,13 @@ class FlutterWindowsView : public WindowBindingHandlerDelegate {
   // This completes a view resize if one is pending.
   virtual void OnFramePresented();
 
+  // Sets the cursor that should be used when the mouse is over the Flutter
+  // content. See mouse_cursor.dart for the values and meanings of cursor_name.
+  void UpdateFlutterCursor(const std::string& cursor_name);
+
+  // Sets the cursor directly from a cursor handle.
+  void SetFlutterCursor(HCURSOR cursor);
+
   // |WindowBindingHandlerDelegate|
   bool OnWindowSizeChanged(size_t width, size_t height) override;
 
@@ -184,10 +191,6 @@ class FlutterWindowsView : public WindowBindingHandlerDelegate {
              KeyEventCallback callback) override;
 
   // |WindowBindingHandlerDelegate|
-  void OnFocus(FlutterViewFocusState focus_state,
-               FlutterViewFocusDirection direction) override;
-
-  // |WindowBindingHandlerDelegate|
   void OnComposeBegin() override;
 
   // |WindowBindingHandlerDelegate|
@@ -242,10 +245,6 @@ class FlutterWindowsView : public WindowBindingHandlerDelegate {
 
   // |WindowBindingHandlerDelegate|
   void OnWindowStateEvent(HWND hwnd, WindowStateEvent event) override;
-
-  // Focus the view.
-  // Returns true if the view was focused.
-  virtual bool Focus();
 
  protected:
   virtual void NotifyWinEventWrapper(ui::AXPlatformNodeWin* node,
@@ -353,10 +352,6 @@ class FlutterWindowsView : public WindowBindingHandlerDelegate {
                bool was_down,
                KeyEventCallback callback);
 
-  // Reports a focus event to Flutter engine.
-  void SendFocus(FlutterViewFocusState focus_state,
-                 FlutterViewFocusDirection direction);
-
   // Reports an IME compose begin event.
   //
   // Triggered when the user begins editing composing text using a multi-step
@@ -434,8 +429,10 @@ class FlutterWindowsView : public WindowBindingHandlerDelegate {
   // Currently configured WindowBindingHandler for view.
   std::unique_ptr<WindowBindingHandler> binding_handler_;
 
-  // Protects resize_status_, resize_target_width_ and resize_target_height_.
+  // Resize events are synchronized using this mutex and the corresponding
+  // condition variable.
   std::mutex resize_mutex_;
+  std::condition_variable resize_cv_;
 
   // Indicates the state of a window resize event. Platform thread will be
   // blocked while this is not done. Guarded by resize_mutex_.

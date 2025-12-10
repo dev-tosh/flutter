@@ -6,8 +6,6 @@
 #include "impeller/toolkit/interop/impeller.h"
 #include "impeller/toolkit/interop/object.h"
 
-// NOLINTBEGIN(clang-analyzer-cplusplus.NewDeleteLeaks)
-
 namespace impeller::interop::testing {
 
 IMPELLER_DEFINE_HANDLE(FlagHandle);
@@ -98,5 +96,3 @@ TEST(InteropObjectTest, CanCopyAssignMove) {
 }
 
 }  // namespace impeller::interop::testing
-
-// NOLINTEND(clang-analyzer-cplusplus.NewDeleteLeaks)

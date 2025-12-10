@@ -10,7 +10,6 @@
 #include <algorithm>
 #include <memory>
 
-#include "flutter/common/constants.h"
 #include "flutter/fml/platform/darwin/string_range_sanitization.h"
 #include "flutter/shell/platform/common/text_editing_delta.h"
 #include "flutter/shell/platform/common/text_input_model.h"
@@ -38,7 +37,6 @@ static NSString* const kPerformSelectors = @"TextInputClient.performSelectors";
 static NSString* const kMultilineInputType = @"TextInputType.multiline";
 
 #pragma mark - TextInputConfiguration field names
-static NSString* const kViewId = @"viewId";
 static NSString* const kSecureTextEntry = @"obscureText";
 static NSString* const kTextInputAction = @"inputAction";
 static NSString* const kEnableDeltaModel = @"enableDeltaModel";
@@ -204,98 +202,78 @@ static char markerKey;
 /**
  * Private properties of FlutterTextInputPlugin.
  */
-@interface FlutterTextInputPlugin () {
-  /**
-   * A text input context, representing a connection to the Cocoa text input system.
-   */
-  NSTextInputContext* _textInputContext;
+@interface FlutterTextInputPlugin ()
 
-  /**
-   * The channel used to communicate with Flutter.
-   */
-  FlutterMethodChannel* _channel;
+/**
+ * A text input context, representing a connection to the Cocoa text input system.
+ */
+@property(nonatomic) NSTextInputContext* textInputContext;
 
-  /**
-   * The FlutterViewController to manage input for.
-   */
-  __weak FlutterViewController* _currentViewController;
+/**
+ * The channel used to communicate with Flutter.
+ */
+@property(nonatomic) FlutterMethodChannel* channel;
 
-  /**
-   * Used to obtain view controller on client creation
-   */
-  __weak id<FlutterTextInputPluginDelegate> _delegate;
+/**
+ * The FlutterViewController to manage input for.
+ */
+@property(nonatomic, weak) FlutterViewController* flutterViewController;
 
-  /**
-   * Whether the text input is shown in the view.
-   *
-   * Defaults to TRUE on startup.
-   */
-  BOOL _shown;
+/**
+ * Whether the text input is shown in the view.
+ *
+ * Defaults to TRUE on startup.
+ */
+@property(nonatomic) BOOL shown;
 
-  /**
-   * The current state of the keyboard and pressed keys.
-   */
-  uint64_t _previouslyPressedFlags;
+/**
+ * The current state of the keyboard and pressed keys.
+ */
+@property(nonatomic) uint64_t previouslyPressedFlags;
 
-  /**
-   * The affinity for the current cursor position.
-   */
-  FlutterTextAffinity _textAffinity;
+/**
+ * The affinity for the current cursor position.
+ */
+@property FlutterTextAffinity textAffinity;
 
-  /**
-   * ID of the text input client.
-   */
-  NSNumber* _clientID;
+/**
+ * ID of the text input client.
+ */
+@property(nonatomic, nonnull) NSNumber* clientID;
 
-  /**
-   * Keyboard type of the client. See available options:
-   * https://api.flutter.dev/flutter/services/TextInputType-class.html
-   */
-  NSString* _inputType;
+/**
+ * Keyboard type of the client. See available options:
+ * https://api.flutter.dev/flutter/services/TextInputType-class.html
+ */
+@property(nonatomic, nonnull) NSString* inputType;
 
-  /**
-   * An action requested by the user on the input client. See available options:
-   * https://api.flutter.dev/flutter/services/TextInputAction-class.html
-   */
-  NSString* _inputAction;
+/**
+ * An action requested by the user on the input client. See available options:
+ * https://api.flutter.dev/flutter/services/TextInputAction-class.html
+ */
+@property(nonatomic, nonnull) NSString* inputAction;
 
-  /**
-   * Set to true if the last event fed to the input context produced a text editing command
-   * or text output. It is reset to false at the beginning of every key event, and is only
-   * used while processing this event.
-   */
-  BOOL _eventProducedOutput;
+/**
+ * Set to true if the last event fed to the input context produced a text editing command
+ * or text output. It is reset to false at the beginning of every key event, and is only
+ * used while processing this event.
+ */
+@property(nonatomic) BOOL eventProducedOutput;
 
-  /**
-   * Whether to enable the sending of text input updates from the engine to the
-   * framework as TextEditingDeltas rather than as one TextEditingValue.
-   * For more information on the delta model, see:
-   * https://master-api.flutter.dev/flutter/services/TextInputConfiguration/enableDeltaModel.html
-   */
-  BOOL _enableDeltaModel;
+/**
+ * Whether to enable the sending of text input updates from the engine to the
+ * framework as TextEditingDeltas rather than as one TextEditingValue.
+ * For more information on the delta model, see:
+ * https://master-api.flutter.dev/flutter/services/TextInputConfiguration/enableDeltaModel.html
+ */
+@property(nonatomic) BOOL enableDeltaModel;
 
-  /**
-   * Used to gather multiple selectors performed in one run loop turn. These
-   * will be all sent in one platform channel call so that the framework can process
-   * them in single microtask.
-   */
-  NSMutableArray* _pendingSelectors;
-
-  /**
-   * The currently active text input model.
-   */
-  std::unique_ptr<flutter::TextInputModel> _activeModel;
-
-  /**
-   * Transform for current the editable. Used to determine position of accent selection menu.
-   */
-  CATransform3D _editableTransform;
-
-  /**
-   * Current position of caret in local (editable) coordinates.
-   */
-  CGRect _caretRect;
-}
+/**
+ * Used to gather multiple selectors performed in one run loop turn. These
+ * will be all sent in one platform channel call so that the framework can process
+ * them in single microtask.
+ */
+@property(nonatomic) NSMutableArray* pendingSelectors;
 
 /**
  * Handles a Flutter system message on the text input channel.
@@ -339,23 +317,37 @@ static char markerKey;
  * Allow overriding run loop mode for test.
  */
 @property(readwrite, nonatomic) NSString* customRunLoopMode;
-@property(nonatomic) NSTextInputContext* textInputContext;
 
 @end
 
 #pragma mark - FlutterTextInputPlugin
 
-@implementation FlutterTextInputPlugin
+@implementation FlutterTextInputPlugin {
+  /**
+   * The currently active text input model.
+   */
+  std::unique_ptr<flutter::TextInputModel> _activeModel;
 
-- (instancetype)initWithDelegate:(id<FlutterTextInputPluginDelegate>)delegate {
+  /**
+   * Transform for current the editable. Used to determine position of accent selection menu.
+   */
+  CATransform3D _editableTransform;
+
+  /**
+   * Current position of caret in local (editable) coordinates.
+   */
+  CGRect _caretRect;
+}
+
+- (instancetype)initWithViewController:(FlutterViewController*)viewController {
   // The view needs an empty frame otherwise it is visible on dark background.
   // https://github.com/flutter/flutter/issues/118504
   self = [super initWithFrame:NSZeroRect];
   self.clipsToBounds = YES;
   if (self != nil) {
-    _delegate = delegate;
+    _flutterViewController = viewController;
     _channel = [FlutterMethodChannel methodChannelWithName:kTextInputChannel
-                                           binaryMessenger:_delegate.binaryMessenger
+                                           binaryMessenger:viewController.engine.binaryMessenger
                                                      codec:[FlutterJSONMethodCodec sharedInstance]];
     _shown = FALSE;
     // NSTextView does not support _weak reference, so this class has to
@@ -379,10 +371,10 @@ static char markerKey;
 }
 
 - (BOOL)isFirstResponder {
-  if (!_currentViewController.viewLoaded) {
+  if (!self.flutterViewController.viewLoaded) {
     return false;
   }
-  return [_currentViewController.view.window firstResponder] == self;
+  return [self.flutterViewController.view.window firstResponder] == self;
 }
 
 - (void)dealloc {
@@ -393,7 +385,7 @@ static char markerKey;
 
 - (void)resignAndRemoveFromSuperview {
   if (self.superview != nil) {
-    [self.window makeFirstResponder:_currentViewController.flutterView];
+    [self.window makeFirstResponder:_flutterViewController.flutterView];
     [self removeFromSuperview];
   }
 }
@@ -402,7 +394,6 @@ static char markerKey;
   BOOL handled = YES;
   NSString* method = call.method;
   if ([method isEqualToString:kSetClientMethod]) {
-    FML_DCHECK(_currentViewController == nil);
     if (!call.arguments[0] || !call.arguments[1]) {
       result([FlutterError
           errorWithCode:@"error"
@@ -419,28 +410,20 @@ static char markerKey;
       _enableDeltaModel = [config[kEnableDeltaModel] boolValue];
       NSDictionary* inputTypeInfo = config[kTextInputType];
       _inputType = inputTypeInfo[kTextInputTypeName];
-      _textAffinity = kFlutterTextAffinityUpstream;
+      self.textAffinity = kFlutterTextAffinityUpstream;
       self.automaticTextCompletionEnabled = EnableAutocomplete(config);
       if (@available(macOS 11.0, *)) {
         self.contentType = GetTextContentType(config);
       }
 
       _activeModel = std::make_unique<flutter::TextInputModel>();
-      FlutterViewIdentifier viewId = flutter::kFlutterImplicitViewId;
-      NSObject* requestViewId = config[kViewId];
-      if ([requestViewId isKindOfClass:[NSNumber class]]) {
-        viewId = [(NSNumber*)requestViewId longLongValue];
-      }
-      _currentViewController = [_delegate viewControllerForIdentifier:viewId];
-      FML_DCHECK(_currentViewController != nil);
     }
   } else if ([method isEqualToString:kShowMethod]) {
-    FML_DCHECK(_currentViewController != nil);
     // Ensure the plugin is in hierarchy. Only do this with accessibility disabled.
     // When accessibility is enabled cocoa will reparent the plugin inside
     // FlutterTextField in [FlutterTextField startEditing].
     if (_client == nil) {
-      [_currentViewController.view addSubview:self];
+      [_flutterViewController.view addSubview:self];
     }
     [self.window makeFirstResponder:self];
     _shown = TRUE;
@@ -448,7 +431,6 @@ static char markerKey;
     [self resignAndRemoveFromSuperview];
     _shown = FALSE;
   } else if ([method isEqualToString:kClearClientMethod]) {
-    FML_DCHECK(_currentViewController != nil);
     [self resignAndRemoveFromSuperview];
     // If there's an active mark region, commit it, end composing, and clear the IME's mark text.
     if (_activeModel && _activeModel->composing()) {
@@ -462,17 +444,13 @@ static char markerKey;
     _enableDeltaModel = NO;
     _inputType = nil;
     _activeModel = nullptr;
-    _currentViewController = nil;
   } else if ([method isEqualToString:kSetEditingStateMethod]) {
-    FML_DCHECK(_currentViewController != nil);
     NSDictionary* state = call.arguments;
     [self setEditingState:state];
   } else if ([method isEqualToString:kSetEditableSizeAndTransform]) {
-    FML_DCHECK(_currentViewController != nil);
     NSDictionary* state = call.arguments;
     [self setEditableTransform:state[kTransformKey]];
   } else if ([method isEqualToString:kSetCaretRect]) {
-    FML_DCHECK(_currentViewController != nil);
     NSDictionary* rect = call.arguments;
     [self updateCaretRect:rect];
   } else {
@@ -567,7 +545,7 @@ static char markerKey;
   }
 
   NSDictionary* state = [self editingState];
-  [_channel invokeMethod:kUpdateEditStateResponseMethod arguments:@[ _clientID, state ]];
+  [_channel invokeMethod:kUpdateEditStateResponseMethod arguments:@[ self.clientID, state ]];
   [self updateTextAndSelection];
 }
 
@@ -596,7 +574,8 @@ static char markerKey;
     @"deltas" : @[ deltaToFramework ],
   };
 
-  [_channel invokeMethod:kUpdateEditStateWithDeltasResponseMethod arguments:@[ _clientID, deltas ]];
+  [_channel invokeMethod:kUpdateEditStateWithDeltasResponseMethod
+               arguments:@[ self.clientID, deltas ]];
   [self updateTextAndSelection];
 }
 
@@ -619,8 +598,8 @@ static char markerKey;
 }
 
 - (NSString*)textAffinityString {
-  return (_textAffinity == kFlutterTextAffinityUpstream) ? kTextAffinityUpstream
-                                                         : kTextAffinityDownstream;
+  return (self.textAffinity == kFlutterTextAffinityUpstream) ? kTextAffinityUpstream
+                                                             : kTextAffinityDownstream;
 }
 
 - (BOOL)handleKeyEvent:(NSEvent*)event {
@@ -658,15 +637,15 @@ static char markerKey;
 #pragma mark NSResponder
 
 - (void)keyDown:(NSEvent*)event {
-  [_currentViewController keyDown:event];
+  [self.flutterViewController keyDown:event];
 }
 
 - (void)keyUp:(NSEvent*)event {
-  [_currentViewController keyUp:event];
+  [self.flutterViewController keyUp:event];
 }
 
 - (BOOL)performKeyEquivalent:(NSEvent*)event {
-  if ([_currentViewController isDispatchingKeyEvent:event]) {
+  if ([_flutterViewController isDispatchingKeyEvent:event]) {
     // When NSWindow is nextResponder, keyboard manager will send to it
     // unhandled events (through [NSWindow keyDown:]). If event has both
     // control and cmd modifiers set (i.e. cmd+control+space - emoji picker)
@@ -679,56 +658,56 @@ static char markerKey;
     return NO;
   }
   [event markAsKeyEquivalent];
-  [_currentViewController keyDown:event];
+  [self.flutterViewController keyDown:event];
   return YES;
 }
 
 - (void)flagsChanged:(NSEvent*)event {
-  [_currentViewController flagsChanged:event];
+  [self.flutterViewController flagsChanged:event];
 }
 
 - (void)mouseDown:(NSEvent*)event {
-  [_currentViewController mouseDown:event];
+  [self.flutterViewController mouseDown:event];
 }
 
 - (void)mouseUp:(NSEvent*)event {
-  [_currentViewController mouseUp:event];
+  [self.flutterViewController mouseUp:event];
 }
 
 - (void)mouseDragged:(NSEvent*)event {
-  [_currentViewController mouseDragged:event];
+  [self.flutterViewController mouseDragged:event];
 }
 
 - (void)rightMouseDown:(NSEvent*)event {
-  [_currentViewController rightMouseDown:event];
+  [self.flutterViewController rightMouseDown:event];
 }
 
 - (void)rightMouseUp:(NSEvent*)event {
-  [_currentViewController rightMouseUp:event];
+  [self.flutterViewController rightMouseUp:event];
 }
 
 - (void)rightMouseDragged:(NSEvent*)event {
-  [_currentViewController rightMouseDragged:event];
+  [self.flutterViewController rightMouseDragged:event];
 }
 
 - (void)otherMouseDown:(NSEvent*)event {
-  [_currentViewController otherMouseDown:event];
+  [self.flutterViewController otherMouseDown:event];
 }
 
 - (void)otherMouseUp:(NSEvent*)event {
-  [_currentViewController otherMouseUp:event];
+  [self.flutterViewController otherMouseUp:event];
 }
 
 - (void)otherMouseDragged:(NSEvent*)event {
-  [_currentViewController otherMouseDragged:event];
+  [self.flutterViewController otherMouseDragged:event];
 }
 
 - (void)mouseMoved:(NSEvent*)event {
-  [_currentViewController mouseMoved:event];
+  [self.flutterViewController mouseMoved:event];
 }
 
 - (void)scrollWheel:(NSEvent*)event {
-  [_currentViewController scrollWheel:event];
+  [self.flutterViewController scrollWheel:event];
 }
 
 - (NSTextInputContext*)inputContext {
@@ -762,18 +741,6 @@ static char markerKey;
     size_t extent = std::clamp(location + signedLength, 0L, textLength);
 
     _activeModel->SetSelection(flutter::TextRange(base, extent));
-  } else if (_activeModel->composing() &&
-             !(_activeModel->composing_range() == _activeModel->selection())) {
-    // When confirmed by Japanese IME, string replaces range of composing_range.
-    // If selection == composing_range there is no problem.
-    // If selection ! = composing_range the range of selection is only a part of composing_range.
-    // Since _activeModel->AddText is processed first for selection, the finalization of the
-    // conversion cannot be processed correctly unless selection == composing_range or
-    // selection.collapsed(). Since _activeModel->SetSelection fails if (composing_ &&
-    // !range.collapsed()), selection == composing_range will failed. Therefore, the selection
-    // cursor should only be placed at the beginning of composing_range.
-    flutter::TextRange composing_range = _activeModel->composing_range();
-    _activeModel->SetSelection(flutter::TextRange(composing_range.start()));
   }
 
   flutter::TextRange oldSelection = _activeModel->selection();
@@ -781,10 +748,7 @@ static char markerKey;
   flutter::TextRange replacedRange(-1, -1);
 
   std::string textBeforeChange = _activeModel->GetText().c_str();
-  // Input string may be NSString or NSAttributedString.
-  BOOL isAttributedString = [string isKindOfClass:[NSAttributedString class]];
-  const NSString* rawString = isAttributedString ? [string string] : string;
-  std::string utf8String = rawString ? [rawString UTF8String] : "";
+  std::string utf8String = [string UTF8String];
   _activeModel->AddText(utf8String);
   if (_activeModel->composing()) {
     replacedRange = composingBeforeChange;
@@ -813,7 +777,7 @@ static char markerKey;
     void (*func)(id, SEL, id) = reinterpret_cast<void (*)(id, SEL, id)>(imp);
     func(self, selector, nil);
   }
-  if (_clientID == nil) {
+  if (self.clientID == nil) {
     // The macOS may still call selector even if it is no longer a first responder.
     return;
   }
@@ -834,7 +798,7 @@ static char markerKey;
   if (_pendingSelectors.count == 1) {
     __weak NSMutableArray* selectors = _pendingSelectors;
     __weak FlutterMethodChannel* channel = _channel;
-    __weak NSNumber* clientID = _clientID;
+    __weak NSNumber* clientID = self.clientID;
 
     CFStringRef runLoopMode = self.customRunLoopMode != nil
                                   ? (__bridge CFStringRef)self.customRunLoopMode
@@ -857,11 +821,11 @@ static char markerKey;
     _activeModel->CommitComposing();
     _activeModel->EndComposing();
   }
-  if ([_inputType isEqualToString:kMultilineInputType] &&
-      [_inputAction isEqualToString:kInputActionNewline]) {
+  if ([self.inputType isEqualToString:kMultilineInputType] &&
+      [self.inputAction isEqualToString:kInputActionNewline]) {
     [self insertText:@"\n" replacementRange:self.selectedRange];
   }
-  [_channel invokeMethod:kPerformAction arguments:@[ _clientID, _inputAction ]];
+  [_channel invokeMethod:kPerformAction arguments:@[ self.clientID, self.inputAction ]];
 }
 
 - (void)setMarkedText:(id)string
@@ -993,7 +957,7 @@ static char markerKey;
     farthest.y = MAX(farthest.y, y);
   }
 
-  const NSView* fromView = _currentViewController.flutterView;
+  const NSView* fromView = self.flutterViewController.flutterView;
   const CGRect rectInWindow = [fromView
       convertRect:CGRectMake(origin.x, origin.y, farthest.x - origin.x, farthest.y - origin.y)
            toView:nil];
@@ -1004,7 +968,7 @@ static char markerKey;
 - (NSRect)firstRectForCharacterRange:(NSRange)range actualRange:(NSRangePointer)actualRange {
   // This only determines position of caret instead of any arbitrary range, but it's enough
   // to properly position accent selection popup
-  return !_currentViewController.viewLoaded || CGRectEqualToRect(_caretRect, CGRectNull)
+  return !self.flutterViewController.viewLoaded || CGRectEqualToRect(_caretRect, CGRectNull)
              ? CGRectZero
              : [self screenRectFromFrameworkTransform:_caretRect];
 }

@@ -117,12 +117,6 @@ class CapabilitiesGLES final
   bool SupportsPrimitiveRestart() const override;
 
   // |Capabilities|
-  bool Supports32BitPrimitiveIndices() const override;
-
-  // |Capabilities|
-  bool SupportsExtendedRangeFormats() const override;
-
-  // |Capabilities|
   PixelFormat GetDefaultColorFormat() const override;
 
   // |Capabilities|
@@ -134,14 +128,7 @@ class CapabilitiesGLES final
   // |Capabilities|
   PixelFormat GetDefaultGlyphAtlasFormat() const override;
 
-  // |Capabilities|
   ISize GetMaximumRenderPassAttachmentSize() const override;
-
-  // |Capabilities|
-  size_t GetMinimumUniformAlignment() const override;
-
-  // |Capabilities|
-  bool NeedsPartitionedHostBuffer() const override;
 
  private:
   bool supports_texture_to_texture_blits_ = false;
@@ -149,7 +136,6 @@ class CapabilitiesGLES final
   bool supports_decal_sampler_address_mode_ = false;
   bool supports_offscreen_msaa_ = false;
   bool supports_implicit_msaa_ = false;
-  bool supports_32bit_primitive_indices_ = false;
   bool is_angle_ = false;
   bool is_es_ = false;
   PixelFormat default_glyph_atlas_format_ = PixelFormat::kUnknown;

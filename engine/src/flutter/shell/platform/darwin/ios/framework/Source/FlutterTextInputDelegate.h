@@ -67,15 +67,6 @@ typedef NS_ENUM(NSInteger, FlutterFloatingCursorDragState) {
     didResignFirstResponderWithTextInputClient:(int)client;
 - (void)flutterTextInputView:(FlutterTextInputView*)textInputView
     willDismissEditMenuWithTextInputClient:(int)client;
-- (void)flutterTextInputView:(FlutterTextInputView*)textInputView
-           shareSelectedText:(NSString*)selectedText;
-- (void)flutterTextInputView:(FlutterTextInputView*)textInputView
-    searchWebWithSelectedText:(NSString*)selectedText;
-- (void)flutterTextInputView:(FlutterTextInputView*)textInputView
-          lookUpSelectedText:(NSString*)selectedText;
-- (void)flutterTextInputView:(FlutterTextInputView*)textInputView
-    performContextMenuCustomActionWithActionID:(NSString*)actionID
-                               textInputClient:(int)client;
 @end
 
 #endif  // FLUTTER_SHELL_PLATFORM_DARWIN_IOS_FRAMEWORK_SOURCE_FLUTTERTEXTINPUTDELEGATE_H_

@@ -59,6 +59,7 @@ FenceWaiterVK::FenceWaiterVK(std::weak_ptr<DeviceHolderVK> device_holder)
 
 FenceWaiterVK::~FenceWaiterVK() {
   Terminate();
+  waiter_thread_->join();
 }
 
 bool FenceWaiterVK::AddFence(vk::UniqueFence fence,
@@ -206,13 +207,9 @@ bool FenceWaiterVK::Wait() {
 void FenceWaiterVK::Terminate() {
   {
     std::scoped_lock lock(wait_set_mutex_);
-    if (terminate_) {
-      return;
-    }
     terminate_ = true;
   }
   wait_set_cv_.notify_one();
-  waiter_thread_->join();
 }
 
 }  // namespace impeller

@@ -1457,14 +1457,16 @@ TEST(RectTest, OptRectUnion) {
 
   auto test1 = [](const Rect& r) {
     // Rect, NullOpt
-    EXPECT_EQ(Rect::Union(r, std::nullopt), r);
+    EXPECT_TRUE(Rect::Union(r, std::nullopt).has_value());
+    EXPECT_EQ(Rect::Union(r, std::nullopt).value(), r);
 
     // OptRect, NullOpt
     EXPECT_TRUE(Rect::Union(std::optional(r), std::nullopt).has_value());
     EXPECT_EQ(Rect::Union(std::optional(r), std::nullopt).value(), r);
 
     // NullOpt, Rect
-    EXPECT_EQ(Rect::Union(std::nullopt, r), r);
+    EXPECT_TRUE(Rect::Union(std::nullopt, r).has_value());
+    EXPECT_EQ(Rect::Union(std::nullopt, r).value(), r);
 
     // NullOpt, OptRect
     EXPECT_TRUE(Rect::Union(std::nullopt, std::optional(r)).has_value());
@@ -1479,10 +1481,12 @@ TEST(RectTest, OptRectUnion) {
     ASSERT_EQ(a.Union(b), u);
 
     // Rect, OptRect
-    EXPECT_EQ(Rect::Union(a, std::optional(b)), u);
+    EXPECT_TRUE(Rect::Union(a, std::optional(b)).has_value());
+    EXPECT_EQ(Rect::Union(a, std::optional(b)).value(), u);
 
     // OptRect, Rect
-    EXPECT_EQ(Rect::Union(std::optional(a), b), u);
+    EXPECT_TRUE(Rect::Union(std::optional(a), b).has_value());
+    EXPECT_EQ(Rect::Union(std::optional(a), b).value(), u);
 
     // OptRect, OptRect
     EXPECT_TRUE(Rect::Union(std::optional(a), std::optional(b)).has_value());
@@ -1577,14 +1581,16 @@ TEST(RectTest, OptIRectUnion) {
 
   auto test1 = [](const IRect& r) {
     // Rect, NullOpt
-    EXPECT_EQ(IRect::Union(r, std::nullopt), r);
+    EXPECT_TRUE(IRect::Union(r, std::nullopt).has_value());
+    EXPECT_EQ(IRect::Union(r, std::nullopt).value(), r);
 
     // OptRect, NullOpt
     EXPECT_TRUE(IRect::Union(std::optional(r), std::nullopt).has_value());
     EXPECT_EQ(IRect::Union(std::optional(r), std::nullopt).value(), r);
 
     // NullOpt, Rect
-    EXPECT_EQ(IRect::Union(std::nullopt, r), r);
+    EXPECT_TRUE(IRect::Union(std::nullopt, r).has_value());
+    EXPECT_EQ(IRect::Union(std::nullopt, r).value(), r);
 
     // NullOpt, OptRect
     EXPECT_TRUE(IRect::Union(std::nullopt, std::optional(r)).has_value());
@@ -1599,10 +1605,12 @@ TEST(RectTest, OptIRectUnion) {
     ASSERT_EQ(a.Union(b), u);
 
     // Rect, OptRect
-    EXPECT_EQ(IRect::Union(a, std::optional(b)), u);
+    EXPECT_TRUE(IRect::Union(a, std::optional(b)).has_value());
+    EXPECT_EQ(IRect::Union(a, std::optional(b)).value(), u);
 
     // OptRect, Rect
-    EXPECT_EQ(IRect::Union(std::optional(a), b), u);
+    EXPECT_TRUE(IRect::Union(std::optional(a), b).has_value());
+    EXPECT_EQ(IRect::Union(std::optional(a), b).value(), u);
 
     // OptRect, OptRect
     EXPECT_TRUE(IRect::Union(std::optional(a), std::optional(b)).has_value());

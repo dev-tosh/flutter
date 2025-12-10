@@ -31,7 +31,8 @@ base class Handle extends NativeFieldWrapperClass1 {
 
   @override
   bool operator ==(Object other) {
-    return other is Handle && other.handle == handle;
+    return other is Handle
+        && other.handle == handle;
   }
 
   @override
@@ -63,6 +64,5 @@ class _OnWaitCompleteClosure {
   Object _arg2;
 
   @pragma('vm:entry-point')
-  Function get _closure =>
-      () => _callback(_arg1, _arg2);
+  Function get _closure => () => _callback(_arg1, _arg2);
 }

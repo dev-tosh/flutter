@@ -5,10 +5,9 @@
 package io.flutter.plugin.editing;
 
 import static io.flutter.Build.API_LEVELS;
-import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertThrows;
-import static org.junit.Assert.assertTrue;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -49,7 +48,7 @@ public class ScribePluginTest {
   @TargetApi(API_LEVELS.API_34)
   @Test
   public void scribePluginIsFeatureAvailable() {
-    assertTrue(scribePlugin.isFeatureAvailable());
+    assertEquals(scribePlugin.isFeatureAvailable(), true);
 
     verify(mockImm).isStylusHandwritingAvailable();
   }
@@ -58,7 +57,7 @@ public class ScribePluginTest {
   @TargetApi(API_LEVELS.API_34)
   @Test
   public void scribePluginIsStylusHandwritingAvailable() {
-    assertTrue(scribePlugin.isStylusHandwritingAvailable());
+    assertEquals(scribePlugin.isStylusHandwritingAvailable(), true);
 
     verify(mockImm).isStylusHandwritingAvailable();
   }
@@ -78,14 +77,18 @@ public class ScribePluginTest {
   public void scribePluginStartStylusHandwritingWhenAPILevelUnsupported() {
     assertNotNull(scribePlugin);
 
-    assertThrows(NoSuchMethodError.class, () -> scribePlugin.startStylusHandwriting());
+    assertThrows(
+        NoSuchMethodError.class,
+        () -> {
+          scribePlugin.startStylusHandwriting();
+        });
   }
 
   @Config(sdk = API_LEVELS.API_33)
   @TargetApi(API_LEVELS.API_33)
   @Test
   public void scribePluginIsFeatureAvailableWhenAPILevelUnsupported() {
-    assertFalse(scribePlugin.isFeatureAvailable());
+    assertEquals(scribePlugin.isFeatureAvailable(), false);
   }
 
   @Config(sdk = API_LEVELS.API_33)
@@ -94,6 +97,10 @@ public class ScribePluginTest {
   public void scribePluginIsStylusHandwritingAvailableWhenAPILevelUnsupported() {
     assertNotNull(scribePlugin);
 
-    assertThrows(NoSuchMethodError.class, () -> scribePlugin.isStylusHandwritingAvailable());
+    assertThrows(
+        NoSuchMethodError.class,
+        () -> {
+          scribePlugin.isStylusHandwritingAvailable();
+        });
   }
 }

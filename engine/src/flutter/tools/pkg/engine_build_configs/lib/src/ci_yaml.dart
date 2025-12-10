@@ -18,7 +18,6 @@ const String _nameField = 'name';
 const String _recipeField = 'recipe';
 const String _propertiesField = 'properties';
 const String _configNameField = 'config_name';
-const String _releaseBuildField = 'release_build';
 
 /// A class containing the information deserialized from the .ci.yaml file.
 ///
@@ -47,14 +46,16 @@ class CiConfig {
       return CiConfig._error(error);
     }
     if (targetsNode is! y.YamlList) {
-      final String error = targetsNode.span.message('Expected "$_targetsField" to be a list.');
+      final String error = targetsNode.span.message(
+        'Expected "$_targetsField" to be a list.',
+      );
       return CiConfig._error(error);
     }
     final y.YamlList targetsList = targetsNode;
 
-    final result = <String, CiTarget>{};
+    final Map<String, CiTarget> result = <String, CiTarget>{};
     for (final y.YamlNode yamlTarget in targetsList.nodes) {
-      final target = CiTarget.fromYaml(yamlTarget);
+      final CiTarget target = CiTarget.fromYaml(yamlTarget);
       if (!target.valid) {
         return CiConfig._error(target.error);
       }
@@ -64,9 +65,13 @@ class CiConfig {
     return CiConfig._(ciTargets: result);
   }
 
-  CiConfig._({required this.ciTargets}) : error = null;
+  CiConfig._({
+    required this.ciTargets,
+  }) : error = null;
 
-  CiConfig._error(this.error) : ciTargets = <String, CiTarget>{};
+  CiConfig._error(
+    this.error,
+  ) : ciTargets = <String, CiTarget>{};
 
   /// Information about CI builder configurations, which .ci.yaml calls
   /// "targets".
@@ -93,7 +98,7 @@ class CiTarget {
       return CiTarget._error(error);
     }
     final y.YamlMap targetMap = yaml;
-    final String? name = targetMap.nodes[_nameField].readStringOrNull();
+    final String? name = _stringOfNode(targetMap.nodes[_nameField]);
     if (name == null) {
       final String error = targetMap.span.message(
         'Expected map to contain a string value for key "$_nameField".',
@@ -101,7 +106,7 @@ class CiTarget {
       return CiTarget._error(error);
     }
 
-    final String? recipe = targetMap.nodes[_recipeField].readStringOrNull();
+    final String? recipe = _stringOfNode(targetMap.nodes[_recipeField]);
     if (recipe == null) {
       final String error = targetMap.span.message(
         'Expected map to contain a string value for key "$_recipeField".',
@@ -116,18 +121,29 @@ class CiTarget {
       );
       return CiTarget._error(error);
     }
-    final properties = CiTargetProperties.fromYaml(propertiesNode);
+    final CiTargetProperties properties = CiTargetProperties.fromYaml(
+      propertiesNode,
+    );
     if (!properties.valid) {
       return CiTarget._error(properties.error);
     }
 
-    return CiTarget._(name: name, recipe: recipe, properties: properties);
+    return CiTarget._(
+      name: name,
+      recipe: recipe,
+      properties: properties,
+    );
   }
 
-  CiTarget._({required this.name, required this.recipe, required this.properties}) : error = null;
+  CiTarget._({
+    required this.name,
+    required this.recipe,
+    required this.properties,
+  }) : error = null;
 
-  CiTarget._error(this.error)
-    : name = '',
+  CiTarget._error(
+    this.error,
+  ) : name = '',
       recipe = '',
       properties = CiTargetProperties._error('Invalid');
 
@@ -156,27 +172,32 @@ class CiTargetProperties {
   /// other fields contain information about the target properties.
   factory CiTargetProperties.fromYaml(y.YamlNode yaml) {
     if (yaml is! y.YamlMap) {
-      final String error = yaml.span.message('Expected "$_propertiesField" to be a map.');
+      final String error = yaml.span.message(
+        'Expected "$_propertiesField" to be a map.',
+      );
       return CiTargetProperties._error(error);
     }
     final y.YamlMap propertiesMap = yaml;
+    final String? configName = _stringOfNode(
+      propertiesMap.nodes[_configNameField],
+    );
     return CiTargetProperties._(
-      configName: propertiesMap.nodes[_configNameField].readStringOrNull(),
-      isReleaseBuilder: propertiesMap.nodes[_releaseBuildField].readStringOrNull() == 'true',
+      configName: configName ?? '',
     );
   }
 
-  CiTargetProperties._({required this.configName, required this.isReleaseBuilder}) : error = null;
+  CiTargetProperties._({
+    required this.configName,
+  }) : error = null;
 
-  CiTargetProperties._error(this.error) : configName = '', isReleaseBuilder = false;
+  CiTargetProperties._error(
+    this.error,
+  ) : configName = '';
 
   /// The name of the build configuration. If the containing [CiTarget] instance
   /// is using the engine_v2 recipes, then this name is the same as the name
   /// of the build config json file under ci/builders.
-  final String? configName;
-
-  /// Whether this is a release builder.
-  final bool isReleaseBuilder;
+  final String configName;
 
   /// An error message when this instance is invalid.
   final String? error;
@@ -185,25 +206,16 @@ class CiTargetProperties {
   late final bool valid = error == null;
 }
 
-/// Extensions for reading and partially validating typed values from YAML.
-extension on y.YamlNode? {
-  // TODO(matanlurey): Much of this should really be an error but that also
-  // predicates a lot more work put into .ci.yaml validation that is better
-  // served by having a dedicated library:
-  // https://github.com/flutter/flutter/issues/161971.
-
-  T? _readOrNull<T>() {
-    final node = this;
-    if (node is! y.YamlScalar) {
-      return null;
-    }
-    final Object? value = node.value;
-    if (value is! T) {
-      return null;
-    }
-    return value;
+String? _stringOfNode(y.YamlNode? stringNode) {
+  if (stringNode == null) {
+    return null;
   }
-
-  /// Returns this node as a string if possible.
-  String? readStringOrNull() => _readOrNull();
+  if (stringNode is! y.YamlScalar) {
+    return null;
+  }
+  final y.YamlScalar stringScalar = stringNode;
+  if (stringScalar.value is! String) {
+    return null;
+  }
+  return stringScalar.value as String;
 }

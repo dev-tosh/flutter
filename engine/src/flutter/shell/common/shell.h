@@ -39,8 +39,6 @@
 #include "flutter/shell/common/rasterizer.h"
 #include "flutter/shell/common/resource_cache_limit_calculator.h"
 #include "flutter/shell/common/shell_io_manager.h"
-#include "flutter/shell/geometry/geometry.h"
-#include "impeller/core/runtime_types.h"
 #include "impeller/renderer/context.h"
 #include "impeller/runtime_stage/runtime_stage.h"
 
@@ -132,8 +130,7 @@ class Shell final : public PlatformView::Delegate,
       fml::RefPtr<SkiaUnrefQueue> unref_queue,
       fml::TaskRunnerAffineWeakPtr<SnapshotDelegate> snapshot_delegate,
       const std::shared_ptr<fml::SyncSwitch>& gpu_disabled_switch,
-      const std::shared_future<impeller::RuntimeStageBackend>&
-          runtime_stage_backend)>
+      impeller::RuntimeStageBackend runtime_stage_type)>
       EngineCreateCallback;
 
   //----------------------------------------------------------------------------
@@ -263,7 +260,7 @@ class Shell final : public PlatformView::Delegate,
   ///
   /// @return     A weak pointer to the engine.
   ///
-  fml::TaskRunnerAffineWeakPtr<Engine> GetEngine();
+  fml::WeakPtr<Engine> GetEngine();
 
   //----------------------------------------------------------------------------
   /// @brief      Platform views may only be accessed on the platform task
@@ -291,13 +288,6 @@ class Shell final : public PlatformView::Delegate,
   ///             warning. The shell will attempt to purge caches. Current, only
   ///             the rasterizer cache is purged.
   void NotifyLowMemoryWarning() const;
-
-  //----------------------------------------------------------------------------
-  /// @brief      Used by embedders to flush the microtask queue. Required
-  ///             when running with merged platform and UI threads, in which
-  ///             case the embedder is responsible for flushing the microtask
-  ///             queue.
-  void FlushMicrotaskQueue() const;
 
   //----------------------------------------------------------------------------
   /// @brief      Used by embedders to check if all shell subcomponents are
@@ -473,8 +463,7 @@ class Shell final : public PlatformView::Delegate,
   std::shared_ptr<PlatformMessageHandler> platform_message_handler_;
   std::atomic<bool> route_messages_through_platform_thread_ = false;
 
-  fml::TaskRunnerAffineWeakPtr<Engine>
-      weak_engine_;  // to be shared across threads
+  fml::WeakPtr<Engine> weak_engine_;  // to be shared across threads
   fml::TaskRunnerAffineWeakPtr<Rasterizer>
       weak_rasterizer_;  // to be shared across threads
   fml::WeakPtr<PlatformView>
@@ -512,13 +501,13 @@ class Shell final : public PlatformView::Delegate,
   /// any of the threads.
   std::unique_ptr<DisplayManager> display_manager_;
 
-  // Protects expected_frame_constraints_ which is set on platform thread and
-  // read on raster thread.
+  // protects expected_frame_size_ which is set on platform thread and read on
+  // raster thread
   std::mutex resize_mutex_;
 
-  // Used to discard wrong size layer tree produced during interactive
-  // resizing.
-  std::unordered_map<int64_t, BoxConstraints> expected_frame_constraints_;
+  // used to discard wrong size layer tree produced during interactive
+  // resizing
+  std::unordered_map<int64_t, SkISize> expected_frame_sizes_;
 
   // Used to communicate the right frame bounds via service protocol.
   double device_pixel_ratio_ = 0.0;
@@ -593,9 +582,6 @@ class Shell final : public PlatformView::Delegate,
                                 RemoveViewCallback callback) override;
 
   // |PlatformView::Delegate|
-  void OnPlatformViewSendViewFocusEvent(const ViewFocusEvent& event) override;
-
-  // |PlatformView::Delegate|
   void OnPlatformViewSetViewportMetrics(
       int64_t view_id,
       const ViewportMetrics& metrics) override;
@@ -609,8 +595,7 @@ class Shell final : public PlatformView::Delegate,
       std::unique_ptr<PointerDataPacket> packet) override;
 
   // |PlatformView::Delegate|
-  void OnPlatformViewDispatchSemanticsAction(int64_t view_id,
-                                             int32_t node_id,
+  void OnPlatformViewDispatchSemanticsAction(int32_t node_id,
                                              SemanticsAction action,
                                              fml::MallocMapping args) override;
 
@@ -671,15 +656,8 @@ class Shell final : public PlatformView::Delegate,
 
   // |Engine::Delegate|
   void OnEngineUpdateSemantics(
-      int64_t view_id,
       SemanticsNodeUpdates update,
       CustomAccessibilityActionUpdates actions) override;
-
-  // |Engine::Delegate|
-  void OnEngineSetApplicationLocale(std::string locale) override;
-
-  // |Engine::Delegate|
-  void OnEngineSetSemanticsTreeEnabled(bool enabled) override;
 
   // |Engine::Delegate|
   void OnEngineHandlePlatformMessage(
@@ -716,9 +694,6 @@ class Shell final : public PlatformView::Delegate,
   // |Engine::Delegate|
   double GetScaledFontSize(double unscaled_font_size,
                            int configuration_id) const override;
-
-  // |Engine::Delegate|
-  void RequestViewFocusChange(const ViewFocusChangeRequest& request) override;
 
   // |Rasterizer::Delegate|
   void OnFrameRasterized(const FrameTiming&) override;
@@ -808,7 +783,7 @@ class Shell final : public PlatformView::Delegate,
   // directory.
   std::unique_ptr<DirectoryAssetBundle> RestoreOriginalAssetResolver();
 
-  BoxConstraints ExpectedFrameConstraints(int64_t view_id);
+  SkISize ExpectedFrameSize(int64_t view_id);
 
   // For accessing the Shell via the raster thread, necessary for various
   // rasterizer callbacks.

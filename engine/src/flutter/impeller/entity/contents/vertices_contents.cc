@@ -4,15 +4,12 @@
 
 #include "vertices_contents.h"
 
-#include <format>
-
 #include "fml/logging.h"
 #include "impeller/base/validation.h"
 #include "impeller/core/formats.h"
 #include "impeller/entity/contents/content_context.h"
 #include "impeller/entity/contents/contents.h"
 #include "impeller/entity/contents/filters/blend_filter_contents.h"
-#include "impeller/entity/contents/pipelines.h"
 #include "impeller/entity/geometry/geometry.h"
 #include "impeller/entity/geometry/vertices_geometry.h"
 #include "impeller/geometry/color.h"
@@ -99,14 +96,15 @@ void VerticesSimpleBlendContents::SetLazyTextureCoverage(Rect rect) {
 bool VerticesSimpleBlendContents::Render(const ContentContext& renderer,
                                          const Entity& entity,
                                          RenderPass& pass) const {
-  FML_DCHECK(texture_ || lazy_texture_ || blend_mode_ == BlendMode::kDst);
+  FML_DCHECK(texture_ || lazy_texture_ ||
+             blend_mode_ == BlendMode::kDestination);
   BlendMode blend_mode = blend_mode_;
   if (!geometry_->HasVertexColors()) {
-    blend_mode = BlendMode::kSrc;
+    blend_mode = BlendMode::kSource;
   }
 
   std::shared_ptr<Texture> texture;
-  if (blend_mode != BlendMode::kDst) {
+  if (blend_mode != BlendMode::kDestination) {
     if (!texture_) {
       texture = lazy_texture_(renderer);
     } else {
@@ -146,17 +144,14 @@ bool VerticesSimpleBlendContents::Render(const ContentContext& renderer,
     using FS = PorterDuffBlendPipeline::FragmentShader;
 
 #ifdef IMPELLER_DEBUG
-    pass.SetCommandLabel(std::format("DrawVertices Porterduff Blend ({})",
-                                     BlendModeToString(blend_mode)));
+    pass.SetCommandLabel(SPrintF("DrawVertices Porterduff Blend (%s)",
+                                 BlendModeToString(blend_mode)));
 #endif  // IMPELLER_DEBUG
     pass.SetVertexBuffer(std::move(geometry_result.vertex_buffer));
 
     auto options = OptionsFromPassAndEntity(pass, entity);
     options.primitive_type = geometry_result.type;
-    auto inverted_blend_mode =
-        InvertPorterDuffBlend(blend_mode).value_or(BlendMode::kSrc);
-    pass.SetPipeline(
-        renderer.GetPorterDuffPipeline(inverted_blend_mode, options));
+    pass.SetPipeline(renderer.GetPorterDuffBlendPipeline(options));
 
     FS::BindTextureSamplerDst(pass, texture, dst_sampler);
 
@@ -166,30 +161,42 @@ bool VerticesSimpleBlendContents::Render(const ContentContext& renderer,
     frame_info.texture_sampler_y_coord_scale = texture->GetYCoordScale();
     frame_info.mvp = geometry_result.transform;
 
-    frag_info.input_alpha_output_alpha_tmx_tmy =
-        Vector4(1, alpha_, static_cast<int>(tile_mode_x_),
-                static_cast<int>(tile_mode_y_));
-    frag_info.use_strict_source_rect = 0.0;
+    frag_info.output_alpha = alpha_;
+    frag_info.input_alpha = 1.0;
 
-    auto& host_buffer = renderer.GetTransientsDataBuffer();
+    auto inverted_blend_mode =
+        InvertPorterDuffBlend(blend_mode).value_or(BlendMode::kSource);
+    auto blend_coefficients =
+        kPorterDuffCoefficients[static_cast<int>(inverted_blend_mode)];
+    frag_info.src_coeff = blend_coefficients[0];
+    frag_info.src_coeff_dst_alpha = blend_coefficients[1];
+    frag_info.dst_coeff = blend_coefficients[2];
+    frag_info.dst_coeff_src_alpha = blend_coefficients[3];
+    frag_info.dst_coeff_src_color = blend_coefficients[4];
+
+    // These values are ignored if the platform supports native decal mode.
+    frag_info.tmx = static_cast<int>(tile_mode_x_);
+    frag_info.tmy = static_cast<int>(tile_mode_y_);
+
+    auto& host_buffer = renderer.GetTransientsBuffer();
     FS::BindFragInfo(pass, host_buffer.EmplaceUniform(frag_info));
     VS::BindFrameInfo(pass, host_buffer.EmplaceUniform(frame_info));
 
     return pass.Draw().ok();
   }
 
-  using VS = VerticesUber1Shader::VertexShader;
-  using FS = VerticesUber1Shader::FragmentShader;
+  using VS = VerticesUberShader::VertexShader;
+  using FS = VerticesUberShader::FragmentShader;
 
 #ifdef IMPELLER_DEBUG
-  pass.SetCommandLabel(std::format("DrawVertices Advanced Blend ({})",
-                                   BlendModeToString(blend_mode)));
+  pass.SetCommandLabel(SPrintF("DrawVertices Advanced Blend (%s)",
+                               BlendModeToString(blend_mode)));
 #endif  // IMPELLER_DEBUG
   pass.SetVertexBuffer(std::move(geometry_result.vertex_buffer));
 
   auto options = OptionsFromPassAndEntity(pass, entity);
   options.primitive_type = geometry_result.type;
-  pass.SetPipeline(renderer.GetDrawVerticesUberPipeline(blend_mode, options));
+  pass.SetPipeline(renderer.GetDrawVerticesUberShader(options));
 
   FS::BindTextureSampler(pass, texture, dst_sampler);
 
@@ -205,7 +212,7 @@ bool VerticesSimpleBlendContents::Render(const ContentContext& renderer,
   frag_info.tmx = static_cast<int>(tile_mode_x_);
   frag_info.tmy = static_cast<int>(tile_mode_y_);
 
-  auto& host_buffer = renderer.GetTransientsDataBuffer();
+  auto& host_buffer = renderer.GetTransientsBuffer();
   FS::BindFragInfo(pass, host_buffer.EmplaceUniform(frag_info));
   VS::BindFrameInfo(pass, host_buffer.EmplaceUniform(frame_info));
 

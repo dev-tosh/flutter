@@ -7,6 +7,7 @@ package io.flutter.plugin.platform;
 import static android.view.View.OnFocusChangeListener;
 import static io.flutter.Build.API_LEVELS;
 
+import android.annotation.TargetApi;
 import android.content.Context;
 import android.hardware.display.DisplayManager;
 import android.hardware.display.VirtualDisplay;
@@ -17,7 +18,6 @@ import android.view.View;
 import android.view.View.OnFocusChangeListener;
 import android.view.ViewTreeObserver;
 import androidx.annotation.NonNull;
-import androidx.annotation.RequiresApi;
 import androidx.annotation.VisibleForTesting;
 
 class VirtualDisplayController {
@@ -57,7 +57,7 @@ class VirtualDisplayController {
     // scale or clamp, which leads to a mismatch between the size of the widget and the size of
     // virtual display.
     // This mismatch leads to some test failures: https://github.com/flutter/flutter/issues/106750
-    // TODO(cyanglaz): find a way to prevent the crash without introducing size mismatch between
+    // TODO(cyanglaz): find a way to prevent the crash without introducing size mistach betewen
     // virtual display and AndroidPlatformView widget.
     // https://github.com/flutter/flutter/issues/93115
     renderTarget.resize(width, height);
@@ -232,7 +232,7 @@ class VirtualDisplayController {
   }
 
   // On Android versions 31+ resizing of a Virtual Display's Presentation is natively supported.
-  @RequiresApi(API_LEVELS.API_31)
+  @TargetApi(API_LEVELS.API_31)
   private void resize31(
       View embeddedView, int width, int height, final Runnable onNewSizeFrameAvailable) {
     renderTarget.resize(width, height);

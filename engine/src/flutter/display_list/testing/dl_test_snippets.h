@@ -10,15 +10,12 @@
 #include "flutter/display_list/effects/color_filters/dl_blend_color_filter.h"
 #include "flutter/display_list/effects/dl_color_sources.h"
 #include "flutter/display_list/effects/dl_image_filters.h"
-#include "flutter/display_list/effects/dl_runtime_effect_skia.h"
 #include "flutter/testing/testing.h"
 
-#include "third_party/skia/include/core/SkPath.h"
-#include "third_party/skia/include/core/SkRRect.h"
+#include "third_party/skia/include/core/SkCanvas.h"
 #include "third_party/skia/include/core/SkSurface.h"
 #include "third_party/skia/include/effects/SkGradientShader.h"
 #include "third_party/skia/include/effects/SkImageFilters.h"
-#include "third_party/skia/include/effects/SkRuntimeEffect.h"
 
 namespace flutter {
 namespace testing {
@@ -26,8 +23,6 @@ namespace testing {
 sk_sp<DisplayList> GetSampleDisplayList();
 sk_sp<DisplayList> GetSampleDisplayList(int ops);
 sk_sp<DisplayList> GetSampleNestedDisplayList();
-sk_sp<DlImage> MakeTestImage(int w, int h, int checker_size);
-sk_sp<DlImage> MakeTestImage(int w, int h, DlColor color);
 
 typedef const std::function<void(DlOpReceiver&)> DlInvoker;
 
@@ -61,7 +56,7 @@ constexpr float kInvertColorMatrix[20] = {
 };
 // clang-format on
 
-constexpr DlPoint kTestPoints[] = {
+constexpr SkPoint kTestPoints[] = {
     {10, 10},
     {20, 20},
     {10, 20},
@@ -72,12 +67,32 @@ constexpr DlPoint kTestPoints[] = {
 static DlImageSampling kNearestSampling = DlImageSampling::kNearestNeighbor;
 static DlImageSampling kLinearSampling = DlImageSampling::kLinear;
 
-static auto kTestImage1 = MakeTestImage(40, 40, 5);
-static auto kTestImage2 = MakeTestImage(50, 50, 5);
-static auto kTestSkImage = MakeTestImage(30, 30, 5)->skia_image();
+static sk_sp<DlImage> MakeTestImage(int w, int h, int checker_size) {
+  sk_sp<SkSurface> surface =
+      SkSurfaces::Raster(SkImageInfo::MakeN32Premul(w, h));
+  SkCanvas* canvas = surface->getCanvas();
+  SkPaint p0, p1;
+  p0.setStyle(SkPaint::kFill_Style);
+  p0.setColor(SK_ColorGREEN);
+  p1.setStyle(SkPaint::kFill_Style);
+  p1.setColor(SK_ColorBLUE);
+  p1.setAlpha(128);
+  for (int y = 0; y < w; y += checker_size) {
+    for (int x = 0; x < h; x += checker_size) {
+      SkPaint& cellp = ((x + y) & 1) == 0 ? p0 : p1;
+      canvas->drawRect(SkRect::MakeXYWH(x, y, checker_size, checker_size),
+                       cellp);
+    }
+  }
+  return DlImage::Make(surface->makeImageSnapshot());
+}
+
+static auto TestImage1 = MakeTestImage(40, 40, 5);
+static auto TestImage2 = MakeTestImage(50, 50, 5);
+static auto TestSkImage = MakeTestImage(30, 30, 5)->skia_image();
 
 static const std::shared_ptr<DlColorSource> kTestSource1 =
-    DlColorSource::MakeImage(kTestImage1,
+    DlColorSource::MakeImage(TestImage1,
                              DlTileMode::kClamp,
                              DlTileMode::kMirror,
                              kLinearSampling);
@@ -173,23 +188,23 @@ constexpr DlRect kTestBounds = DlRect::MakeLTRB(10, 10, 50, 60);
 constexpr SkRect kTestSkBounds = SkRect::MakeLTRB(10, 10, 50, 60);
 static const DlRoundRect kTestRRect =
     DlRoundRect::MakeRectXY(kTestBounds, 5, 5);
-static const DlRoundSuperellipse kTestRSuperellipse =
-    DlRoundSuperellipse::MakeRectXY(kTestBounds, 3, 3);
 static const SkRRect kTestSkRRect = SkRRect::MakeRectXY(kTestSkBounds, 5, 5);
 static const SkRRect kTestRRectRect = SkRRect::MakeRect(kTestSkBounds);
 static const DlRoundRect kTestInnerRRect =
     DlRoundRect::MakeRectXY(kTestBounds.Expand(-5, -5), 2, 2);
 static const SkRRect kTestSkInnerRRect =
     SkRRect::MakeRectXY(kTestSkBounds.makeInset(5, 5), 2, 2);
-static const DlPath kTestPathRect = DlPath::MakeRect(kTestBounds);
-static const DlPath kTestPathOval = DlPath::MakeOval(kTestBounds);
-static const DlPath kTestPathRRect = DlPath::MakeRoundRect(kTestRRect);
+static const DlPath kTestPathRect = DlPath(SkPath::Rect(kTestSkBounds));
+static const DlPath kTestPathOval = DlPath(SkPath::Oval(kTestSkBounds));
+static const DlPath kTestPathRRect = DlPath(SkPath::RRect(kTestSkRRect));
 static const DlPath kTestPath1 =
     DlPath(SkPath::Polygon({{0, 0}, {10, 10}, {10, 0}, {0, 10}}, true));
 static const DlPath kTestPath2 =
     DlPath(SkPath::Polygon({{0, 0}, {10, 10}, {0, 10}, {10, 0}}, true));
 static const DlPath kTestPath3 =
     DlPath(SkPath::Polygon({{0, 0}, {10, 10}, {10, 0}, {0, 10}}, false));
+static const SkMatrix kTestMatrix1 = SkMatrix::Scale(2, 2);
+static const SkMatrix kTestMatrix2 = SkMatrix::RotateDeg(45);
 
 static const std::shared_ptr<DlVertices> kTestVertices1 =
     DlVertices::Make(DlVertexMode::kTriangles,  //
@@ -206,7 +221,7 @@ static const std::shared_ptr<DlVertices> kTestVertices2 =
 
 static sk_sp<DisplayList> MakeTestDisplayList(int w, int h, SkColor color) {
   DisplayListBuilder builder;
-  builder.DrawRect(DlRect::MakeWH(w, h), DlPaint(DlColor(color)));
+  builder.DrawRect(SkRect::MakeWH(w, h), DlPaint(DlColor(color)));
   return builder.Build();
 }
 static sk_sp<DisplayList> TestDisplayList1 =
@@ -214,25 +229,9 @@ static sk_sp<DisplayList> TestDisplayList1 =
 static sk_sp<DisplayList> TestDisplayList2 =
     MakeTestDisplayList(25, 25, SK_ColorBLUE);
 
-static const sk_sp<DlRuntimeEffect> kTestRuntimeEffect1 =
-    DlRuntimeEffectSkia::Make(
-        SkRuntimeEffect::MakeForShader(
-            SkString("vec4 main(vec2 p) { return vec4(0); }"))
-            .effect);
-static const sk_sp<DlRuntimeEffect> kTestRuntimeEffect2 =
-    DlRuntimeEffectSkia::Make(
-        SkRuntimeEffect::MakeForShader(
-            SkString("vec4 main(vec2 p) { return vec4(1); }"))
-            .effect);
+SkFont CreateTestFontOfSize(SkScalar scalar);
 
-SkFont CreateTestFontOfSize(DlScalar scalar);
-
-sk_sp<SkTextBlob> GetTestTextBlob(const std::string& str,
-                                  DlScalar font_size = 20.0f);
 sk_sp<SkTextBlob> GetTestTextBlob(int index);
-#if IMPELLER_SUPPORTS_RENDERING
-std::shared_ptr<impeller::TextFrame> GetTestTextFrame(int index);
-#endif
 
 struct DisplayListInvocation {
   // ----------------------------------

@@ -5,13 +5,13 @@
 #ifndef FLUTTER_IMPELLER_RENDERER_BACKEND_VULKAN_CONTEXT_VK_H_
 #define FLUTTER_IMPELLER_RENDERER_BACKEND_VULKAN_CONTEXT_VK_H_
 
-#include <format>
 #include <memory>
 
 #include "flutter/fml/concurrent_message_loop.h"
 #include "flutter/fml/mapping.h"
 #include "flutter/fml/unique_fd.h"
 #include "impeller/base/backend_cast.h"
+#include "impeller/base/strings.h"
 #include "impeller/core/formats.h"
 #include "impeller/core/runtime_types.h"
 #include "impeller/renderer/backend/vulkan/command_pool_vk.h"
@@ -21,7 +21,6 @@
 #include "impeller/renderer/backend/vulkan/queue_vk.h"
 #include "impeller/renderer/backend/vulkan/sampler_library_vk.h"
 #include "impeller/renderer/backend/vulkan/shader_library_vk.h"
-#include "impeller/renderer/backend/vulkan/workarounds_vk.h"
 #include "impeller/renderer/capabilities.h"
 #include "impeller/renderer/command_buffer.h"
 #include "impeller/renderer/command_queue.h"
@@ -82,10 +81,9 @@ class ContextVK final : public Context,
     fml::UniqueFD cache_directory;
     bool enable_validation = false;
     bool enable_gpu_tracing = false;
-    bool enable_surface_control = false;
+    bool disable_surface_control = false;
     /// If validations are requested but cannot be enabled, log a fatal error.
     bool fatal_missing_validations = false;
-    Flags flags;
 
     std::optional<EmbedderData> embedder_data;
 
@@ -133,17 +131,11 @@ class ContextVK final : public Context,
   // |Context|
   const std::shared_ptr<const Capabilities>& GetCapabilities() const override;
 
-  // |Context|
-  virtual bool SubmitOnscreen(
-      std::shared_ptr<CommandBuffer> cmd_buffer) override;
-
   const std::shared_ptr<YUVConversionLibraryVK>& GetYUVConversionLibrary()
       const;
 
   // |Context|
   void Shutdown() override;
-
-  const WorkaroundsVK& GetWorkarounds() const;
 
   void SetOffscreenFormat(PixelFormat pixel_format);
 
@@ -160,7 +152,7 @@ class ContextVK final : public Context,
       // No-op if validation layers are not enabled.
       return true;
     }
-    std::string combined = std::format("{} {}", label, trailing);
+    std::string combined = SPrintF("%s %s", label.data(), trailing.data());
     return SetDebugName(GetDevice(), handle, combined);
   }
 
@@ -228,8 +220,8 @@ class ContextVK final : public Context,
   void DisposeThreadLocalCachedResources() override;
 
   /// @brief Whether the Android Surface control based swapchain should be
-  ///        enabled
-  bool GetShouldEnableSurfaceControlSwapchain() const;
+  /// disabled, even if the device is capable of supporting it.
+  bool GetShouldDisableSurfaceControlSwapchain() const;
 
   // | Context |
   bool EnqueueCommandBuffer(
@@ -285,7 +277,6 @@ class ContextVK final : public Context,
   std::shared_ptr<GPUTracerVK> gpu_tracer_;
   std::shared_ptr<CommandQueue> command_queue_vk_;
   std::shared_ptr<const IdleWaiter> idle_waiter_vk_;
-  WorkaroundsVK workarounds_;
 
   using DescriptorPoolMap =
       std::unordered_map<std::thread::id, std::shared_ptr<DescriptorPoolVK>>;
@@ -293,7 +284,7 @@ class ContextVK final : public Context,
   mutable Mutex desc_pool_mutex_;
   mutable DescriptorPoolMap IPLR_GUARDED_BY(desc_pool_mutex_)
       cached_descriptor_pool_;
-  bool should_enable_surface_control_ = false;
+  bool should_disable_surface_control_ = false;
   bool should_batch_cmd_buffers_ = false;
   std::vector<std::shared_ptr<CommandBuffer>> pending_command_buffers_;
 
@@ -301,7 +292,7 @@ class ContextVK final : public Context,
 
   bool is_valid_ = false;
 
-  explicit ContextVK(const Flags& flags);
+  ContextVK();
 
   void Setup(Settings settings);
 

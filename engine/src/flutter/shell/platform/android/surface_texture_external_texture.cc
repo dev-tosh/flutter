@@ -13,6 +13,11 @@
 #include "third_party/skia/include/core/SkColorSpace.h"
 #include "third_party/skia/include/core/SkColorType.h"
 #include "third_party/skia/include/core/SkImage.h"
+#include "third_party/skia/include/gpu/ganesh/GrBackendSurface.h"
+#include "third_party/skia/include/gpu/ganesh/GrDirectContext.h"
+#include "third_party/skia/include/gpu/ganesh/SkImageGanesh.h"
+#include "third_party/skia/include/gpu/ganesh/gl/GrGLBackendSurface.h"
+#include "third_party/skia/include/gpu/ganesh/gl/GrGLTypes.h"
 
 namespace flutter {
 
@@ -36,7 +41,7 @@ void SurfaceTextureExternalTexture::MarkNewFrameAvailable() {
 }
 
 void SurfaceTextureExternalTexture::Paint(PaintContext& context,
-                                          const DlRect& bounds,
+                                          const SkRect& bounds,
                                           bool freeze,
                                           const DlImageSampling sampling) {
   if (state_ == AttachmentState::kDetached) {
@@ -45,7 +50,7 @@ void SurfaceTextureExternalTexture::Paint(PaintContext& context,
   const bool should_process_frame =
       !freeze || ShouldUpdate() || dl_image_ == nullptr;
   if (should_process_frame) {
-    ProcessFrame(context, ToSkRect(bounds));
+    ProcessFrame(context, bounds);
   }
   // If process frame failed, this may not be in attached state.
   if (state_ != AttachmentState::kAttached) {
@@ -58,7 +63,7 @@ void SurfaceTextureExternalTexture::Paint(PaintContext& context,
     return;
   }
 
-  DrawFrame(context, ToSkRect(bounds), sampling);
+  DrawFrame(context, bounds, sampling);
 }
 
 void SurfaceTextureExternalTexture::DrawFrame(
@@ -75,7 +80,7 @@ void SurfaceTextureExternalTexture::DrawFrame(
   // outside of the virtual "clip rect"), so we invert the incoming matrix.
 
   if (transform.IsIdentity()) {
-    context.canvas->DrawImage(dl_image_, DlPoint{0, 0}, sampling,
+    context.canvas->DrawImage(dl_image_, SkPoint{0, 0}, sampling,
                               context.paint);
     return;
   }
@@ -102,7 +107,7 @@ void SurfaceTextureExternalTexture::DrawFrame(
     paintWithShader = *context.paint;
   }
   paintWithShader.setColorSource(source);
-  context.canvas->DrawRect(DlRect::MakeWH(1, 1), paintWithShader);
+  context.canvas->DrawRect(SkRect::MakeWH(1, 1), paintWithShader);
 }
 
 void SurfaceTextureExternalTexture::OnGrContextDestroyed() {

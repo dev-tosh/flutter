@@ -95,7 +95,6 @@ typedef struct {
   const int32_t* custom_accessibility_actions;
   FlutterPlatformViewIdentifier platform_view_id;
   const char* tooltip;
-  int32_t heading_level;
 } FrozenFlutterSemanticsNode;
 
 // New members must not be added to `FlutterSemanticsCustomAction`

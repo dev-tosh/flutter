@@ -27,7 +27,7 @@ class InlinePassContext {
 
   std::shared_ptr<Texture> GetTexture();
 
-  bool EndPass(bool is_onscreen = false);
+  bool EndPass();
 
   EntityPassTarget& GetPassTarget() const;
 

@@ -9,10 +9,7 @@
 
 #include "flutter/display_list/dl_canvas.h"
 #include "flutter/display_list/skia/dl_sk_types.h"
-
-namespace impeller {
-class TextFrame;
-}
+#include "impeller/typographer/text_frame.h"
 
 namespace flutter {
 
@@ -67,15 +64,12 @@ class DlSkCanvasAdapter final : public virtual DlCanvas {
   /// save stack.
   DlMatrix GetMatrix() const override;
 
-  void ClipRect(const DlRect& rect, DlClipOp clip_op, bool is_aa) override;
-  void ClipOval(const DlRect& bounds, DlClipOp clip_op, bool is_aa) override;
+  void ClipRect(const DlRect& rect, ClipOp clip_op, bool is_aa) override;
+  void ClipOval(const DlRect& bounds, ClipOp clip_op, bool is_aa) override;
   void ClipRoundRect(const DlRoundRect& rrect,
-                     DlClipOp clip_op,
+                     ClipOp clip_op,
                      bool is_aa) override;
-  void ClipRoundSuperellipse(const DlRoundSuperellipse& rse,
-                             DlClipOp clip_op,
-                             bool is_aa) override;
-  void ClipPath(const DlPath& path, DlClipOp clip_op, bool is_aa) override;
+  void ClipPath(const DlPath& path, ClipOp clip_op, bool is_aa) override;
 
   /// Conservative estimate of the bounds of all outstanding clip operations
   /// measured in the coordinate space within which this DisplayList will
@@ -110,15 +104,13 @@ class DlSkCanvasAdapter final : public virtual DlCanvas {
   void DrawDiffRoundRect(const DlRoundRect& outer,
                          const DlRoundRect& inner,
                          const DlPaint& paint) override;
-  void DrawRoundSuperellipse(const DlRoundSuperellipse& rse,
-                             const DlPaint& paint) override;
   void DrawPath(const DlPath& path, const DlPaint& paint) override;
   void DrawArc(const DlRect& bounds,
                DlScalar start,
                DlScalar sweep,
                bool useCenter,
                const DlPaint& paint) override;
-  void DrawPoints(DlPointMode mode,
+  void DrawPoints(PointMode mode,
                   uint32_t count,
                   const DlPoint pts[],
                   const DlPaint& paint) override;
@@ -135,14 +127,14 @@ class DlSkCanvasAdapter final : public virtual DlCanvas {
       const DlRect& dst,
       DlImageSampling sampling,
       const DlPaint* paint = nullptr,
-      DlSrcRectConstraint constraint = DlSrcRectConstraint::kFast) override;
+      SrcRectConstraint constraint = SrcRectConstraint::kFast) override;
   void DrawImageNine(const sk_sp<DlImage>& image,
                      const DlIRect& center,
                      const DlRect& dst,
                      DlFilterMode filter,
                      const DlPaint* paint = nullptr) override;
   void DrawAtlas(const sk_sp<DlImage>& atlas,
-                 const DlRSTransform xform[],
+                 const SkRSXform xform[],
                  const DlRect tex[],
                  const DlColor colors[],
                  int count,
@@ -152,10 +144,14 @@ class DlSkCanvasAdapter final : public virtual DlCanvas {
                  const DlPaint* paint = nullptr) override;
   void DrawDisplayList(const sk_sp<DisplayList> display_list,
                        DlScalar opacity = SK_Scalar1) override;
-  void DrawText(const std::shared_ptr<DlText>& text,
-                DlScalar x,
-                DlScalar y,
-                const DlPaint& paint) override;
+  void DrawTextBlob(const sk_sp<SkTextBlob>& blob,
+                    DlScalar x,
+                    DlScalar y,
+                    const DlPaint& paint) override;
+  void DrawTextFrame(const std::shared_ptr<impeller::TextFrame>& text_frame,
+                     DlScalar x,
+                     DlScalar y,
+                     const DlPaint& paint) override;
   void DrawShadow(const DlPath& path,
                   const DlColor color,
                   const DlScalar elevation,
@@ -163,6 +159,8 @@ class DlSkCanvasAdapter final : public virtual DlCanvas {
                   DlScalar dpr) override;
 
   void Flush() override;
+
+  ENABLE_DL_CANVAS_BACKWARDS_COMPATIBILITY
 
  private:
   SkCanvas* delegate_;

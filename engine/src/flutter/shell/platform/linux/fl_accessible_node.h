@@ -40,7 +40,7 @@ struct _FlAccessibleNodeClass {
                       gint y,
                       gint width,
                       gint height);
-  void (*set_flags)(FlAccessibleNode* node, FlutterSemanticsFlags* flags);
+  void (*set_flags)(FlAccessibleNode* node, FlutterSemanticsFlag flags);
   void (*set_actions)(FlAccessibleNode* node, FlutterSemanticsAction actions);
   void (*set_value)(FlAccessibleNode* node, const gchar* value);
   void (*set_text_selection)(FlAccessibleNode* node, gint base, gint extent);
@@ -55,17 +55,14 @@ struct _FlAccessibleNodeClass {
 /**
  * fl_accessible_node_new:
  * @engine: the #FlEngine this node came from.
- * @view_id: the view ID this object represents.
- * @node_id: the semantics node ID this object represents.
+ * @id: the semantics node ID this object represents.
  *
  * Creates a new accessibility object that exposes Flutter accessibility
  * information to ATK.
  *
  * Returns: a new #FlAccessibleNode.
  */
-FlAccessibleNode* fl_accessible_node_new(FlEngine* engine,
-                                         FlutterViewId view_id,
-                                         int32_t node_id);
+FlAccessibleNode* fl_accessible_node_new(FlEngine* engine, int32_t id);
 
 /**
  * fl_accessible_node_set_parent:
@@ -122,7 +119,7 @@ void fl_accessible_node_set_extents(FlAccessibleNode* node,
  * Sets the flags for this node.
  */
 void fl_accessible_node_set_flags(FlAccessibleNode* node,
-                                  FlutterSemanticsFlags* flags);
+                                  FlutterSemanticsFlag flags);
 
 /**
  * fl_accessible_node_set_actions:
@@ -166,7 +163,7 @@ void fl_accessible_node_set_text_direction(FlAccessibleNode* node,
                                            FlutterTextDirection direction);
 
 /**
- * fl_accessible_node_perform_action:
+ * fl_accessible_node_dispatch_action:
  * @node: an #FlAccessibleNode.
  * @action: the action being dispatched.
  * @data: (allow-none): data associated with the action.

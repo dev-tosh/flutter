@@ -35,7 +35,12 @@ struct OverlayLayer {
   // Whether a frame for this layer was submitted.
   bool did_submit_last_frame;
 
-  void UpdateViewState(UIView* flutter_view, DlRect rect, int64_t view_id, int64_t overlay_id);
+  // The GrContext that is currently used by the overlay surfaces.
+  // We track this to know when the GrContext for the Flutter app has changed
+  // so we can update the overlay with the new context.
+  GrDirectContext* gr_context;
+
+  void UpdateViewState(UIView* flutter_view, SkRect rect, int64_t view_id, int64_t overlay_id);
 };
 
 /// @brief Storage for Overlay layers across frames.
@@ -58,7 +63,9 @@ class OverlayLayerPool {
   /// @brief Create a new overlay layer.
   ///
   /// This method can only be called on the Platform thread.
-  void CreateLayer(const std::shared_ptr<IOSContext>& ios_context, MTLPixelFormat pixel_format);
+  void CreateLayer(GrDirectContext* gr_context,
+                   const std::shared_ptr<IOSContext>& ios_context,
+                   MTLPixelFormat pixel_format);
 
   /// @brief Removes unused layers from the pool. Returns the unused layers.
   std::vector<std::shared_ptr<OverlayLayer>> RemoveUnusedLayers();

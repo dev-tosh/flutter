@@ -32,7 +32,7 @@ class PlaygroundImplVK final : public PlaygroundImpl {
 
   // A global Vulkan instance which ensures that the Vulkan library will remain
   // loaded throughout the lifetime of the process.
-  static VkInstance global_instance_;
+  static vk::UniqueInstance global_instance_;
 
   // |PlaygroundImpl|
   std::shared_ptr<Context> GetContext() const override;
@@ -43,10 +43,6 @@ class PlaygroundImplVK final : public PlaygroundImpl {
   // |PlaygroundImpl|
   std::unique_ptr<Surface> AcquireSurfaceFrame(
       std::shared_ptr<Context> context) override;
-
-  // |PlaygroundImpl|
-  Playground::VKProcAddressResolver CreateVKProcAddressResolver()
-      const override;
 
   PlaygroundImplVK(const PlaygroundImplVK&) = delete;
 

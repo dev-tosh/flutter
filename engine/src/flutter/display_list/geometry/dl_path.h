@@ -5,22 +5,17 @@
 #ifndef FLUTTER_DISPLAY_LIST_GEOMETRY_DL_PATH_H_
 #define FLUTTER_DISPLAY_LIST_GEOMETRY_DL_PATH_H_
 
-#include <functional>
-
 #include "flutter/display_list/geometry/dl_geometry_types.h"
-#include "flutter/impeller/geometry/path_source.h"
+#include "flutter/impeller/geometry/path.h"
 #include "flutter/third_party/skia/include/core/SkPath.h"
 
 namespace flutter {
 
-using DlPathFillType = impeller::FillType;
-using DlPathReceiver = impeller::PathReceiver;
-
-class DlPath : public impeller::PathSource {
+class DlPath {
  public:
   static constexpr uint32_t kMaxVolatileUses = 2;
 
-  static DlPath MakeRect(const DlRect& rect);
+  static DlPath MakeRect(DlRect rect);
   static DlPath MakeRectLTRB(DlScalar left,
                              DlScalar top,
                              DlScalar right,
@@ -30,31 +25,11 @@ class DlPath : public impeller::PathSource {
                              DlScalar width,
                              DlScalar height);
 
-  static DlPath MakeOval(const DlRect& bounds);
+  static DlPath MakeOval(DlRect bounds);
   static DlPath MakeOvalLTRB(DlScalar left,
                              DlScalar top,
                              DlScalar right,
                              DlScalar bottom);
-
-  static DlPath MakeCircle(const DlPoint center, DlScalar radius);
-
-  static DlPath MakeRoundRect(const DlRoundRect& rrect);
-  static DlPath MakeRoundRectXY(const DlRect& rect,
-                                DlScalar x_radius,
-                                DlScalar y_radius,
-                                bool counter_clock_wise = false);
-  static DlPath MakeRoundSuperellipse(const DlRoundSuperellipse& rse);
-
-  static DlPath MakeLine(const DlPoint a, const DlPoint b);
-  static DlPath MakePoly(const DlPoint pts[],
-                         int count,
-                         bool close,
-                         DlPathFillType fill_type = DlPathFillType::kNonZero);
-
-  static DlPath MakeArc(const DlRect& bounds,
-                        DlDegrees start,
-                        DlDegrees sweep,
-                        bool use_center);
 
   DlPath() : data_(std::make_shared<Data>(SkPath())) {}
   explicit DlPath(const SkPath& path) : data_(std::make_shared<Data>(path)) {}
@@ -63,11 +38,8 @@ class DlPath : public impeller::PathSource {
   DlPath(DlPath&& path) = default;
   DlPath& operator=(const DlPath&) = default;
 
-  ~DlPath() override = default;
-
   const SkPath& GetSkPath() const;
-
-  void Dispatch(DlPathReceiver& receiver) const override;
+  impeller::Path GetPath() const;
 
   /// Intent to render an SkPath multiple times will make the path
   /// non-volatile to enable caching in Skia. Calling this method
@@ -77,44 +49,39 @@ class DlPath : public impeller::PathSource {
   /// @see |kMaxVolatileUses|
   void WillRenderSkPath() const;
 
-  [[nodiscard]] DlPath WithOffset(const DlPoint offset) const;
-  [[nodiscard]] DlPath WithFillType(DlPathFillType type) const;
+  bool IsInverseFillType() const;
 
-  bool IsEmpty() const;
-  bool IsRect(DlRect* rect = nullptr, bool* is_closed = nullptr) const;
-  bool IsOval(DlRect* bounds = nullptr) const;
-  bool IsLine(DlPoint* start = nullptr, DlPoint* end = nullptr) const;
-  bool IsRoundRect(DlRoundRect* rrect = nullptr) const;
+  bool IsRect(DlRect* rect, bool* is_closed = nullptr) const;
+  bool IsOval(DlRect* bounds) const;
 
-  bool Contains(const DlPoint point) const;
+  bool IsSkRect(SkRect* rect, bool* is_closed = nullptr) const;
+  bool IsSkOval(SkRect* bounds) const;
+  bool IsSkRRect(SkRRect* rrect) const;
 
-  DlRect GetBounds() const override;
-  DlPathFillType GetFillType() const override;
+  SkRect GetSkBounds() const;
+  DlRect GetBounds() const;
 
   bool operator==(const DlPath& other) const;
+  bool operator!=(const DlPath& other) const { return !(*this == other); }
 
+  bool IsConverted() const;
   bool IsVolatile() const;
-  bool IsConvex() const override;
 
   DlPath operator+(const DlPath& other) const;
 
  private:
   struct Data {
-    explicit Data(const SkPath& path) : sk_path(path) {
-      FML_DCHECK(!SkPathFillType_IsInverse(path.getFillType()));
-    }
+    explicit Data(const SkPath& path) : sk_path(path) {}
 
     SkPath sk_path;
+    std::optional<impeller::Path> path;
     uint32_t render_count = 0u;
   };
 
   std::shared_ptr<Data> data_;
 
-  static void ReduceConic(DlPathReceiver& receiver,
-                          const DlPoint& p1,
-                          const DlPoint& cp,
-                          const DlPoint& p2,
-                          DlScalar weight);
+  static impeller::Path ConvertToImpellerPath(const SkPath& path,
+                                              const DlPoint& shift = DlPoint());
 };
 
 }  // namespace flutter

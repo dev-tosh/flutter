@@ -42,8 +42,7 @@ void Close(PathBuilder* builder) {
 struct Vertices* Tessellate(PathBuilder* builder,
                             int fill_type,
                             Scalar tolerance) {
-  builder->SetFillType(static_cast<FillType>(fill_type));
-  auto path = builder->CopyPath();
+  auto path = builder->CopyPath(static_cast<FillType>(fill_type));
   std::vector<float> points;
   if (TessellatorLibtess{}.Tessellate(
           path, tolerance,

@@ -24,7 +24,6 @@ impeller_shaders("modern_shader_fixtures") {
     "sepia.vert",
     "swizzle.frag",
   ]
-  entry_point_prefix = ""
 }
 
 impeller_shaders("shader_fixtures") {
@@ -69,10 +68,6 @@ impeller_shaders("shader_fixtures") {
     "texture.vert",
   ]
 
-  if (impeller_enable_vulkan) {
-    vulkan_exclusions = [ "half.frag" ]
-  }
-
   if (impeller_enable_opengles) {
     gles_exclusions = [
       "sample.comp",
@@ -81,24 +76,18 @@ impeller_shaders("shader_fixtures") {
       "half.frag",
     ]
   }
-  entry_point_prefix = ""
 }
 
 impellerc("runtime_stages") {
-  mnemonic = "IMPELLERC_IPLR"
   shaders = [
     "ink_sparkle.frag",
     "runtime_stage_example.frag",
     "runtime_stage_filter_example.frag",
-    "interop_runtime_stage_cs.frag",
     "runtime_stage_simple.frag",
     "runtime_stage_position.frag",
-    "runtime_stage_filter_circle.frag",
-    "runtime_stage_filter_warp.frag",
     "gradient.frag",
     "uniforms_and_sampler_1.frag",
     "uniforms_and_sampler_2.frag",
-    "runtime_stage_border.frag",
   ]
   sl_file_extension = "iplr"
 
@@ -113,11 +102,10 @@ impellerc("runtime_stages") {
 
 test_fixtures("file_fixtures") {
   fixtures = [
-    "//flutter/txt/third_party/fonts/ahem.ttf",
-    "//flutter/txt/third_party/fonts/HomemadeApple.ttf",
-    "//flutter/txt/third_party/fonts/NotoColorEmoji.ttf",
-    "//flutter/txt/third_party/fonts/Roboto-Medium.ttf",
-    "//flutter/txt/third_party/fonts/Roboto-Regular.ttf",
+    "//flutter/third_party/txt/third_party/fonts/HomemadeApple.ttf",
+    "//flutter/third_party/txt/third_party/fonts/NotoColorEmoji.ttf",
+    "//flutter/third_party/txt/third_party/fonts/Roboto-Medium.ttf",
+    "//flutter/third_party/txt/third_party/fonts/Roboto-Regular.ttf",
     "airplane.jpg",
     "bay_bridge.jpg",
     "blend_mode_dst.png",
@@ -133,15 +121,11 @@ test_fixtures("file_fixtures") {
     "monkey.png",
     "multiple_stages.hlsl",
     "nine_patch_corners.png",
-    "nine_patch2.png",
     "resources_limit.vert",
     "sample.comp",
     "sample.frag",
     "sample.vert",
-    "check_gles_definition.frag",
     "sample_with_binding.vert",
-    "sample_with_positioned_uniforms.frag",
-    "sample_with_uniforms.frag",
     "simple.vert.hlsl",
     "sa%m#ple.vert",
     "stage1.comp",

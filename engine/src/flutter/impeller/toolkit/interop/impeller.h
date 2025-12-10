@@ -5,8 +5,6 @@
 #ifndef FLUTTER_IMPELLER_TOOLKIT_INTEROP_IMPELLER_H_
 #define FLUTTER_IMPELLER_TOOLKIT_INTEROP_IMPELLER_H_
 
-// NOLINTBEGIN(google-objc-function-naming)
-
 #include <stdbool.h>
 #include <stddef.h>
 #include <stdint.h>
@@ -82,7 +80,7 @@ IMPELLER_EXTERN_C_BEGIN
 
 #define IMPELLER_VERSION_VARIANT 1
 #define IMPELLER_VERSION_MAJOR 1
-#define IMPELLER_VERSION_MINOR 4
+#define IMPELLER_VERSION_MINOR 2
 #define IMPELLER_VERSION_PATCH 0
 
 //------------------------------------------------------------------------------
@@ -247,20 +245,6 @@ IMPELLER_DEFINE_HANDLE(ImpellerParagraphBuilder);
 IMPELLER_DEFINE_HANDLE(ImpellerParagraphStyle);
 
 //------------------------------------------------------------------------------
-/// Describes the metrics of lines in a fully laid out paragraph.
-///
-/// Regardless of how the string of text is specified to the paragraph builder,
-/// offsets into buffers that are returned by line metrics are always assumed to
-/// be into buffers of UTF-16 code units.
-///
-IMPELLER_DEFINE_HANDLE(ImpellerLineMetrics);
-
-//------------------------------------------------------------------------------
-/// Describes the metrics of glyphs in a paragraph line.
-///
-IMPELLER_DEFINE_HANDLE(ImpellerGlyphInfo);
-
-//------------------------------------------------------------------------------
 /// Represents a two-dimensional path that is immutable and graphics context
 /// agnostic.
 ///
@@ -305,27 +289,6 @@ IMPELLER_DEFINE_HANDLE(ImpellerSurface);
 IMPELLER_DEFINE_HANDLE(ImpellerTexture);
 
 //------------------------------------------------------------------------------
-/// The primary form of WSI when using a Vulkan context, these swapchains use
-/// the `VK_KHR_surface` Vulkan extension.
-///
-/// Creating a swapchain is extremely expensive. One must be created at
-/// application startup and re-used throughout the application lifecycle.
-///
-/// Swapchains are resilient to the underlying surfaces being resized. The
-/// swapchain images will be re-created as necessary on-demand.
-///
-IMPELLER_DEFINE_HANDLE(ImpellerVulkanSwapchain);
-
-//------------------------------------------------------------------------------
-/// A fragment shader is a small program that is authored in GLSL and compiled
-/// using `impellerc` that runs on each pixel covered by a polygon and allows
-/// the user to configure how it is shaded.
-///
-/// @see https://docs.flutter.dev/ui/design/graphics/fragment-shaders
-///
-IMPELLER_DEFINE_HANDLE(ImpellerFragmentProgram);
-
-//------------------------------------------------------------------------------
 // Signatures
 //------------------------------------------------------------------------------
 
@@ -346,16 +309,6 @@ typedef void (*ImpellerCallback)(void* IMPELLER_NULLABLE user_data);
 ///
 typedef void* IMPELLER_NULLABLE (*ImpellerProcAddressCallback)(
     const char* IMPELLER_NONNULL proc_name,
-    void* IMPELLER_NULLABLE user_data);
-
-//------------------------------------------------------------------------------
-/// A callback used by Impeller to allow the user to resolve Vulkan function
-/// pointers. A user supplied baton that is uninterpreted by Impeller is passed
-/// back to the user in the callback.
-///
-typedef void* IMPELLER_NULLABLE (*ImpellerVulkanProcAddressCallback)(
-    void* IMPELLER_NULLABLE vulkan_instance,
-    const char* IMPELLER_NONNULL vulkan_proc_name,
     void* IMPELLER_NULLABLE user_data);
 
 //------------------------------------------------------------------------------
@@ -481,21 +434,6 @@ typedef enum ImpellerTextDirection {
   kImpellerTextDirectionLTR,
 } ImpellerTextDirection;
 
-typedef enum ImpellerTextDecorationType {
-  kImpellerTextDecorationTypeNone = 0 << 0,
-  kImpellerTextDecorationTypeUnderline = 1 << 0,
-  kImpellerTextDecorationTypeOverline = 1 << 1,
-  kImpellerTextDecorationTypeLineThrough = 1 << 2,
-} ImpellerTextDecorationType;
-
-typedef enum ImpellerTextDecorationStyle {
-  kImpellerTextDecorationStyleSolid,
-  kImpellerTextDecorationStyleDouble,
-  kImpellerTextDecorationStyleDotted,
-  kImpellerTextDecorationStyleDashed,
-  kImpellerTextDecorationStyleWavy,
-} ImpellerTextDecorationStyle;
-
 //------------------------------------------------------------------------------
 // Non-opaque structs
 // -----------------------------------------------------------------------------
@@ -520,11 +458,6 @@ typedef struct ImpellerISize {
   int64_t width;
   int64_t height;
 } ImpellerISize;
-
-typedef struct ImpellerRange {
-  uint64_t start;
-  uint64_t end;
-} ImpellerRange;
 
 //------------------------------------------------------------------------------
 /// A 4x4 transformation matrix using column-major storage.
@@ -629,32 +562,6 @@ typedef struct ImpellerMapping {
   ImpellerCallback IMPELLER_NULLABLE on_release;
 } ImpellerMapping;
 
-typedef struct ImpellerContextVulkanSettings {
-  void* IMPELLER_NULLABLE user_data;
-  ImpellerVulkanProcAddressCallback IMPELLER_NONNULL proc_address_callback;
-  bool enable_vulkan_validation;
-} ImpellerContextVulkanSettings;
-
-typedef struct ImpellerContextVulkanInfo {
-  void* IMPELLER_NULLABLE vk_instance;
-  void* IMPELLER_NULLABLE vk_physical_device;
-  void* IMPELLER_NULLABLE vk_logical_device;
-  uint32_t graphics_queue_family_index;
-  uint32_t graphics_queue_index;
-} ImpellerContextVulkanInfo;
-
-typedef struct ImpellerTextDecoration {
-  /// A mask of `ImpellerTextDecorationType`s to enable.
-  int types;
-  /// The decoration color.
-  ImpellerColor color;
-  /// The decoration style.
-  ImpellerTextDecorationStyle style;
-  // The multiplier applied to the default thickness of the font to use for the
-  // decoration.
-  float thickness_multiplier;
-} ImpellerTextDecoration;
-
 //------------------------------------------------------------------------------
 // Version
 //------------------------------------------------------------------------------
@@ -719,29 +626,6 @@ ImpellerContextCreateOpenGLESNew(
     void* IMPELLER_NULLABLE gl_proc_address_callback_user_data);
 
 //------------------------------------------------------------------------------
-/// @brief      Create a Metal context using the system default Metal device.
-///
-/// @param[in]  version  The version specified in the IMPELLER_VERSION macro.
-///
-/// @return     The Metal context or NULL if one cannot be created.
-///
-IMPELLER_EXPORT IMPELLER_NODISCARD ImpellerContext IMPELLER_NULLABLE
-ImpellerContextCreateMetalNew(uint32_t version);
-
-//------------------------------------------------------------------------------
-/// @brief      Create a Vulkan context using the provided Vulkan Settings.
-///
-/// @param[in]  version   The version specified in the IMPELLER_VERSION macro.
-/// @param[in]  settings  The Vulkan settings.
-///
-/// @return     The Vulkan context or NULL if one cannot be created.
-///
-IMPELLER_EXPORT IMPELLER_NODISCARD ImpellerContext IMPELLER_NULLABLE
-ImpellerContextCreateVulkanNew(
-    uint32_t version,
-    const ImpellerContextVulkanSettings* IMPELLER_NONNULL settings);
-
-//------------------------------------------------------------------------------
 /// @brief      Retain a strong reference to the object. The object can be NULL
 ///             in which case this method is a no-op.
 ///
@@ -758,80 +642,6 @@ void ImpellerContextRetain(ImpellerContext IMPELLER_NULLABLE context);
 ///
 IMPELLER_EXPORT
 void ImpellerContextRelease(ImpellerContext IMPELLER_NULLABLE context);
-
-//------------------------------------------------------------------------------
-/// @brief      Get internal Vulkan handles managed by the given Vulkan context.
-///             Ownership of the handles is still maintained by Impeller. This
-///             accessor is just available so embedders can create resources
-///             using the same device and instance as Impeller for interop.
-///
-/// @warning    If the context is not a Vulkan context, False is returned with
-///             the [out] argument unaffected.
-///
-/// @param[in]  context          The context
-/// @param[out]  out_vulkan_info  The out vulkan information
-///
-/// @return     If the Vulkan info could be fetched from the context.
-///
-IMPELLER_EXPORT
-bool ImpellerContextGetVulkanInfo(ImpellerContext IMPELLER_NONNULL context,
-                                  ImpellerContextVulkanInfo* IMPELLER_NONNULL
-                                      out_vulkan_info);
-
-//------------------------------------------------------------------------------
-// Vulkan Swapchain
-//------------------------------------------------------------------------------
-
-//------------------------------------------------------------------------------
-/// @brief      Create a new Vulkan swapchain using a VkSurfaceKHR instance.
-///             Ownership of the surface is transferred over to Impeller. The
-///             Vulkan instance the surface is created from must the same as the
-///             context provided.
-///
-/// @param[in]  context             The context. Must be a Vulkan context whose
-///                                 instance is the same used to create the
-///                                 surface passed into the next argument.
-/// @param      vulkan_surface_khr  The vulkan surface.
-///
-/// @return     The vulkan swapchain.
-///
-IMPELLER_EXPORT IMPELLER_NODISCARD ImpellerVulkanSwapchain IMPELLER_NULLABLE
-ImpellerVulkanSwapchainCreateNew(ImpellerContext IMPELLER_NONNULL context,
-                                 void* IMPELLER_NONNULL vulkan_surface_khr);
-
-//------------------------------------------------------------------------------
-/// @brief      Retain a strong reference to the object. The object can be NULL
-///             in which case this method is a no-op.
-///
-/// @param[in]  swapchain  The swapchain.
-///
-IMPELLER_EXPORT
-void ImpellerVulkanSwapchainRetain(
-    ImpellerVulkanSwapchain IMPELLER_NULLABLE swapchain);
-
-//------------------------------------------------------------------------------
-/// @brief      Release a previously retained reference to the object. The
-///             object can be NULL in which case this method is a no-op.
-///
-/// @param[in]  swapchain  The swapchain.
-///
-IMPELLER_EXPORT
-void ImpellerVulkanSwapchainRelease(
-    ImpellerVulkanSwapchain IMPELLER_NULLABLE swapchain);
-
-//------------------------------------------------------------------------------
-/// @brief      A potentially blocking operation, acquires the next surface to
-///             render to. Since this may block, surface acquisition must be
-///             delayed for as long as possible to avoid an idle wait on the
-///             CPU.
-///
-/// @param[in]  swapchain  The swapchain.
-///
-/// @return     The surface if one could be obtained, NULL otherwise.
-///
-IMPELLER_EXPORT IMPELLER_NODISCARD ImpellerSurface IMPELLER_NULLABLE
-ImpellerVulkanSwapchainAcquireNextSurfaceNew(
-    ImpellerVulkanSwapchain IMPELLER_NONNULL swapchain);
 
 //------------------------------------------------------------------------------
 // Surface
@@ -852,30 +662,10 @@ ImpellerVulkanSwapchainAcquireNextSurfaceNew(
 /// @return     The surface if once can be created, NULL otherwise.
 ///
 IMPELLER_EXPORT IMPELLER_NODISCARD ImpellerSurface IMPELLER_NULLABLE
-ImpellerSurfaceCreateWrappedFBONew(ImpellerContext IMPELLER_NONNULL context,
+ImpellerSurfaceCreateWrappedFBONew(ImpellerContext IMPELLER_NULLABLE context,
                                    uint64_t fbo,
                                    ImpellerPixelFormat format,
-                                   const ImpellerISize* IMPELLER_NONNULL size);
-
-//------------------------------------------------------------------------------
-/// @brief      Create a surface by wrapping a Metal drawable. This is useful
-///             during WSI when the drawable is the backing store of the Metal
-///             layer being drawn to.
-///
-///             The Metal layer must be using the same device managed by the
-///             underlying context.
-///
-/// @param[in]  context         The context. The Metal device managed by this
-///                             context must be the same used to create the
-///                             drawable that is being wrapped.
-/// @param      metal_drawable  The drawable to wrap as a surface.
-///
-/// @return     The surface if one could be wrapped, NULL otherwise.
-///
-IMPELLER_EXPORT IMPELLER_NODISCARD ImpellerSurface IMPELLER_NULLABLE
-ImpellerSurfaceCreateWrappedMetalDrawableNew(
-    ImpellerContext IMPELLER_NONNULL context,
-    void* IMPELLER_NONNULL metal_drawable);
+                                   const ImpellerISize* IMPELLER_NULLABLE size);
 
 //------------------------------------------------------------------------------
 /// @brief      Retain a strong reference to the object. The object can be NULL
@@ -913,19 +703,9 @@ void ImpellerSurfaceRelease(ImpellerSurface IMPELLER_NULLABLE surface);
 /// @return     If the display list could be drawn onto the surface.
 ///
 IMPELLER_EXPORT
-bool ImpellerSurfaceDrawDisplayList(ImpellerSurface IMPELLER_NONNULL surface,
-                                    ImpellerDisplayList IMPELLER_NONNULL
-                                        display_list);
-
-//------------------------------------------------------------------------------
-/// @brief      Present the surface to the underlying window system.
-///
-/// @param[in]  surface  The surface to present.
-///
-/// @return     True if the surface could be presented.
-///
-IMPELLER_EXPORT
-bool ImpellerSurfacePresent(ImpellerSurface IMPELLER_NONNULL surface);
+bool ImpellerSurfaceDrawDisplayList(
+    ImpellerSurface IMPELLER_NULLABLE surface,
+    ImpellerDisplayList IMPELLER_NONNULL display_list);
 
 //------------------------------------------------------------------------------
 // Path
@@ -948,20 +728,6 @@ void ImpellerPathRetain(ImpellerPath IMPELLER_NULLABLE path);
 ///
 IMPELLER_EXPORT
 void ImpellerPathRelease(ImpellerPath IMPELLER_NULLABLE path);
-
-//------------------------------------------------------------------------------
-/// @brief      Get the bounds of the path.
-///
-///             The bounds are conservative. That is, they may be larger than
-///             the actual shape of the path and could include the control
-///             points and isolated calls to move the cursor.
-///
-/// @param[in]  path        The path
-/// @param[out] out_bounds  The conservative bounds of the path.
-///
-IMPELLER_EXPORT
-void ImpellerPathGetBounds(ImpellerPath IMPELLER_NONNULL path,
-                           ImpellerRect* IMPELLER_NONNULL out_bounds);
 
 //------------------------------------------------------------------------------
 // Path Builder
@@ -1082,9 +848,9 @@ void ImpellerPathBuilderAddArc(ImpellerPathBuilder IMPELLER_NONNULL builder,
 /// @param[in]  oval_bounds  The oval bounds.
 ///
 IMPELLER_EXPORT
-void ImpellerPathBuilderAddOval(ImpellerPathBuilder IMPELLER_NONNULL builder,
-                                const ImpellerRect* IMPELLER_NONNULL
-                                    oval_bounds);
+void ImpellerPathBuilderAddOval(
+    ImpellerPathBuilder IMPELLER_NONNULL builder,
+    const ImpellerRect* IMPELLER_NONNULL oval_bounds);
 
 //------------------------------------------------------------------------------
 /// @brief      Add a rounded rect with potentially non-uniform radii to the
@@ -1248,9 +1014,9 @@ void ImpellerPaintSetStrokeMiter(ImpellerPaint IMPELLER_NONNULL paint,
 /// @param[in]  color_filter  The color filter.
 ///
 IMPELLER_EXPORT
-void ImpellerPaintSetColorFilter(ImpellerPaint IMPELLER_NONNULL paint,
-                                 ImpellerColorFilter IMPELLER_NONNULL
-                                     color_filter);
+void ImpellerPaintSetColorFilter(
+    ImpellerPaint IMPELLER_NONNULL paint,
+    ImpellerColorFilter IMPELLER_NONNULL color_filter);
 
 //------------------------------------------------------------------------------
 /// @brief      Set the color source of the paint.
@@ -1262,9 +1028,9 @@ void ImpellerPaintSetColorFilter(ImpellerPaint IMPELLER_NONNULL paint,
 /// @param[in]  color_source  The color source.
 ///
 IMPELLER_EXPORT
-void ImpellerPaintSetColorSource(ImpellerPaint IMPELLER_NONNULL paint,
-                                 ImpellerColorSource IMPELLER_NONNULL
-                                     color_source);
+void ImpellerPaintSetColorSource(
+    ImpellerPaint IMPELLER_NONNULL paint,
+    ImpellerColorSource IMPELLER_NONNULL color_source);
 
 //------------------------------------------------------------------------------
 /// @brief      Set the image filter of a paint.
@@ -1276,9 +1042,9 @@ void ImpellerPaintSetColorSource(ImpellerPaint IMPELLER_NONNULL paint,
 /// @param[in]  image_filter  The image filter.
 ///
 IMPELLER_EXPORT
-void ImpellerPaintSetImageFilter(ImpellerPaint IMPELLER_NONNULL paint,
-                                 ImpellerImageFilter IMPELLER_NONNULL
-                                     image_filter);
+void ImpellerPaintSetImageFilter(
+    ImpellerPaint IMPELLER_NONNULL paint,
+    ImpellerImageFilter IMPELLER_NONNULL image_filter);
 
 //------------------------------------------------------------------------------
 /// @brief      Set the mask filter of a paint.
@@ -1287,9 +1053,9 @@ void ImpellerPaintSetImageFilter(ImpellerPaint IMPELLER_NONNULL paint,
 /// @param[in]  mask_filter  The mask filter.
 ///
 IMPELLER_EXPORT
-void ImpellerPaintSetMaskFilter(ImpellerPaint IMPELLER_NONNULL paint,
-                                ImpellerMaskFilter IMPELLER_NONNULL
-                                    mask_filter);
+void ImpellerPaintSetMaskFilter(
+    ImpellerPaint IMPELLER_NONNULL paint,
+    ImpellerMaskFilter IMPELLER_NONNULL mask_filter);
 
 //------------------------------------------------------------------------------
 // Texture
@@ -1400,51 +1166,6 @@ void ImpellerTextureRelease(ImpellerTexture IMPELLER_NULLABLE texture);
 IMPELLER_EXPORT
 uint64_t ImpellerTextureGetOpenGLHandle(
     ImpellerTexture IMPELLER_NONNULL texture);
-
-//------------------------------------------------------------------------------
-// Fragment Program
-//------------------------------------------------------------------------------
-
-//------------------------------------------------------------------------------
-/// @brief      Create a new fragment program using data obtained by compiling a
-///             GLSL shader with `impellerc`.
-///
-/// @warning    The data provided must be compiled by `impellerc`. Providing raw
-///             GLSL strings will lead to a `nullptr` return. Impeller does not
-///             compile shaders at runtime.
-///
-/// @param[in]  data                    The data compiled by `impellerc`.
-/// @param      data_release_user_data  A baton passed back to the caller on the
-///                                     invocation of the mappings release
-///                                     callback. This call can happen on any
-///                                     thread.
-///
-/// @return     The fragment program if one can be created, nullptr otherwise.
-///
-IMPELLER_EXPORT
-IMPELLER_NODISCARD ImpellerFragmentProgram IMPELLER_NULLABLE
-ImpellerFragmentProgramNew(const ImpellerMapping* IMPELLER_NONNULL data,
-                           void* IMPELLER_NULLABLE data_release_user_data);
-
-//------------------------------------------------------------------------------
-/// @brief      Retain a strong reference to the object. The object can be NULL
-///             in which case this method is a no-op.
-///
-/// @param[in]  fragment_program  The fragment program.
-///
-IMPELLER_EXPORT
-void ImpellerFragmentProgramRetain(
-    ImpellerFragmentProgram IMPELLER_NULLABLE fragment_program);
-
-//------------------------------------------------------------------------------
-/// @brief      Release a previously retained reference to the object. The
-///             object can be NULL in which case this method is a no-op.
-///
-/// @param[in]  fragment_program  The fragment program.
-///
-IMPELLER_EXPORT
-void ImpellerFragmentProgramRelease(
-    ImpellerFragmentProgram IMPELLER_NULLABLE fragment_program);
 
 //------------------------------------------------------------------------------
 // Color Sources
@@ -1581,36 +1302,12 @@ ImpellerColorSourceCreateSweepGradientNew(
 /// @return     The color source.
 ///
 IMPELLER_EXPORT IMPELLER_NODISCARD ImpellerColorSource IMPELLER_NULLABLE
-ImpellerColorSourceCreateImageNew(ImpellerTexture IMPELLER_NONNULL image,
-                                  ImpellerTileMode horizontal_tile_mode,
-                                  ImpellerTileMode vertical_tile_mode,
-                                  ImpellerTextureSampling sampling,
-                                  const ImpellerMatrix* IMPELLER_NULLABLE
-                                      transformation);
-
-//------------------------------------------------------------------------------
-/// @brief      Create a color source whose pixels are shaded by a fragment
-///             program.
-///
-/// @see        https://docs.flutter.dev/ui/design/graphics/fragment-shaders
-///
-/// @param[in]  context            The context.
-/// @param[in]  fragment_program   The fragment program.
-/// @param      samplers           The samplers.
-/// @param[in]  samplers_count     The samplers count.
-/// @param[in]  data               The data (copied).
-/// @param[in]  data_bytes_length  The data bytes length.
-///
-/// @return     The color source.
-///
-IMPELLER_EXPORT IMPELLER_NODISCARD ImpellerColorSource IMPELLER_NULLABLE
-ImpellerColorSourceCreateFragmentProgramNew(
-    ImpellerContext IMPELLER_NONNULL context,
-    ImpellerFragmentProgram IMPELLER_NONNULL fragment_program,
-    IMPELLER_NONNULL ImpellerTexture* IMPELLER_NULLABLE samplers,
-    size_t samplers_count,
-    const uint8_t* IMPELLER_NULLABLE data,
-    size_t data_bytes_length);
+ImpellerColorSourceCreateImageNew(
+    ImpellerTexture IMPELLER_NONNULL image,
+    ImpellerTileMode horizontal_tile_mode,
+    ImpellerTileMode vertical_tile_mode,
+    ImpellerTextureSampling sampling,
+    const ImpellerMatrix* IMPELLER_NULLABLE transformation);
 
 //------------------------------------------------------------------------------
 // Color Filters
@@ -1772,33 +1469,9 @@ ImpellerImageFilterCreateErodeNew(float x_radius, float y_radius);
 /// @return     The image filter.
 ///
 IMPELLER_EXPORT IMPELLER_NODISCARD ImpellerImageFilter IMPELLER_NULLABLE
-ImpellerImageFilterCreateMatrixNew(const ImpellerMatrix* IMPELLER_NONNULL
-                                       matrix,
-                                   ImpellerTextureSampling sampling);
-
-//------------------------------------------------------------------------------
-/// @brief      Create an image filter where each pixel is shaded by a fragment
-///             program.
-///
-/// @see        https://docs.flutter.dev/ui/design/graphics/fragment-shaders
-///
-/// @param[in]  context            The context.
-/// @param[in]  fragment_program   The fragment program.
-/// @param      samplers           The samplers.
-/// @param[in]  samplers_count     The samplers count.
-/// @param[in]  data               The data (copied).
-/// @param[in]  data_bytes_length  The data bytes length.
-///
-/// @return     The image filter.
-///
-IMPELLER_EXPORT IMPELLER_NODISCARD ImpellerImageFilter IMPELLER_NULLABLE
-ImpellerImageFilterCreateFragmentProgramNew(
-    ImpellerContext IMPELLER_NONNULL context,
-    ImpellerFragmentProgram IMPELLER_NONNULL fragment_program,
-    IMPELLER_NONNULL ImpellerTexture* IMPELLER_NULLABLE samplers,
-    size_t samplers_count,
-    const uint8_t* IMPELLER_NULLABLE data,
-    size_t data_bytes_length);
+ImpellerImageFilterCreateMatrixNew(
+    const ImpellerMatrix* IMPELLER_NONNULL matrix,
+    ImpellerTextureSampling sampling);
 
 //------------------------------------------------------------------------------
 /// @brief      Creates a composed filter that when applied is identical to
@@ -1946,10 +1619,10 @@ void ImpellerDisplayListBuilderRestore(
 /// @param[in]  y_scale  The y scale.
 ///
 IMPELLER_EXPORT
-void ImpellerDisplayListBuilderScale(ImpellerDisplayListBuilder IMPELLER_NONNULL
-                                         builder,
-                                     float x_scale,
-                                     float y_scale);
+void ImpellerDisplayListBuilderScale(
+    ImpellerDisplayListBuilder IMPELLER_NONNULL builder,
+    float x_scale,
+    float y_scale);
 
 //------------------------------------------------------------------------------
 /// @brief      Apply a clockwise rotation to the transformation matrix
@@ -2261,30 +1934,6 @@ void ImpellerDisplayListBuilderDrawParagraph(
     const ImpellerPoint* IMPELLER_NONNULL point);
 
 //------------------------------------------------------------------------------
-/// @brief      Draw a shadow for a Path given a material elevation. If the
-///             occluding object is not opaque, additional hints (via the
-///             `occluder_is_transparent` argument) must be provided to render
-///             the shadow correctly.
-///
-/// @param[in]  builder    The builder.
-/// @param[in]  path       The shadow path.
-/// @param[in]  color      The shadow color.
-/// @param[in]  elevation  The material elevation.
-/// @param[in]  occluder_is_transparent
-///                        If the object casting the shadow is transparent.
-/// @param[in]  device_pixel_ratio
-///                        The device pixel ratio.
-///
-IMPELLER_EXPORT
-void ImpellerDisplayListBuilderDrawShadow(
-    ImpellerDisplayListBuilder IMPELLER_NONNULL builder,
-    ImpellerPath IMPELLER_NONNULL path,
-    const ImpellerColor* IMPELLER_NONNULL color,
-    float elevation,
-    bool occluder_is_transparent,
-    float device_pixel_ratio);
-
-//------------------------------------------------------------------------------
 // Display List Builder: Drawing Textures
 //------------------------------------------------------------------------------
 
@@ -2442,9 +2091,9 @@ void ImpellerParagraphStyleRelease(
 /// @param[in]  paint            The paint.
 ///
 IMPELLER_EXPORT
-void ImpellerParagraphStyleSetForeground(ImpellerParagraphStyle IMPELLER_NONNULL
-                                             paragraph_style,
-                                         ImpellerPaint IMPELLER_NONNULL paint);
+void ImpellerParagraphStyleSetForeground(
+    ImpellerParagraphStyle IMPELLER_NONNULL paragraph_style,
+    ImpellerPaint IMPELLER_NONNULL paint);
 
 //------------------------------------------------------------------------------
 /// @brief      Set the paint used to render the background of the text glyphs.
@@ -2453,9 +2102,9 @@ void ImpellerParagraphStyleSetForeground(ImpellerParagraphStyle IMPELLER_NONNULL
 /// @param[in]  paint            The paint.
 ///
 IMPELLER_EXPORT
-void ImpellerParagraphStyleSetBackground(ImpellerParagraphStyle IMPELLER_NONNULL
-                                             paragraph_style,
-                                         ImpellerPaint IMPELLER_NONNULL paint);
+void ImpellerParagraphStyleSetBackground(
+    ImpellerParagraphStyle IMPELLER_NONNULL paragraph_style,
+    ImpellerPaint IMPELLER_NONNULL paint);
 
 //------------------------------------------------------------------------------
 /// @brief      Set the weight of the font to select when rendering glyphs.
@@ -2464,9 +2113,9 @@ void ImpellerParagraphStyleSetBackground(ImpellerParagraphStyle IMPELLER_NONNULL
 /// @param[in]  weight           The weight.
 ///
 IMPELLER_EXPORT
-void ImpellerParagraphStyleSetFontWeight(ImpellerParagraphStyle IMPELLER_NONNULL
-                                             paragraph_style,
-                                         ImpellerFontWeight weight);
+void ImpellerParagraphStyleSetFontWeight(
+    ImpellerParagraphStyle IMPELLER_NONNULL paragraph_style,
+    ImpellerFontWeight weight);
 
 //------------------------------------------------------------------------------
 /// @brief      Set whether the glyphs should be bolded or italicized.
@@ -2475,9 +2124,9 @@ void ImpellerParagraphStyleSetFontWeight(ImpellerParagraphStyle IMPELLER_NONNULL
 /// @param[in]  style            The style.
 ///
 IMPELLER_EXPORT
-void ImpellerParagraphStyleSetFontStyle(ImpellerParagraphStyle IMPELLER_NONNULL
-                                            paragraph_style,
-                                        ImpellerFontStyle style);
+void ImpellerParagraphStyleSetFontStyle(
+    ImpellerParagraphStyle IMPELLER_NONNULL paragraph_style,
+    ImpellerFontStyle style);
 
 //------------------------------------------------------------------------------
 /// @brief      Set the font family.
@@ -2497,9 +2146,9 @@ void ImpellerParagraphStyleSetFontFamily(
 /// @param[in]  size             The size.
 ///
 IMPELLER_EXPORT
-void ImpellerParagraphStyleSetFontSize(ImpellerParagraphStyle IMPELLER_NONNULL
-                                           paragraph_style,
-                                       float size);
+void ImpellerParagraphStyleSetFontSize(
+    ImpellerParagraphStyle IMPELLER_NONNULL paragraph_style,
+    float size);
 
 //------------------------------------------------------------------------------
 /// @brief      The height of the text as a multiple of text size.
@@ -2513,9 +2162,9 @@ void ImpellerParagraphStyleSetFontSize(ImpellerParagraphStyle IMPELLER_NONNULL
 /// @param[in]  height           The height.
 ///
 IMPELLER_EXPORT
-void ImpellerParagraphStyleSetHeight(ImpellerParagraphStyle IMPELLER_NONNULL
-                                         paragraph_style,
-                                     float height);
+void ImpellerParagraphStyleSetHeight(
+    ImpellerParagraphStyle IMPELLER_NONNULL paragraph_style,
+    float height);
 
 //------------------------------------------------------------------------------
 /// @brief      Set the alignment of text within the paragraph.
@@ -2540,28 +2189,15 @@ void ImpellerParagraphStyleSetTextDirection(
     ImpellerTextDirection direction);
 
 //------------------------------------------------------------------------------
-/// @brief      Set one of more text decorations on the paragraph. Decorations
-///             can be underlines, overlines, strikethroughs, etc.. The style of
-///             decorations can be set as well (dashed, dotted, wavy, etc..)
-///
-/// @param[in]  ImpellerParagraphStyle  The paragraph style.
-/// @param[in]  decoration              The text decoration.
-///
-IMPELLER_EXPORT
-void ImpellerParagraphStyleSetTextDecoration(
-    ImpellerParagraphStyle IMPELLER_NONNULL paragraph_style,
-    const ImpellerTextDecoration* IMPELLER_NONNULL decoration);
-
-//------------------------------------------------------------------------------
 /// @brief      Set the maximum line count within the paragraph.
 ///
 /// @param[in]  paragraph_style  The paragraph style.
 /// @param[in]  max_lines        The maximum lines.
 ///
 IMPELLER_EXPORT
-void ImpellerParagraphStyleSetMaxLines(ImpellerParagraphStyle IMPELLER_NONNULL
-                                           paragraph_style,
-                                       uint32_t max_lines);
+void ImpellerParagraphStyleSetMaxLines(
+    ImpellerParagraphStyle IMPELLER_NONNULL paragraph_style,
+    uint32_t max_lines);
 
 //------------------------------------------------------------------------------
 /// @brief      Set the paragraph locale.
@@ -2570,21 +2206,9 @@ void ImpellerParagraphStyleSetMaxLines(ImpellerParagraphStyle IMPELLER_NONNULL
 /// @param[in]  locale           The locale.
 ///
 IMPELLER_EXPORT
-void ImpellerParagraphStyleSetLocale(ImpellerParagraphStyle IMPELLER_NONNULL
-                                         paragraph_style,
-                                     const char* IMPELLER_NONNULL locale);
-
-//------------------------------------------------------------------------------
-/// @brief      Set the UTF-8 string to use as the ellipsis. Pass `nullptr` to
-///             clear the setting to default.
-///
-/// @param[in]  paragraph_style  The paragraph style.
-/// @param[in]  data             The ellipsis string UTF-8 data, or null.
-///
-IMPELLER_EXPORT
-void ImpellerParagraphStyleSetEllipsis(ImpellerParagraphStyle IMPELLER_NONNULL
-                                           paragraph_style,
-                                       const char* IMPELLER_NULLABLE ellipsis);
+void ImpellerParagraphStyleSetLocale(
+    ImpellerParagraphStyle IMPELLER_NONNULL paragraph_style,
+    const char* IMPELLER_NONNULL locale);
 
 //------------------------------------------------------------------------------
 // Paragraph Builder
@@ -2664,10 +2288,10 @@ void ImpellerParagraphBuilderPopStyle(
 /// @param[in]  length             The length.
 ///
 IMPELLER_EXPORT
-void ImpellerParagraphBuilderAddText(ImpellerParagraphBuilder IMPELLER_NONNULL
-                                         paragraph_builder,
-                                     const uint8_t* IMPELLER_NULLABLE data,
-                                     uint32_t length);
+void ImpellerParagraphBuilderAddText(
+    ImpellerParagraphBuilder IMPELLER_NONNULL paragraph_builder,
+    const uint8_t* IMPELLER_NULLABLE data,
+    uint32_t length);
 
 //------------------------------------------------------------------------------
 /// @brief      Layout and build a new paragraph using the specified width. The
@@ -2797,337 +2421,6 @@ IMPELLER_EXPORT
 uint32_t ImpellerParagraphGetLineCount(
     ImpellerParagraph IMPELLER_NONNULL paragraph);
 
-//------------------------------------------------------------------------------
-/// @brief      Get the range into the UTF-16 code unit buffer that represents
-///             the word at the specified caret location in the same buffer.
-///
-///             Word boundaries are defined more precisely in [Unicode Standard
-///             Annex #29](http://www.unicode.org/reports/tr29/#Word_Boundaries)
-///
-/// @param[in]  paragraph        The paragraph
-/// @param[in]  code_unit_index  The code unit index
-/// @param[out]  code_unit_index The range.
-///
-IMPELLER_EXPORT
-void ImpellerParagraphGetWordBoundary(
-    ImpellerParagraph IMPELLER_NONNULL paragraph,
-    size_t code_unit_index,
-    ImpellerRange* IMPELLER_NONNULL out_range);
-
-//------------------------------------------------------------------------------
-/// @brief      Get the line metrics of this laid out paragraph. Calculating the
-///             line metrics is expensive. The first time line metrics are
-///             requested, they will be cached along with the paragraph (which
-///             is immutable).
-///
-/// @param[in]  paragraph  The paragraph.
-///
-/// @return     The line metrics.
-///
-IMPELLER_EXPORT
-ImpellerLineMetrics IMPELLER_NULLABLE
-ImpellerParagraphGetLineMetrics(ImpellerParagraph IMPELLER_NONNULL paragraph);
-
-//------------------------------------------------------------------------------
-/// @brief      Create a new instance of glyph info that can be queried for
-///             information about the glyph at the given UTF-16 code unit index.
-///             The instance must be freed using `ImpellerGlyphInfoRelease`.
-///
-/// @param[in]  paragraph        The paragraph.
-/// @param[in]  code_unit_index  The UTF-16 code unit index.
-///
-/// @return     The glyph information.
-///
-IMPELLER_EXPORT
-IMPELLER_NODISCARD ImpellerGlyphInfo IMPELLER_NULLABLE
-ImpellerParagraphCreateGlyphInfoAtCodeUnitIndexNew(
-    ImpellerParagraph IMPELLER_NONNULL paragraph,
-    size_t code_unit_index);
-
-//------------------------------------------------------------------------------
-/// @brief      Create a new instance of glyph info that can be queried for
-///             information about the glyph closest to the specified coordinates
-///             relative to the origin of the paragraph. The instance must be
-///             freed using `ImpellerGlyphInfoRelease`.
-///
-/// @param[in]  paragraph  The paragraph.
-/// @param[in]  x          The x coordinate relative to paragraph origin.
-/// @param[in]  y          The x coordinate relative to paragraph origin.
-///
-/// @return     The glyph information.
-///
-IMPELLER_EXPORT
-IMPELLER_NODISCARD ImpellerGlyphInfo IMPELLER_NULLABLE
-ImpellerParagraphCreateGlyphInfoAtParagraphCoordinatesNew(
-    ImpellerParagraph IMPELLER_NONNULL paragraph,
-    double x,
-    double y);
-
-//------------------------------------------------------------------------------
-// Line Metrics
-//------------------------------------------------------------------------------
-
-//------------------------------------------------------------------------------
-/// @brief      Retain a strong reference to the object. The object can be NULL
-///             in which case this method is a no-op.
-///
-/// @param[in]  line_metrics  The line metrics.
-///
-IMPELLER_EXPORT
-void ImpellerLineMetricsRetain(
-    ImpellerLineMetrics IMPELLER_NULLABLE line_metrics);
-
-//------------------------------------------------------------------------------
-/// @brief      Release a previously retained reference to the object. The
-///             object can be NULL in which case this method is a no-op.
-///
-/// @param[in]  line_metrics  The line metrics.
-///
-IMPELLER_EXPORT
-void ImpellerLineMetricsRelease(
-    ImpellerLineMetrics IMPELLER_NULLABLE line_metrics);
-
-//------------------------------------------------------------------------------
-/// @brief      The rise from the baseline as calculated from the font and style
-///             for this line ignoring the height from the text style.
-///
-/// @param[in]  metrics  The metrics.
-/// @param[in]  line     The line index (zero based).
-///
-/// @return     The unscaled ascent.
-///
-IMPELLER_EXPORT
-double ImpellerLineMetricsGetUnscaledAscent(ImpellerLineMetrics IMPELLER_NONNULL
-                                                metrics,
-                                            size_t line);
-
-//------------------------------------------------------------------------------
-/// @brief      The rise from the baseline as calculated from the font and style
-///             for this line.
-///
-/// @param[in]  metrics  The metrics.
-/// @param[in]  line     The line index (zero based).
-///
-/// @return     The ascent.
-///
-IMPELLER_EXPORT
-double ImpellerLineMetricsGetAscent(ImpellerLineMetrics IMPELLER_NONNULL
-                                        metrics,
-                                    size_t line);
-
-//------------------------------------------------------------------------------
-/// @brief      The drop from the baseline as calculated from the font and style
-///             for this line.
-///
-/// @param[in]  metrics  The metrics.
-/// @param[in]  line     The line index (zero based).
-///
-/// @return     The descent.
-///
-IMPELLER_EXPORT
-double ImpellerLineMetricsGetDescent(ImpellerLineMetrics IMPELLER_NONNULL
-                                         metrics,
-                                     size_t line);
-
-//------------------------------------------------------------------------------
-/// @brief      The y coordinate of the baseline for this line from the top of
-///             the paragraph.
-///
-/// @param[in]  metrics  The metrics.
-/// @param[in]  line     The line index (zero based).
-///
-/// @return     The baseline.
-///
-IMPELLER_EXPORT
-double ImpellerLineMetricsGetBaseline(ImpellerLineMetrics IMPELLER_NONNULL
-                                          metrics,
-                                      size_t line);
-
-//------------------------------------------------------------------------------
-/// @brief      Used to determine if this line ends with an explicit line break
-///             (e.g. '\n') or is the end of the paragraph.
-///
-/// @param[in]  metrics  The metrics.
-/// @param[in]  line     The line index (zero based).
-///
-/// @return     True if the line is a hard break.
-///
-IMPELLER_EXPORT
-bool ImpellerLineMetricsIsHardbreak(ImpellerLineMetrics IMPELLER_NONNULL
-                                        metrics,
-                                    size_t line);
-
-//------------------------------------------------------------------------------
-/// @brief      Width of the line from the left edge of the leftmost glyph to
-///             the right edge of the rightmost glyph.
-///
-/// @param[in]  metrics  The metrics.
-/// @param[in]  line     The line index (zero based).
-///
-/// @return     The width.
-///
-IMPELLER_EXPORT
-double ImpellerLineMetricsGetWidth(ImpellerLineMetrics IMPELLER_NONNULL metrics,
-                                   size_t line);
-
-//------------------------------------------------------------------------------
-/// @brief      Total height of the line from the top edge to the bottom edge.
-///
-/// @param[in]  metrics  The metrics.
-/// @param[in]  line     The line index (zero based).
-///
-/// @return     The height.
-///
-IMPELLER_EXPORT
-double ImpellerLineMetricsGetHeight(ImpellerLineMetrics IMPELLER_NONNULL
-                                        metrics,
-                                    size_t line);
-
-//------------------------------------------------------------------------------
-/// @brief      The x coordinate of left edge of the line.
-///
-/// @param[in]  metrics  The metrics.
-/// @param[in]  line     The line index (zero based).
-///
-/// @return     The left edge coordinate.
-///
-IMPELLER_EXPORT
-double ImpellerLineMetricsGetLeft(ImpellerLineMetrics IMPELLER_NONNULL metrics,
-                                  size_t line);
-
-//------------------------------------------------------------------------------
-/// @brief      Fetch the start index in the buffer of UTF-16 code units used to
-///             represent the paragraph line.
-///
-/// @param[in]  metrics  The metrics.
-/// @param[in]  line     The line index (zero based).
-///
-/// @return     The UTF-16 code units start index.
-///
-IMPELLER_EXPORT
-size_t ImpellerLineMetricsGetCodeUnitStartIndex(
-    ImpellerLineMetrics IMPELLER_NONNULL metrics,
-    size_t line);
-
-//------------------------------------------------------------------------------
-/// @brief      Fetch the end index in the buffer of UTF-16 code units used to
-///             represent the paragraph line.
-///
-/// @param[in]  metrics  The metrics.
-/// @param[in]  line     The line index (zero based).
-///
-/// @return     The UTF-16 code units end index.
-///
-IMPELLER_EXPORT
-size_t ImpellerLineMetricsGetCodeUnitEndIndex(
-    ImpellerLineMetrics IMPELLER_NONNULL metrics,
-    size_t line);
-
-//------------------------------------------------------------------------------
-/// @brief      Fetch the end index (excluding whitespace) in the buffer of
-///             UTF-16 code units used to represent the paragraph line.
-///
-/// @param[in]  metrics  The metrics.
-/// @param[in]  line     The line index (zero based).
-///
-/// @return     The UTF-16 code units end index excluding whitespace.
-///
-IMPELLER_EXPORT
-size_t ImpellerLineMetricsGetCodeUnitEndIndexExcludingWhitespace(
-    ImpellerLineMetrics IMPELLER_NONNULL metrics,
-    size_t line);
-
-//------------------------------------------------------------------------------
-/// @brief      Fetch the end index (including newlines) in the buffer of UTF-16
-///             code units used to represent the paragraph line.
-///
-/// @param[in]  metrics  The metrics.
-/// @param[in]  line     The line index (zero based).
-///
-/// @return     The UTF-16 code units end index including newlines.
-///
-IMPELLER_EXPORT
-size_t ImpellerLineMetricsGetCodeUnitEndIndexIncludingNewline(
-    ImpellerLineMetrics IMPELLER_NONNULL metrics,
-    size_t line);
-
-//------------------------------------------------------------------------------
-// Glyph Info
-//------------------------------------------------------------------------------
-
-//------------------------------------------------------------------------------
-/// @brief      Retain a strong reference to the object. The object can be NULL
-///             in which case this method is a no-op.
-///
-/// @param[in]  glyph_info  The glyph information.
-///
-IMPELLER_EXPORT
-void ImpellerGlyphInfoRetain(ImpellerGlyphInfo IMPELLER_NULLABLE glyph_info);
-
-//------------------------------------------------------------------------------
-/// @brief      Release a previously retained reference to the object. The
-///             object can be NULL in which case this method is a no-op.
-///
-/// @param[in]  glyph_info  The glyph information.
-///
-IMPELLER_EXPORT
-void ImpellerGlyphInfoRelease(ImpellerGlyphInfo IMPELLER_NULLABLE glyph_info);
-
-//------------------------------------------------------------------------------
-/// @brief      Fetch the start index in the buffer of UTF-16 code units used to
-///             represent the grapheme cluster for a glyph.
-///
-/// @param[in]  glyph_info  The glyph information.
-///
-/// @return     The UTF-16 code units start index.
-///
-IMPELLER_EXPORT
-size_t ImpellerGlyphInfoGetGraphemeClusterCodeUnitRangeBegin(
-    ImpellerGlyphInfo IMPELLER_NONNULL glyph_info);
-
-//------------------------------------------------------------------------------
-/// @brief      Fetch the end index in the buffer of UTF-16 code units used to
-///             represent the grapheme cluster for a glyph.
-///
-/// @param[in]  glyph_info  The glyph information.
-///
-/// @return     The UTF-16 code units end index.
-///
-IMPELLER_EXPORT
-size_t ImpellerGlyphInfoGetGraphemeClusterCodeUnitRangeEnd(
-    ImpellerGlyphInfo IMPELLER_NONNULL glyph_info);
-
-//------------------------------------------------------------------------------
-/// @brief      Fetch the bounds of the grapheme cluster for the glyph in the
-///             coordinate space of the paragraph.
-///
-/// @param[in]  glyph_info  The glyph information.
-/// @param[out] out_bounds  The grapheme cluster bounds.
-///
-IMPELLER_EXPORT
-void ImpellerGlyphInfoGetGraphemeClusterBounds(
-    ImpellerGlyphInfo IMPELLER_NONNULL glyph_info,
-    ImpellerRect* IMPELLER_NONNULL out_bounds);
-
-//------------------------------------------------------------------------------
-/// @param[in]  glyph_info  The glyph information.
-///
-/// @return     True if the glyph represents an ellipsis. False otherwise.
-///
-IMPELLER_EXPORT
-bool ImpellerGlyphInfoIsEllipsis(ImpellerGlyphInfo IMPELLER_NONNULL glyph_info);
-
-//------------------------------------------------------------------------------
-/// @param[in]  glyph_info  The glyph information.
-///
-/// @return     The direction of the run that contains the glyph.
-///
-IMPELLER_EXPORT
-ImpellerTextDirection ImpellerGlyphInfoGetTextDirection(
-    ImpellerGlyphInfo IMPELLER_NONNULL glyph_info);
-
 IMPELLER_EXTERN_C_END
-
-// NOLINTEND(google-objc-function-naming)
 
 #endif  // FLUTTER_IMPELLER_TOOLKIT_INTEROP_IMPELLER_H_

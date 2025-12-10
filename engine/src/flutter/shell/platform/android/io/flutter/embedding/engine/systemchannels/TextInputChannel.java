@@ -1,7 +1,3 @@
-// Copyright 2013 The Flutter Authors. All rights reserved.
-// Use of this source code is governed by a BSD-style license that can be
-// found in the LICENSE file.
-
 package io.flutter.embedding.engine.systemchannels;
 
 import static io.flutter.Build.API_LEVELS;
@@ -23,7 +19,6 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
-import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
 import org.json.JSONArray;
@@ -259,7 +254,11 @@ public class TextInputChannel {
 
   public void updateEditingStateWithTag(
       int inputClientId, @NonNull HashMap<String, TextEditState> editStates) {
-    Log.v(TAG, "Sending message to update editing state for " + editStates.size() + " field(s).");
+    Log.v(
+        TAG,
+        "Sending message to update editing state for "
+            + String.valueOf(editStates.size())
+            + " field(s).");
 
     final HashMap<String, HashMap<Object, Object>> json = new HashMap<>();
     for (Map.Entry<String, TextEditState> element : editStates.entrySet()) {
@@ -479,16 +478,6 @@ public class TextInputChannel {
         }
       }
 
-      // Build an array of hint locales from the data in the JSON list.
-      Locale[] hintLocales = null;
-      if (!json.isNull("hintLocales")) {
-        JSONArray hintLocalesJson = json.getJSONArray("hintLocales");
-        hintLocales = new Locale[hintLocalesJson.length()];
-        for (int i = 0; i < hintLocalesJson.length(); i++) {
-          hintLocales[i] = Locale.forLanguageTag(hintLocalesJson.optString(i));
-        }
-      }
-
       return new Configuration(
           json.optBoolean("obscureText"),
           json.optBoolean("autocorrect", true),
@@ -501,14 +490,14 @@ public class TextInputChannel {
           json.isNull("actionLabel") ? null : json.getString("actionLabel"),
           json.isNull("autofill") ? null : Autofill.fromJson(json.getJSONObject("autofill")),
           contentList.toArray(new String[contentList.size()]),
-          fields,
-          hintLocales);
+          fields);
     }
 
     @NonNull
     private static Integer inputActionFromTextInputAction(@NonNull String inputAction) {
       switch (inputAction) {
         case "TextInputAction.newline":
+          return EditorInfo.IME_ACTION_NONE;
         case "TextInputAction.none":
           return EditorInfo.IME_ACTION_NONE;
         case "TextInputAction.unspecified":
@@ -660,7 +649,6 @@ public class TextInputChannel {
     @Nullable public final Autofill autofill;
     @Nullable public final String[] contentCommitMimeTypes;
     @Nullable public final Configuration[] fields;
-    @Nullable public final Locale[] hintLocales;
 
     public Configuration(
         boolean obscureText,
@@ -674,8 +662,7 @@ public class TextInputChannel {
         @Nullable String actionLabel,
         @Nullable Autofill autofill,
         @Nullable String[] contentCommitMimeTypes,
-        @Nullable Configuration[] fields,
-        @Nullable Locale[] hintLocales) {
+        @Nullable Configuration[] fields) {
       this.obscureText = obscureText;
       this.autocorrect = autocorrect;
       this.enableSuggestions = enableSuggestions;
@@ -688,7 +675,6 @@ public class TextInputChannel {
       this.autofill = autofill;
       this.contentCommitMimeTypes = contentCommitMimeTypes;
       this.fields = fields;
-      this.hintLocales = hintLocales;
     }
   }
 
@@ -732,8 +718,7 @@ public class TextInputChannel {
     URL("TextInputType.url"),
     VISIBLE_PASSWORD("TextInputType.visiblePassword"),
     NONE("TextInputType.none"),
-    WEB_SEARCH("TextInputType.webSearch"),
-    TWITTER("TextInputType.twitter");
+    WEB_SEARCH("TextInputType.webSearch");
 
     static TextInputType fromValue(@NonNull String encodedName) throws NoSuchFieldException {
       for (TextInputType textInputType : TextInputType.values()) {
@@ -803,25 +788,36 @@ public class TextInputChannel {
       if ((selectionStart != -1 || selectionEnd != -1)
           && (selectionStart < 0 || selectionEnd < 0)) {
         throw new IndexOutOfBoundsException(
-            "invalid selection: (" + selectionStart + ", " + selectionEnd + ")");
+            "invalid selection: ("
+                + String.valueOf(selectionStart)
+                + ", "
+                + String.valueOf(selectionEnd)
+                + ")");
       }
 
       if ((composingStart != -1 || composingEnd != -1)
           && (composingStart < 0 || composingStart > composingEnd)) {
         throw new IndexOutOfBoundsException(
-            "invalid composing range: (" + composingStart + ", " + composingEnd + ")");
+            "invalid composing range: ("
+                + String.valueOf(composingStart)
+                + ", "
+                + String.valueOf(composingEnd)
+                + ")");
       }
 
       if (composingEnd > text.length()) {
-        throw new IndexOutOfBoundsException("invalid composing start: " + composingStart);
+        throw new IndexOutOfBoundsException(
+            "invalid composing start: " + String.valueOf(composingStart));
       }
 
       if (selectionStart > text.length()) {
-        throw new IndexOutOfBoundsException("invalid selection start: " + selectionStart);
+        throw new IndexOutOfBoundsException(
+            "invalid selection start: " + String.valueOf(selectionStart));
       }
 
       if (selectionEnd > text.length()) {
-        throw new IndexOutOfBoundsException("invalid selection end: " + selectionEnd);
+        throw new IndexOutOfBoundsException(
+            "invalid selection end: " + String.valueOf(selectionEnd));
       }
 
       this.text = text;

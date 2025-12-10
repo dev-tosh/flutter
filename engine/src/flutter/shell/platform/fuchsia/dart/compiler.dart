@@ -12,10 +12,11 @@ import 'package:vm/kernel_front_end.dart'
     show createCompilerArgParser, runCompiler, successExitCode;
 
 final ArgParser _argParser = createCompilerArgParser()
-  ..addFlag('train', help: 'Run through sample command line to produce snapshot', negatable: false);
+  ..addFlag('train',
+      help: 'Run through sample command line to produce snapshot',
+      negatable: false);
 
-String _usage =
-    '''
+String _usage = '''
 Usage: compiler [options] input.dart
 
 Options:
@@ -28,9 +29,13 @@ Future<void> main(List<String> args) async {
     options = _argParser.parse(args);
 
     if (options['train']) {
-      final Directory temp = Directory.systemTemp.createTempSync('train_kernel_compiler');
+      final Directory temp =
+          Directory.systemTemp.createTempSync('train_kernel_compiler');
       try {
-        options = _argParser.parse(<String>['--manifest=flutter', '--data-dir=${temp.absolute}']);
+        options = _argParser.parse(<String>[
+          '--manifest=flutter',
+          '--data-dir=${temp.absolute}',
+        ]);
 
         await runCompiler(options, _usage);
         return;

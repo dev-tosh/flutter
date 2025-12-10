@@ -7,11 +7,9 @@
 #include "flutter/display_list/effects/dl_color_filters.h"
 #include "flutter/display_list/effects/dl_color_sources.h"
 #include "flutter/display_list/effects/dl_image_filters.h"
-#include "flutter/display_list/geometry/dl_geometry_conversions.h"
 #include "third_party/skia/include/core/SkColorFilter.h"
 #include "third_party/skia/include/effects/SkGradientShader.h"
 #include "third_party/skia/include/effects/SkImageFilters.h"
-#include "third_party/skia/include/effects/SkRuntimeEffect.h"
 
 namespace flutter {
 
@@ -28,7 +26,7 @@ SkPaint ToSk(const DlPaint& paint) {
   SkPaint sk_paint;
 
   sk_paint.setAntiAlias(paint.isAntiAlias());
-  sk_paint.setColor(ToSkColor4f(paint.getColor()));
+  sk_paint.setColor(ToSk(paint.getColor()));
   sk_paint.setBlendMode(ToSk(paint.getBlendMode()));
   sk_paint.setStyle(ToSk(paint.getDrawStyle()));
   sk_paint.setStrokeWidth(paint.getStrokeWidth());
@@ -155,7 +153,7 @@ sk_sp<SkShader> ToSk(const DlColorSource* source) {
       auto samplers = runtime_source->samplers();
       std::vector<sk_sp<SkShader>> sk_samplers(samplers.size());
       for (size_t i = 0; i < samplers.size(); i++) {
-        const auto& sampler = samplers[i];
+        auto sampler = samplers[i];
         if (sampler == nullptr) {
           return nullptr;
         }
@@ -249,7 +247,7 @@ sk_sp<SkColorFilter> ToSk(const DlColorFilter* filter) {
     case DlColorFilterType::kBlend: {
       const DlBlendColorFilter* blend_filter = filter->asBlend();
       FML_DCHECK(blend_filter != nullptr);
-      return SkColorFilters::Blend(ToSkColor4f(blend_filter->color()), nullptr,
+      return SkColorFilters::Blend(ToSk(blend_filter->color()),
                                    ToSk(blend_filter->mode()));
     }
     case DlColorFilterType::kMatrix: {
@@ -294,10 +292,9 @@ sk_sp<SkVertices> ToSk(const std::shared_ptr<DlVertices>& vertices) {
     sk_colors_ptr = sk_colors.data();
   }
   return SkVertices::MakeCopy(ToSk(vertices->mode()), vertices->vertex_count(),
-                              ToSkPoints(vertices->vertex_data()),
-                              ToSkPoints(vertices->texture_coordinate_data()),
-                              sk_colors_ptr, vertices->index_count(),
-                              vertices->indices());
+                              vertices->vertices(),
+                              vertices->texture_coordinates(), sk_colors_ptr,
+                              vertices->index_count(), vertices->indices());
 }
 
 }  // namespace flutter

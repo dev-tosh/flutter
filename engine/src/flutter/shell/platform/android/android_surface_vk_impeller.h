@@ -7,7 +7,6 @@
 
 #include "flutter/fml/concurrent_message_loop.h"
 #include "flutter/fml/macros.h"
-#include "flutter/impeller/display_list/aiks_context.h"
 #include "flutter/impeller/renderer/backend/vulkan/surface_context_vk.h"
 #include "flutter/shell/platform/android/android_context_vk_impeller.h"
 #include "flutter/shell/platform/android/surface/android_native_window.h"
@@ -34,7 +33,7 @@ class AndroidSurfaceVKImpeller : public AndroidSurface {
   void TeardownOnScreenContext() override;
 
   // |AndroidSurface|
-  bool OnScreenSurfaceResize(const DlISize& size) override;
+  bool OnScreenSurfaceResize(const SkISize& size) override;
 
   // |AndroidSurface|
   bool ResourceContextMakeCurrent() override;
@@ -46,13 +45,16 @@ class AndroidSurfaceVKImpeller : public AndroidSurface {
   std::shared_ptr<impeller::Context> GetImpellerContext() override;
 
   // |AndroidSurface|
-  bool SetNativeWindow(
-      fml::RefPtr<AndroidNativeWindow> window,
-      const std::shared_ptr<PlatformViewAndroidJNI>& jni_facade) override;
+  bool SetNativeWindow(fml::RefPtr<AndroidNativeWindow> window) override;
 
  private:
   std::shared_ptr<impeller::SurfaceContextVK> surface_context_vk_;
   fml::RefPtr<AndroidNativeWindow> native_window_;
+  // The first GPU Surface is initialized as soon as the
+  // AndroidSurfaceVulkanImpeller is created. This ensures that the pipelines
+  // are bootstrapped as early as possible.
+  std::unique_ptr<GPUSurfaceVulkanImpeller> eager_gpu_surface_;
+
   bool is_valid_ = false;
 
   FML_DISALLOW_COPY_AND_ASSIGN(AndroidSurfaceVKImpeller);

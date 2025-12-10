@@ -5,8 +5,7 @@
 #ifndef FLUTTER_IMPELLER_RENDERER_PIPELINE_BUILDER_H_
 #define FLUTTER_IMPELLER_RENDERER_PIPELINE_BUILDER_H_
 
-#include <format>
-
+#include "impeller/base/strings.h"
 #include "impeller/base/validation.h"
 #include "impeller/core/formats.h"
 #include "impeller/renderer/context.h"
@@ -62,7 +61,7 @@ struct PipelineBuilder {
       const Context& context,
       PipelineDescriptor& desc) {
     // Setup debug instrumentation.
-    desc.SetLabel(std::format("{} Pipeline", FragmentShader::kLabel));
+    desc.SetLabel(SPrintF("%s Pipeline", FragmentShader::kLabel.data()));
 
     // Resolve pipeline entrypoints.
     {

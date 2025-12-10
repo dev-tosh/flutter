@@ -7,7 +7,7 @@ import 'package:logging/logging.dart';
 import 'package:test/test.dart';
 
 /// Matches a thrown [FatalError].
-final Matcher throwsFatalError = throwsA(isA<FatalError>());
+final throwsFatalError = throwsA(isA<FatalError>());
 
 /// Returns a matcher that matches a [LogRecord] with a [message].
 ///
@@ -21,12 +21,20 @@ Matcher logRecord(Object message, {Object level = anything}) {
   final Matcher messageMatcher = switch (message) {
     String() => equals(message),
     Matcher() => message,
-    _ => throw ArgumentError.value(message, 'message', 'must be a String or Matcher'),
+    _ => throw ArgumentError.value(
+        message,
+        'message',
+        'must be a String or Matcher',
+      ),
   };
   final Matcher levelMatcher = switch (level) {
     Level() => equals(level),
     Matcher() => level,
-    _ => throw ArgumentError.value(level, 'level', 'must be a Level or Matcher'),
+    _ => throw ArgumentError.value(
+        level,
+        'level',
+        'must be a Level or Matcher',
+      ),
   };
   return _LogRecordMatcher(levelMatcher, messageMatcher);
 }

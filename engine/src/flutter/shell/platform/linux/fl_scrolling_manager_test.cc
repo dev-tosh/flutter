@@ -5,23 +5,35 @@
 #include "flutter/shell/platform/linux/fl_scrolling_manager.h"
 #include "flutter/shell/platform/embedder/test_utils/proc_table_replacement.h"
 #include "flutter/shell/platform/linux/fl_engine_private.h"
+#include "flutter/shell/platform/linux/testing/fl_test.h"
 
-#include <gdk/gdkwayland.h>
 #include <cstring>
 #include <vector>
 
 #include "gtest/gtest.h"
 
+// Disgusting hack but could not find any way to create a GdkDevice
+struct _FakeGdkDevice {
+  GObject parent_instance;
+  gchar* name;
+  GdkInputSource source;
+};
+GdkDevice* makeFakeDevice(GdkInputSource source) {
+  _FakeGdkDevice* device =
+      static_cast<_FakeGdkDevice*>(g_malloc0(sizeof(_FakeGdkDevice)));
+  device->source = source;
+  // Bully the type checker
+  (reinterpret_cast<GTypeInstance*>(device))->g_class =
+      static_cast<GTypeClass*>(g_malloc0(sizeof(GTypeClass)));
+  (reinterpret_cast<GTypeInstance*>(device))->g_class->g_type = GDK_TYPE_DEVICE;
+  return reinterpret_cast<GdkDevice*>(device);
+}
+
 TEST(FlScrollingManagerTest, DiscreteDirectional) {
-  g_autoptr(FlDartProject) project = fl_dart_project_new();
-  g_autoptr(FlEngine) engine = fl_engine_new(project);
-
-  g_autoptr(GError) error = nullptr;
-  EXPECT_TRUE(fl_engine_start(engine, &error));
-  EXPECT_EQ(error, nullptr);
-
+  g_autoptr(FlEngine) engine = make_mock_engine();
+  FlutterEngineProcTable* embedder_api = fl_engine_get_embedder_api(engine);
   std::vector<FlutterPointerEvent> pointer_events;
-  fl_engine_get_embedder_api(engine)->SendPointerEvent = MOCK_ENGINE_PROC(
+  embedder_api->SendPointerEvent = MOCK_ENGINE_PROC(
       SendPointerEvent,
       ([&pointer_events](auto engine, const FlutterPointerEvent* events,
                          size_t events_count) {
@@ -34,9 +46,7 @@ TEST(FlScrollingManagerTest, DiscreteDirectional) {
 
   g_autoptr(FlScrollingManager) manager = fl_scrolling_manager_new(engine, 0);
 
-  GdkDevice* mouse =
-      GDK_DEVICE(g_object_new(gdk_wayland_device_get_type(), "input-source",
-                              GDK_SOURCE_MOUSE, nullptr));
+  GdkDevice* mouse = makeFakeDevice(GDK_SOURCE_MOUSE);
   GdkEventScroll* event =
       reinterpret_cast<GdkEventScroll*>(gdk_event_new(GDK_SCROLL));
   event->time = 1;
@@ -86,15 +96,10 @@ TEST(FlScrollingManagerTest, DiscreteDirectional) {
 }
 
 TEST(FlScrollingManagerTest, DiscreteScrolling) {
-  g_autoptr(FlDartProject) project = fl_dart_project_new();
-  g_autoptr(FlEngine) engine = fl_engine_new(project);
-
-  g_autoptr(GError) error = nullptr;
-  EXPECT_TRUE(fl_engine_start(engine, &error));
-  EXPECT_EQ(error, nullptr);
-
+  g_autoptr(FlEngine) engine = make_mock_engine();
+  FlutterEngineProcTable* embedder_api = fl_engine_get_embedder_api(engine);
   std::vector<FlutterPointerEvent> pointer_events;
-  fl_engine_get_embedder_api(engine)->SendPointerEvent = MOCK_ENGINE_PROC(
+  embedder_api->SendPointerEvent = MOCK_ENGINE_PROC(
       SendPointerEvent,
       ([&pointer_events](auto engine, const FlutterPointerEvent* events,
                          size_t events_count) {
@@ -107,9 +112,7 @@ TEST(FlScrollingManagerTest, DiscreteScrolling) {
 
   g_autoptr(FlScrollingManager) manager = fl_scrolling_manager_new(engine, 0);
 
-  GdkDevice* mouse =
-      GDK_DEVICE(g_object_new(gdk_wayland_device_get_type(), "input-source",
-                              GDK_SOURCE_MOUSE, nullptr));
+  GdkDevice* mouse = makeFakeDevice(GDK_SOURCE_MOUSE);
   GdkEventScroll* event =
       reinterpret_cast<GdkEventScroll*>(gdk_event_new(GDK_SCROLL));
   event->time = 1;
@@ -131,15 +134,10 @@ TEST(FlScrollingManagerTest, DiscreteScrolling) {
 }
 
 TEST(FlScrollingManagerTest, Panning) {
-  g_autoptr(FlDartProject) project = fl_dart_project_new();
-  g_autoptr(FlEngine) engine = fl_engine_new(project);
-
-  g_autoptr(GError) error = nullptr;
-  EXPECT_TRUE(fl_engine_start(engine, &error));
-  EXPECT_EQ(error, nullptr);
-
+  g_autoptr(FlEngine) engine = make_mock_engine();
+  FlutterEngineProcTable* embedder_api = fl_engine_get_embedder_api(engine);
   std::vector<FlutterPointerEvent> pointer_events;
-  fl_engine_get_embedder_api(engine)->SendPointerEvent = MOCK_ENGINE_PROC(
+  embedder_api->SendPointerEvent = MOCK_ENGINE_PROC(
       SendPointerEvent,
       ([&pointer_events](auto engine, const FlutterPointerEvent* events,
                          size_t events_count) {
@@ -152,9 +150,7 @@ TEST(FlScrollingManagerTest, Panning) {
 
   g_autoptr(FlScrollingManager) manager = fl_scrolling_manager_new(engine, 0);
 
-  GdkDevice* touchpad =
-      GDK_DEVICE(g_object_new(gdk_wayland_device_get_type(), "input-source",
-                              GDK_SOURCE_TOUCHPAD, nullptr));
+  GdkDevice* touchpad = makeFakeDevice(GDK_SOURCE_TOUCHPAD);
   GdkEventScroll* event =
       reinterpret_cast<GdkEventScroll*>(gdk_event_new(GDK_SCROLL));
   event->time = 1;
@@ -202,15 +198,10 @@ TEST(FlScrollingManagerTest, Panning) {
 }
 
 TEST(FlScrollingManagerTest, Zooming) {
-  g_autoptr(FlDartProject) project = fl_dart_project_new();
-  g_autoptr(FlEngine) engine = fl_engine_new(project);
-
-  g_autoptr(GError) error = nullptr;
-  EXPECT_TRUE(fl_engine_start(engine, &error));
-  EXPECT_EQ(error, nullptr);
-
+  g_autoptr(FlEngine) engine = make_mock_engine();
+  FlutterEngineProcTable* embedder_api = fl_engine_get_embedder_api(engine);
   std::vector<FlutterPointerEvent> pointer_events;
-  fl_engine_get_embedder_api(engine)->SendPointerEvent = MOCK_ENGINE_PROC(
+  embedder_api->SendPointerEvent = MOCK_ENGINE_PROC(
       SendPointerEvent,
       ([&pointer_events](auto engine, const FlutterPointerEvent* events,
                          size_t events_count) {
@@ -249,15 +240,10 @@ TEST(FlScrollingManagerTest, Zooming) {
 }
 
 TEST(FlScrollingManagerTest, Rotating) {
-  g_autoptr(FlDartProject) project = fl_dart_project_new();
-  g_autoptr(FlEngine) engine = fl_engine_new(project);
-
-  g_autoptr(GError) error = nullptr;
-  EXPECT_TRUE(fl_engine_start(engine, &error));
-  EXPECT_EQ(error, nullptr);
-
+  g_autoptr(FlEngine) engine = make_mock_engine();
+  FlutterEngineProcTable* embedder_api = fl_engine_get_embedder_api(engine);
   std::vector<FlutterPointerEvent> pointer_events;
-  fl_engine_get_embedder_api(engine)->SendPointerEvent = MOCK_ENGINE_PROC(
+  embedder_api->SendPointerEvent = MOCK_ENGINE_PROC(
       SendPointerEvent,
       ([&pointer_events](auto engine, const FlutterPointerEvent* events,
                          size_t events_count) {
@@ -296,15 +282,10 @@ TEST(FlScrollingManagerTest, Rotating) {
 }
 
 TEST(FlScrollingManagerTest, SynchronizedZoomingAndRotating) {
-  g_autoptr(FlDartProject) project = fl_dart_project_new();
-  g_autoptr(FlEngine) engine = fl_engine_new(project);
-
-  g_autoptr(GError) error = nullptr;
-  EXPECT_TRUE(fl_engine_start(engine, &error));
-  EXPECT_EQ(error, nullptr);
-
+  g_autoptr(FlEngine) engine = make_mock_engine();
+  FlutterEngineProcTable* embedder_api = fl_engine_get_embedder_api(engine);
   std::vector<FlutterPointerEvent> pointer_events;
-  fl_engine_get_embedder_api(engine)->SendPointerEvent = MOCK_ENGINE_PROC(
+  embedder_api->SendPointerEvent = MOCK_ENGINE_PROC(
       SendPointerEvent,
       ([&pointer_events](auto engine, const FlutterPointerEvent* events,
                          size_t events_count) {
@@ -360,15 +341,10 @@ TEST(FlScrollingManagerTest, SynchronizedZoomingAndRotating) {
 // Make sure that zoom and rotate sequences which don't end at the same time
 // don't cause any problems.
 TEST(FlScrollingManagerTest, UnsynchronizedZoomingAndRotating) {
-  g_autoptr(FlDartProject) project = fl_dart_project_new();
-  g_autoptr(FlEngine) engine = fl_engine_new(project);
-
-  g_autoptr(GError) error = nullptr;
-  EXPECT_TRUE(fl_engine_start(engine, &error));
-  EXPECT_EQ(error, nullptr);
-
+  g_autoptr(FlEngine) engine = make_mock_engine();
+  FlutterEngineProcTable* embedder_api = fl_engine_get_embedder_api(engine);
   std::vector<FlutterPointerEvent> pointer_events;
-  fl_engine_get_embedder_api(engine)->SendPointerEvent = MOCK_ENGINE_PROC(
+  embedder_api->SendPointerEvent = MOCK_ENGINE_PROC(
       SendPointerEvent,
       ([&pointer_events](auto engine, const FlutterPointerEvent* events,
                          size_t events_count) {

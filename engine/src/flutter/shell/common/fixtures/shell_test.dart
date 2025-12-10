@@ -61,9 +61,9 @@ void drawFrames() {
   notifyNative();
 
   PlatformDispatcher.instance.onBeginFrame = (Duration beginTime) {
-    final builder = SceneBuilder();
-    final recorder = PictureRecorder();
-    final canvas = Canvas(recorder);
+    final SceneBuilder builder = SceneBuilder();
+    final PictureRecorder recorder = PictureRecorder();
+    final Canvas canvas = Canvas(recorder);
     canvas.drawPaint(Paint()..color = const Color(0xFFABCDEF));
     final Picture picture = recorder.endRecording();
     builder.addPicture(Offset.zero, picture);
@@ -82,12 +82,13 @@ void reportTimingsMain() {
   PlatformDispatcher.instance.onReportTimings = (List<FrameTiming> timings) {
     final timestamps = <int>[];
     for (final t in timings) {
-      for (final FramePhase phase in FramePhase.values) {
+      for (final phase in FramePhase.values) {
         timestamps.add(t.timestampInMicroseconds(phase));
       }
     }
     nativeReportTimingsCallback(timestamps);
-    PlatformDispatcher.instance.onReportTimings = (List<FrameTiming> timings) {};
+    PlatformDispatcher.instance.onReportTimings =
+        (List<FrameTiming> timings) {};
   };
 }
 
@@ -103,7 +104,7 @@ void onBeginFrameMain() {
 void onPointerDataPacketMain() {
   PlatformDispatcher.instance.onPointerDataPacket = (PointerDataPacket packet) {
     final sequence = <int>[];
-    for (final PointerData data in packet.data) {
+    for (final data in packet.data) {
       sequence.add(PointerChange.values.indexOf(data.change));
     }
     nativeOnPointerDataPacket(sequence);
@@ -116,12 +117,17 @@ void emptyMain() {}
 @pragma('vm:entry-point')
 void reportMetrics() {
   window.onMetricsChanged = () {
-    _reportMetrics(window.devicePixelRatio, window.physicalSize.width, window.physicalSize.height);
+    _reportMetrics(
+      window.devicePixelRatio,
+      window.physicalSize.width,
+      window.physicalSize.height,
+    );
   };
 }
 
 @pragma('vm:external-name', 'ReportMetrics')
-external void _reportMetrics(double devicePixelRatio, double width, double height);
+external void _reportMetrics(
+    double devicePixelRatio, double width, double height);
 
 @pragma('vm:entry-point')
 void dummyReportTimingsMain() {
@@ -142,7 +148,7 @@ external void notifyNative();
 
 @pragma('vm:entry-point')
 void thousandCallsToNative() {
-  for (var i = 0; i < 1000; i++) {
+  for (int i = 0; i < 1000; i++) {
     notifyNative();
   }
 }
@@ -165,14 +171,14 @@ void testSkiaResourceCacheSendsResponse() {
       throw AssertionError('Response must not be null.');
     }
     final String response = utf8.decode(data.buffer.asUint8List());
-    final List<bool> jsonResponse = (json.decode(response) as List).cast<bool>();
+    final jsonResponse = (json.decode(response) as List).cast<bool>();
     if (!jsonResponse[0]) {
       throw AssertionError('Response was not true');
     }
     notifyNative();
   }
 
-  const jsonRequest = '''
+  const String jsonRequest = '''
 {
   "method": "Skia.setResourceCacheMaxBytes",
   "args": 10000
@@ -189,30 +195,49 @@ external void notifyWidthHeight(int width, int height);
 
 @pragma('vm:entry-point')
 void canCreateImageFromDecompressedData() {
-  const imageWidth = 10;
-  const imageHeight = 10;
-  final pixels = Uint8List.fromList(
-    List<int>.generate(imageWidth * imageHeight * 4, (int i) => i % 4 < 2 ? 0x00 : 0xFF),
-  );
+  const int imageWidth = 10;
+  const int imageHeight = 10;
+  final Uint8List pixels = Uint8List.fromList(List<int>.generate(
+    imageWidth * imageHeight * 4,
+    (int i) => i % 4 < 2 ? 0x00 : 0xFF,
+  ));
 
-  decodeImageFromPixels(pixels, imageWidth, imageHeight, PixelFormat.rgba8888, (Image image) {
-    notifyWidthHeight(image.width, image.height);
-  });
+  decodeImageFromPixels(
+    pixels,
+    imageWidth,
+    imageHeight,
+    PixelFormat.rgba8888,
+    (Image image) {
+      notifyWidthHeight(image.width, image.height);
+    },
+  );
 }
 
 @pragma('vm:entry-point')
 void canAccessIsolateLaunchData() {
   notifyMessage(
-    utf8.decode(PlatformDispatcher.instance.getPersistentIsolateData()!.buffer.asUint8List()),
+    utf8.decode(
+      PlatformDispatcher.instance
+          .getPersistentIsolateData()!
+          .buffer
+          .asUint8List(),
+    ),
   );
 }
 
 @pragma('vm:entry-point')
 void performanceModeImpactsNotifyIdle() {
   notifyNativeBool(false);
-  PlatformDispatcher.instance.requestDartPerformanceMode(DartPerformanceMode.latency);
+  PlatformDispatcher.instance
+      .requestDartPerformanceMode(DartPerformanceMode.latency);
   notifyNativeBool(true);
-  PlatformDispatcher.instance.requestDartPerformanceMode(DartPerformanceMode.balanced);
+  PlatformDispatcher.instance
+      .requestDartPerformanceMode(DartPerformanceMode.balanced);
+}
+
+@pragma('vm:entry-point')
+void callNotifyDestroyed() {
+  notifyDestroyed();
 }
 
 @pragma('vm:external-name', 'NotifyMessage')
@@ -238,7 +263,7 @@ external bool waitFixture();
 // Return local date-time as a string, to an hour resolution.  So, "2020-07-23
 // 14:03:22" will become "2020-07-23 14".
 String localTimeAsString() {
-  final DateTime now = DateTime.now().toLocal();
+  final now = DateTime.now().toLocal();
   // This is: "$y-$m-$d $h:$min:$sec.$ms$us";
   final timeStr = now.toString();
   // Forward only "$y-$m-$d $h" for timestamp comparison.  Not using DateTime
@@ -284,12 +309,14 @@ external void notifyNativeWhenEngineSpawn(bool success);
 
 @pragma('vm:entry-point')
 void canReceiveArgumentsWhenEngineRun(List<String> args) {
-  notifyNativeWhenEngineRun(args.length == 2 && args[0] == 'foo' && args[1] == 'bar');
+  notifyNativeWhenEngineRun(
+      args.length == 2 && args[0] == 'foo' && args[1] == 'bar');
 }
 
 @pragma('vm:entry-point')
 void canReceiveArgumentsWhenEngineSpawn(List<String> args) {
-  notifyNativeWhenEngineSpawn(args.length == 2 && args[0] == 'arg1' && args[1] == 'arg2');
+  notifyNativeWhenEngineSpawn(
+      args.length == 2 && args[0] == 'arg1' && args[1] == 'arg2');
 }
 
 @pragma('vm:entry-point')
@@ -301,7 +328,8 @@ void onBeginFrameWithNotifyNativeMain() {
 }
 
 @pragma('vm:entry-point')
-void frameCallback(Object? image, int durationMilliseconds, String decodeError) {
+void frameCallback(
+    Object? image, int durationMilliseconds, String decodeError) {
   if (image == null) {
     throw Exception('Expeccted image in frame callback to be non-null');
   }
@@ -312,8 +340,8 @@ external void onBeforeToImageSync();
 
 @pragma('vm:entry-point')
 Future<void> toImageSync() async {
-  final recorder = PictureRecorder();
-  final canvas = Canvas(recorder);
+  final PictureRecorder recorder = PictureRecorder();
+  final Canvas canvas = Canvas(recorder);
   canvas.drawPaint(Paint()..color = const Color(0xFFAAAAAA));
   final Picture picture = recorder.endRecording();
 
@@ -338,8 +366,8 @@ Future<void> toImageSync() async {
   }
 
   // Verify that the image can be drawn successfully.
-  final recorder2 = PictureRecorder();
-  final canvas2 = Canvas(recorder2);
+  final PictureRecorder recorder2 = PictureRecorder();
+  final Canvas canvas2 = Canvas(recorder2);
   canvas2.drawImage(image, Offset.zero, Paint());
   final Picture picture2 = recorder2.endRecording();
 
@@ -362,8 +390,9 @@ class IsolateParam {
 @pragma('vm:entry-point')
 Future<void> runCallback(IsolateParam param) async {
   try {
-    final func =
-        PluginUtilities.getCallbackFromHandle(CallbackHandle.fromRawHandle(param.rawHandle))!
+    final Future<dynamic> Function() func =
+        PluginUtilities.getCallbackFromHandle(
+                CallbackHandle.fromRawHandle(param.rawHandle))!
             as Future<dynamic> Function();
     await func.call();
     param.sendPort.send(true);
@@ -375,15 +404,17 @@ Future<void> runCallback(IsolateParam param) async {
 @pragma('vm:entry-point')
 @pragma('vm:external-name', 'NotifyNativeBool')
 external void notifyNativeBool(bool value);
+@pragma('vm:external-name', 'NotifyDestroyed')
+external void notifyDestroyed();
 
 @pragma('vm:entry-point')
 Future<void> testPluginUtilitiesCallbackHandle() async {
-  var port = ReceivePort();
+  ReceivePort port = ReceivePort();
   await Isolate.spawn(
-    runCallback,
-    IsolateParam(port.sendPort, PluginUtilities.getCallbackHandle(included)!.toRawHandle()),
-    onError: port.sendPort,
-  );
+      runCallback,
+      IsolateParam(port.sendPort,
+          PluginUtilities.getCallbackHandle(included)!.toRawHandle()),
+      onError: port.sendPort);
   final dynamic result1 = await port.first;
   if (result1 != true) {
     print('Expected $result1 to == true');
@@ -394,10 +425,10 @@ Future<void> testPluginUtilitiesCallbackHandle() async {
   if (const bool.fromEnvironment('dart.vm.product')) {
     port = ReceivePort();
     await Isolate.spawn(
-      runCallback,
-      IsolateParam(port.sendPort, PluginUtilities.getCallbackHandle(excluded)!.toRawHandle()),
-      onError: port.sendPort,
-    );
+        runCallback,
+        IsolateParam(port.sendPort,
+            PluginUtilities.getCallbackHandle(excluded)!.toRawHandle()),
+        onError: port.sendPort);
     final dynamic result2 = await port.first;
     if (result2 != false) {
       print('Expected $result2 to == false');
@@ -413,19 +444,21 @@ Future<void> testPluginUtilitiesCallbackHandle() async {
 Future<void> testThatAssetLoadingHappensOnWorkerThread() async {
   try {
     await ImmutableBuffer.fromAsset('DoesNotExist');
-  } catch (err) {
-    /* Do nothing */
-  }
+  } catch (err) {/* Do nothing */}
   notifyNative();
 }
 
 @pragma('vm:external-name', 'NativeReportViewIdsCallback')
-external void nativeReportViewIdsCallback(bool hasImplicitView, List<int> viewIds);
+external void nativeReportViewIdsCallback(
+    bool hasImplicitView, List<int> viewIds);
 
 List<int> getCurrentViewIds() {
-  final List<int> result =
-      PlatformDispatcher.instance.views.map((FlutterView view) => view.viewId).toList()..sort();
-  assert(result.toSet().length == result.length, 'Unexpected duplicate view ID found: $result');
+  final List<int> result = PlatformDispatcher.instance.views
+      .map((FlutterView view) => view.viewId)
+      .toList()
+    ..sort();
+  assert(result.toSet().length == result.length,
+      'Unexpected duplicate view ID found: $result');
   return result;
 }
 
@@ -433,7 +466,7 @@ bool listEquals<T>(List<T> a, List<T> b) {
   if (a.length != b.length) {
     return false;
   }
-  for (var i = 0; i < a.length; i += 1) {
+  for (int i = 0; i < a.length; i += 1) {
     if (a[i] != b[i]) {
       return false;
     }
@@ -447,12 +480,14 @@ bool listEquals<T>(List<T> a, List<T> b) {
 @pragma('vm:entry-point')
 void testReportViewIds() {
   List<int> viewIds = getCurrentViewIds();
-  nativeReportViewIdsCallback(PlatformDispatcher.instance.implicitView != null, viewIds);
+  nativeReportViewIdsCallback(
+      PlatformDispatcher.instance.implicitView != null, viewIds);
   PlatformDispatcher.instance.onMetricsChanged = () {
     final List<int> newViewIds = getCurrentViewIds();
     if (!listEquals(viewIds, newViewIds)) {
       viewIds = newViewIds;
-      nativeReportViewIdsCallback(PlatformDispatcher.instance.implicitView != null, viewIds);
+      nativeReportViewIdsCallback(
+          PlatformDispatcher.instance.implicitView != null, viewIds);
     }
   };
 }
@@ -460,7 +495,7 @@ void testReportViewIds() {
 // Returns a list of [view_id 1, view_width 1, view_id 2, view_width 2, ...]
 // for all views.
 List<int> getCurrentViewWidths() {
-  final result = <int>[];
+  final List<int> result = <int>[];
   for (final FlutterView view in PlatformDispatcher.instance.views) {
     result.add(view.viewId);
     result.add(view.physicalSize.width.round());
@@ -482,9 +517,9 @@ void testReportViewWidths() {
 }
 
 void renderDummyToView(FlutterView view) {
-  final builder = SceneBuilder();
-  final recorder = PictureRecorder();
-  final canvas = Canvas(recorder);
+  final SceneBuilder builder = SceneBuilder();
+  final PictureRecorder recorder = PictureRecorder();
+  final Canvas canvas = Canvas(recorder);
   canvas.drawPaint(Paint()..color = const Color(0xFFABCDEF));
   final Picture picture = recorder.endRecording();
   builder.addPicture(Offset.zero, picture);
@@ -518,9 +553,9 @@ external void _captureRootLayer(SceneBuilder sceneBuilder);
 
 @pragma('vm:entry-point')
 void renderTwiceForOneView() {
-  final builder = SceneBuilder();
-  final recorder = PictureRecorder();
-  final canvas = Canvas(recorder);
+  final SceneBuilder builder = SceneBuilder();
+  final PictureRecorder recorder = PictureRecorder();
+  final Canvas canvas = Canvas(recorder);
   canvas.drawPaint(Paint()..color = const Color(0xFFABCDEF));
   final Picture picture = recorder.endRecording();
   builder.addPicture(Offset.zero, picture);
@@ -545,9 +580,9 @@ void renderTwiceForOneView() {
 @pragma('vm:entry-point')
 void renderSingleViewAndCallAfterOnDrawFrame() {
   PlatformDispatcher.instance.onDrawFrame = () {
-    final builder = SceneBuilder();
-    final recorder = PictureRecorder();
-    final canvas = Canvas(recorder);
+    final SceneBuilder builder = SceneBuilder();
+    final PictureRecorder recorder = PictureRecorder();
+    final Canvas canvas = Canvas(recorder);
     canvas.drawPaint(Paint()..color = const Color(0xFFABCDEF));
     final Picture picture = recorder.endRecording();
     builder.addPicture(Offset.zero, picture);
@@ -566,7 +601,7 @@ void renderSingleViewAndCallAfterOnDrawFrame() {
 
 @pragma('vm:entry-point')
 void renderWarmUpImplicitView() {
-  var beginFrameCalled = false;
+  bool beginFrameCalled = false;
 
   PlatformDispatcher.instance.scheduleWarmUpFrame(
     beginFrame: () {
@@ -582,21 +617,18 @@ void renderWarmUpImplicitView() {
 
 @pragma('vm:entry-point')
 void renderWarmUpView1and2() {
-  var beginFrameCalled = false;
+  bool beginFrameCalled = false;
 
-  PlatformDispatcher.instance.scheduleWarmUpFrame(
-    beginFrame: () {
-      expect(beginFrameCalled, false);
-      beginFrameCalled = true;
-    },
-    drawFrame: () {
-      expect(beginFrameCalled, true);
+  PlatformDispatcher.instance.scheduleWarmUpFrame(beginFrame: () {
+    expect(beginFrameCalled, false);
+    beginFrameCalled = true;
+  }, drawFrame: () {
+    expect(beginFrameCalled, true);
 
-      for (final viewId in <int>[1, 2]) {
-        renderDummyToView(PlatformDispatcher.instance.view(id: viewId)!);
-      }
-    },
-  );
+    for (final int viewId in <int>[1, 2]) {
+      renderDummyToView(PlatformDispatcher.instance.view(id: viewId)!);
+    }
+  });
 }
 
 @pragma('vm:entry-point')
@@ -617,27 +649,4 @@ void testPointerActions() {
       notifyNative();
     });
   };
-}
-
-@pragma('vm:entry-point')
-void testDispatchEvents() {
-  PlatformDispatcher.instance.onPointerDataPacket = (PointerDataPacket pointer) {
-    notifyNative();
-  };
-}
-
-@pragma('vm:entry-point')
-void testSendViewFocusEvent() {
-  PlatformDispatcher.instance.onViewFocusChange = (ViewFocusEvent event) {
-    notifyMessage('${event.viewId} ${event.state} ${event.direction}');
-  };
-  notifyNative();
-}
-
-@pragma('vm:external-name', 'ReportEngineId')
-external void _reportEngineId(int? identifier);
-
-@pragma('vm:entry-point')
-void providesEngineId() {
-  _reportEngineId(PlatformDispatcher.instance.engineId);
 }

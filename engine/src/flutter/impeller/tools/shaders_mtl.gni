@@ -28,7 +28,6 @@ template("impeller_shaders_metal") {
                                   ])
   impellerc_mtl = "impellerc_$target_name"
   impellerc(impellerc_mtl) {
-    mnemonic = "IMPELLERC_METAL"
     shaders = invoker.shaders
     metal_version = metal_version
     sl_file_extension = "metal"
@@ -43,10 +42,6 @@ template("impeller_shaders_metal") {
       defines += [ "IMPELLER_TARGET_METAL_DESKTOP" ]
     } else {
       assert(false, "Metal not supported on this platform.")
-    }
-
-    if (defined(invoker.entry_point_prefix)) {
-      entry_point_prefix = invoker.entry_point_prefix
     }
   }
 

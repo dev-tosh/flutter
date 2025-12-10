@@ -7,8 +7,8 @@
 
 #import <Cocoa/Cocoa.h>
 
-#import "flutter/shell/platform/darwin/macos/framework/Headers/FlutterViewController.h"
 #import "flutter/shell/platform/darwin/macos/framework/Source/FlutterSurfaceManager.h"
+#import "flutter/shell/platform/darwin/macos/framework/Source/FlutterThreadSynchronizer.h"
 
 #include <stdint.h>
 
@@ -40,6 +40,7 @@
 - (nullable instancetype)initWithMTLDevice:(nonnull id<MTLDevice>)device
                               commandQueue:(nonnull id<MTLCommandQueue>)commandQueue
                                   delegate:(nonnull id<FlutterViewDelegate>)delegate
+                        threadSynchronizer:(nonnull FlutterThreadSynchronizer*)threadSynchronizer
                             viewIdentifier:(FlutterViewIdentifier)viewIdentifier
     NS_DESIGNATED_INITIALIZER;
 
@@ -70,11 +71,6 @@
  * when the mouse enters the view from another subview.
  */
 - (void)didUpdateMouseCursor:(nonnull NSCursor*)cursor;
-
-/**
- * Called from the controller to unblock resize synchronizer when shutting down.
- */
-- (void)shutDown;
 
 @end
 

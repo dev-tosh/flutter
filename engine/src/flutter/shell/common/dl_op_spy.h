@@ -57,13 +57,12 @@ class DlOpSpy final : public virtual DlOpReceiver,
   void drawRoundRect(const DlRoundRect& rrect) override;
   void drawDiffRoundRect(const DlRoundRect& outer,
                          const DlRoundRect& inner) override;
-  void drawRoundSuperellipse(const DlRoundSuperellipse& rse) override;
   void drawPath(const DlPath& path) override;
   void drawArc(const DlRect& oval_bounds,
                DlScalar start_degrees,
                DlScalar sweep_degrees,
                bool use_center) override;
-  void drawPoints(DlPointMode mode,
+  void drawPoints(PointMode mode,
                   uint32_t count,
                   const DlPoint points[]) override;
   void drawVertices(const std::shared_ptr<DlVertices>& vertices,
@@ -78,14 +77,14 @@ class DlOpSpy final : public virtual DlOpReceiver,
       const DlRect& dst,
       DlImageSampling sampling,
       bool render_with_attributes,
-      DlSrcRectConstraint constraint = DlSrcRectConstraint::kFast) override;
+      SrcRectConstraint constraint = SrcRectConstraint::kFast) override;
   void drawImageNine(const sk_sp<DlImage> image,
                      const DlIRect& center,
                      const DlRect& dst,
                      DlFilterMode filter,
                      bool render_with_attributes) override;
   void drawAtlas(const sk_sp<DlImage> atlas,
-                 const DlRSTransform xform[],
+                 const SkRSXform xform[],
                  const DlRect tex[],
                  const DlColor colors[],
                  int count,
@@ -95,9 +94,12 @@ class DlOpSpy final : public virtual DlOpReceiver,
                  bool render_with_attributes) override;
   void drawDisplayList(const sk_sp<DisplayList> display_list,
                        DlScalar opacity = SK_Scalar1) override;
-  void drawText(const std::shared_ptr<DlText>& text,
-                DlScalar x,
-                DlScalar y) override;
+  void drawTextBlob(const sk_sp<SkTextBlob> blob,
+                    DlScalar x,
+                    DlScalar y) override;
+  void drawTextFrame(const std::shared_ptr<impeller::TextFrame>& text_frame,
+                     DlScalar x,
+                     DlScalar y) override;
   void drawShadow(const DlPath& path,
                   const DlColor color,
                   const DlScalar elevation,

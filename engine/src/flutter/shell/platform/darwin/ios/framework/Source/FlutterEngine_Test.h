@@ -23,8 +23,6 @@ class ThreadHost;
 
 @property(readonly, nonatomic) FlutterEngineProcTable& embedderAPI;
 @property(readonly, nonatomic) BOOL enableEmbedderAPI;
-@property(nonatomic, readonly) NSMutableDictionary* pluginPublications;
-@property(nonatomic, strong) FlutterRestorationPlugin* restorationPlugin;
 
 - (flutter::Shell&)shell;
 - (flutter::PlatformViewIOS*)platformView;
@@ -45,8 +43,6 @@ class ThreadHost;
 - (void)sceneDidEnterBackground:(NSNotification*)notification API_AVAILABLE(ios(13.0));
 - (void)applicationWillEnterForeground:(NSNotification*)notification;
 - (void)applicationDidEnterBackground:(NSNotification*)notification;
-- (NSString*)lookupKeyForAsset:(NSString*)asset;
-- (NSString*)lookupKeyForAsset:(NSString*)asset fromPackage:(NSString*)package;
 
 @end
 

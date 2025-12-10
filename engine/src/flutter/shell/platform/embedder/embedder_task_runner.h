@@ -75,8 +75,6 @@ class EmbedderTaskRunner final : public fml::TaskRunner {
 
   bool PostTask(uint64_t baton);
 
-  intptr_t unique_id() const { return unique_id_; }
-
  private:
   const size_t embedder_identifier_;
   DispatchTable dispatch_table_;
@@ -84,9 +82,6 @@ class EmbedderTaskRunner final : public fml::TaskRunner {
   uint64_t last_baton_ = 0;
   std::unordered_map<uint64_t, fml::closure> pending_tasks_;
   fml::TaskQueueId placeholder_id_;
-  intptr_t unique_id_;
-
-  static std::atomic_intptr_t next_unique_id_;
 
   // |fml::TaskRunner|
   void PostTask(const fml::closure& task) override;

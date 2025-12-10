@@ -18,21 +18,20 @@ class PrePushCommand extends Command<bool> {
 
   @override
   Future<bool> run() async {
-    final sw = Stopwatch()..start();
-    final verbose = globalResults!['verbose']! as bool;
-    final enableClangTidy = globalResults!['enable-clang-tidy']! as bool;
-    final flutterRoot = globalResults!['flutter']! as String;
+    final Stopwatch sw = Stopwatch()..start();
+    final bool verbose = globalResults!['verbose']! as bool;
+    final bool enableClangTidy = globalResults!['enable-clang-tidy']! as bool;
+    final String flutterRoot = globalResults!['flutter']! as String;
 
     if (!enableClangTidy) {
-      print(
-        'The clang-tidy check is disabled. To enable set the environment '
-        'variable PRE_PUSH_CLANG_TIDY to any value.',
-      );
+      print('The clang-tidy check is disabled. To enable set the environment '
+            'variable PRE_PUSH_CLANG_TIDY to any value.');
     }
 
-    final checkResults = <bool>[
+    final List<bool> checkResults = <bool>[
       await _runFormatter(flutterRoot, verbose),
-      if (enableClangTidy) await _runClangTidy(flutterRoot, verbose),
+      if (enableClangTidy)
+        await _runClangTidy(flutterRoot, verbose),
     ];
     sw.stop();
     io.stdout.writeln('pre-push checks finished in ${sw.elapsed}');
@@ -41,27 +40,33 @@ class PrePushCommand extends Command<bool> {
 
   Future<bool> _runClangTidy(String flutterRoot, bool verbose) async {
     io.stdout.writeln('Starting clang-tidy checks.');
-    final sw = Stopwatch()..start();
+    final Stopwatch sw = Stopwatch()..start();
     // First ensure that out/host_debug/compile_commands.json exists by running
     // //flutter/tools/gn.
-    var compileCommands = io.File(
-      path.join(flutterRoot, '..', 'out', 'host_debug', 'compile_commands.json'),
-    );
+    io.File compileCommands = io.File(path.join(
+      flutterRoot,
+      '..',
+      'out',
+      'host_debug',
+      'compile_commands.json',
+    ));
     if (!compileCommands.existsSync()) {
-      compileCommands = io.File(
-        path.join(flutterRoot, '..', 'out', 'host_debug_unopt', 'compile_commands.json'),
-      );
+      compileCommands = io.File(path.join(
+        flutterRoot,
+        '..',
+        'out',
+        'host_debug_unopt',
+        'compile_commands.json',
+      ));
       if (!compileCommands.existsSync()) {
-        io.stderr.writeln(
-          'clang-tidy requires a fully built host_debug or '
-          'host_debug_unopt build directory',
-        );
+        io.stderr.writeln('clang-tidy requires a fully built host_debug or '
+                          'host_debug_unopt build directory');
         return false;
       }
     }
-    final outBuffer = StringBuffer();
-    final errBuffer = StringBuffer();
-    final clangTidy = ClangTidy(
+    final StringBuffer outBuffer = StringBuffer();
+    final StringBuffer errBuffer = StringBuffer();
+    final ClangTidy clangTidy = ClangTidy(
       buildCommandsPath: compileCommands,
       outSink: outBuffer,
       errSink: errBuffer,
@@ -78,8 +83,8 @@ class PrePushCommand extends Command<bool> {
 
   Future<bool> _runFormatter(String flutterRoot, bool verbose) async {
     io.stdout.writeln('Starting formatting checks.');
-    final sw = Stopwatch()..start();
-    final ext = io.Platform.isWindows ? '.bat' : '.sh';
+    final Stopwatch sw = Stopwatch()..start();
+    final String ext = io.Platform.isWindows ? '.bat' : '.sh';
     final bool result = await _runCheck(
       flutterRoot,
       path.join(flutterRoot, 'ci', 'format$ext'),
@@ -108,7 +113,7 @@ class PrePushCommand extends Command<bool> {
       workingDirectory: flutterRoot,
     );
     if (result.exitCode != 0) {
-      final message = StringBuffer();
+      final StringBuffer message = StringBuffer();
       message.writeln('Check "$checkName" failed.');
       message.writeln('command: $scriptPath ${scriptArgs.join(" ")}');
       message.writeln('working directory: $flutterRoot');

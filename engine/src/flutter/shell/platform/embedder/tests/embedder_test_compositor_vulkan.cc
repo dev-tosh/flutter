@@ -16,7 +16,7 @@ namespace flutter {
 namespace testing {
 
 EmbedderTestCompositorVulkan::EmbedderTestCompositorVulkan(
-    DlISize surface_size,
+    SkISize surface_size,
     sk_sp<GrDirectContext> context)
     : EmbedderTestCompositor(surface_size, std::move(context)) {}
 
@@ -48,7 +48,7 @@ bool EmbedderTestCompositorVulkan::UpdateOffscrenComposition(
     size_t layers_count) {
   last_composition_ = nullptr;
 
-  const auto image_info = SkImageInfo::MakeN32Premul(ToSkISize(surface_size_));
+  const auto image_info = SkImageInfo::MakeN32Premul(surface_size_);
 
   sk_sp<SkSurface> surface =
       SkSurfaces::RenderTarget(context_.get(),            // context
@@ -119,8 +119,7 @@ bool EmbedderTestCompositorVulkan::UpdateOffscrenComposition(
   }
 
   if (next_scene_callback_) {
-    auto last_composition_snapshot =
-        last_composition_->makeRasterImage(nullptr);
+    auto last_composition_snapshot = last_composition_->makeRasterImage();
     FML_CHECK(last_composition_snapshot);
     auto callback = next_scene_callback_;
     next_scene_callback_ = nullptr;

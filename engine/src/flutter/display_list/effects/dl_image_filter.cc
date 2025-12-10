@@ -5,7 +5,6 @@
 #include "flutter/display_list/effects/dl_image_filter.h"
 
 #include "flutter/display_list/effects/dl_image_filters.h"
-#include "flutter/display_list/geometry/dl_geometry_conversions.h"
 
 namespace flutter {
 

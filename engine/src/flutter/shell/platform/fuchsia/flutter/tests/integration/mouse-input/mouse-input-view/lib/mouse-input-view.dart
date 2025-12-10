@@ -21,7 +21,14 @@ class MyApp {
   static const _blue = Color.fromARGB(255, 33, 150, 143);
   static const _purple = Color.fromARGB(255, 156, 39, 176);
 
-  final List<Color> _colors = <Color>[_red, _orange, _yellow, _green, _blue, _purple];
+  final List<Color> _colors = <Color>[
+    _red,
+    _orange,
+    _yellow,
+    _green,
+    _blue,
+    _purple,
+  ];
 
   // Each tap will increment the counter, we then determine what color to choose
   int _touchCounter = 0;
@@ -92,31 +99,27 @@ class MyApp {
     window.scheduleFrame();
   }
 
-  void _reportMouseInput({
-    required double localX,
-    required double localY,
-    required int timeReceived,
-    required int buttons,
-    required String phase,
-    required double wheelXPhysicalPixel,
-    required double wheelYPhysicalPixel,
-  }) {
+  void _reportMouseInput(
+      {required double localX,
+      required double localY,
+      required int timeReceived,
+      required int buttons,
+      required String phase,
+      required double wheelXPhysicalPixel,
+      required double wheelYPhysicalPixel}) {
     print('mouse-input-view reporting mouse input to MouseInputListener');
-    final message = ByteData.sublistView(
-      utf8.encode(
-        json.encode({
-          'method': 'MouseInputListener.ReportMouseInput',
-          'local_x': localX,
-          'local_y': localY,
-          'time_received': timeReceived,
-          'component_name': 'touch-input-view',
-          'buttons': buttons,
-          'phase': phase,
-          'wheel_x_physical_pixel': wheelXPhysicalPixel,
-          'wheel_y_physical_pixel': wheelYPhysicalPixel,
-        }),
-      ),
-    );
-    PlatformDispatcher.instance.sendPlatformMessage('fuchsia/input_test', message, null);
+    final message = ByteData.sublistView(utf8.encode(json.encode({
+        'method': 'MouseInputListener.ReportMouseInput',
+        'local_x': localX,
+        'local_y': localY,
+        'time_received': timeReceived,
+        'component_name': 'touch-input-view',
+        'buttons': buttons,
+        'phase': phase,
+        'wheel_x_physical_pixel': wheelXPhysicalPixel,
+        'wheel_y_physical_pixel': wheelYPhysicalPixel,
+      })));
+    PlatformDispatcher.instance
+        .sendPlatformMessage('fuchsia/input_test', message, null);
   }
 }

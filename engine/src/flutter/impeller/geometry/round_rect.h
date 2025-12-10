@@ -5,53 +5,99 @@
 #ifndef FLUTTER_IMPELLER_GEOMETRY_ROUND_RECT_H_
 #define FLUTTER_IMPELLER_GEOMETRY_ROUND_RECT_H_
 
-#include "flutter/impeller/geometry/path_source.h"
 #include "flutter/impeller/geometry/point.h"
 #include "flutter/impeller/geometry/rect.h"
-#include "flutter/impeller/geometry/rounding_radii.h"
 #include "flutter/impeller/geometry/size.h"
 
 namespace impeller {
 
+struct RoundingRadii {
+  Size top_left;
+  Size top_right;
+  Size bottom_left;
+  Size bottom_right;
+
+  constexpr static RoundingRadii MakeRadius(Scalar radius) {
+    return {Size(radius), Size(radius), Size(radius), Size(radius)};
+  }
+
+  constexpr static RoundingRadii MakeRadii(Size radii) {
+    return {radii, radii, radii, radii};
+  }
+
+  constexpr bool IsFinite() const {
+    return top_left.IsFinite() &&     //
+           top_right.IsFinite() &&    //
+           bottom_left.IsFinite() &&  //
+           bottom_right.IsFinite();
+  }
+
+  constexpr bool AreAllCornersEmpty() const {
+    return top_left.IsEmpty() &&     //
+           top_right.IsEmpty() &&    //
+           bottom_left.IsEmpty() &&  //
+           bottom_right.IsEmpty();
+  }
+
+  constexpr bool AreAllCornersSame(Scalar tolerance = kEhCloseEnough) const {
+    return ScalarNearlyEqual(top_left.width, top_right.width, tolerance) &&
+           ScalarNearlyEqual(top_left.width, bottom_right.width, tolerance) &&
+           ScalarNearlyEqual(top_left.width, bottom_left.width, tolerance) &&
+           ScalarNearlyEqual(top_left.height, top_right.height, tolerance) &&
+           ScalarNearlyEqual(top_left.height, bottom_right.height, tolerance) &&
+           ScalarNearlyEqual(top_left.height, bottom_left.height, tolerance);
+  }
+
+  constexpr inline RoundingRadii operator*(Scalar scale) {
+    return {
+        .top_left = top_left * scale,
+        .top_right = top_right * scale,
+        .bottom_left = bottom_left * scale,
+        .bottom_right = bottom_right * scale,
+    };
+  }
+
+  [[nodiscard]] constexpr bool operator==(const RoundingRadii& rr) const {
+    return top_left == rr.top_left &&        //
+           top_right == rr.top_right &&      //
+           bottom_left == rr.bottom_left &&  //
+           bottom_right == rr.bottom_right;
+  }
+
+  [[nodiscard]] constexpr bool operator!=(const RoundingRadii& rr) const {
+    return !(*this == rr);
+  }
+};
+
 struct RoundRect {
   RoundRect() = default;
 
-  inline static RoundRect MakeRect(const Rect& rect) {
+  constexpr static RoundRect MakeRect(const Rect& rect) {
     return MakeRectRadii(rect, RoundingRadii());
   }
 
-  inline static RoundRect MakeOval(const Rect& rect) {
+  constexpr static RoundRect MakeOval(const Rect& rect) {
     return MakeRectRadii(rect, RoundingRadii::MakeRadii(rect.GetSize() * 0.5f));
   }
 
-  inline static RoundRect MakeRectRadius(const Rect& rect, Scalar radius) {
+  constexpr static RoundRect MakeRectRadius(const Rect& rect, Scalar radius) {
     return MakeRectRadii(rect, RoundingRadii::MakeRadius(radius));
   }
 
-  inline static RoundRect MakeRectXY(const Rect& rect,
-                                     Scalar x_radius,
-                                     Scalar y_radius) {
+  constexpr static RoundRect MakeRectXY(const Rect& rect,
+                                        Scalar x_radius,
+                                        Scalar y_radius) {
     return MakeRectRadii(rect,
                          RoundingRadii::MakeRadii(Size(x_radius, y_radius)));
   }
 
-  inline static RoundRect MakeRectXY(const Rect& rect, Size corner_radii) {
+  constexpr static RoundRect MakeRectXY(const Rect& rect, Size corner_radii) {
     return MakeRectRadii(rect, RoundingRadii::MakeRadii(corner_radii));
-  }
-
-  inline static RoundRect MakeNinePatch(const Rect& rect,
-                                        Scalar left,
-                                        Scalar top,
-                                        Scalar right,
-                                        Scalar bottom) {
-    return MakeRectRadii(
-        rect, RoundingRadii::MakeNinePatch(left, top, right, bottom));
   }
 
   static RoundRect MakeRectRadii(const Rect& rect, const RoundingRadii& radii);
 
   constexpr const Rect& GetBounds() const { return bounds_; }
-
   constexpr const RoundingRadii& GetRadii() const { return radii_; }
 
   [[nodiscard]] constexpr bool IsFinite() const {
@@ -86,7 +132,7 @@ struct RoundRect {
   [[nodiscard]] bool Contains(const Point& p) const;
 
   /// @brief  Returns a new round rectangle translated by the given offset.
-  [[nodiscard]] inline RoundRect Shift(Scalar dx, Scalar dy) const {
+  [[nodiscard]] constexpr RoundRect Shift(Scalar dx, Scalar dy) const {
     // Just in case, use the factory rather than the internal constructor
     // as shifting the rectangle may increase/decrease its bit precision
     // so we should re-validate the radii to the newly located rectangle.
@@ -95,10 +141,10 @@ struct RoundRect {
 
   /// @brief  Returns a round rectangle with expanded edges. Negative expansion
   ///         results in shrinking.
-  [[nodiscard]] inline RoundRect Expand(Scalar left,
-                                        Scalar top,
-                                        Scalar right,
-                                        Scalar bottom) const {
+  [[nodiscard]] constexpr RoundRect Expand(Scalar left,
+                                           Scalar top,
+                                           Scalar right,
+                                           Scalar bottom) const {
     // Use the factory rather than the internal constructor as the changing
     // size of the rectangle requires that we re-validate the radii to the
     // newly sized rectangle.
@@ -107,8 +153,8 @@ struct RoundRect {
 
   /// @brief  Returns a round rectangle with expanded edges. Negative expansion
   ///         results in shrinking.
-  [[nodiscard]] inline RoundRect Expand(Scalar horizontal,
-                                        Scalar vertical) const {
+  [[nodiscard]] constexpr RoundRect Expand(Scalar horizontal,
+                                           Scalar vertical) const {
     // Use the factory rather than the internal constructor as the changing
     // size of the rectangle requires that we re-validate the radii to the
     // newly sized rectangle.
@@ -117,7 +163,7 @@ struct RoundRect {
 
   /// @brief  Returns a round rectangle with expanded edges. Negative expansion
   ///         results in shrinking.
-  [[nodiscard]] inline RoundRect Expand(Scalar amount) const {
+  [[nodiscard]] constexpr RoundRect Expand(Scalar amount) const {
     // Use the factory rather than the internal constructor as the changing
     // size of the rectangle requires that we re-validate the radii to the
     // newly sized rectangle.
@@ -128,74 +174,32 @@ struct RoundRect {
     return bounds_ == rr.bounds_ && radii_ == rr.radii_;
   }
 
+  [[nodiscard]] constexpr bool operator!=(const RoundRect& r) const {
+    return !(*this == r);
+  }
+
  private:
   constexpr RoundRect(const Rect& bounds, const RoundingRadii& radii)
       : bounds_(bounds), radii_(radii) {}
 
   Rect bounds_;
   RoundingRadii radii_;
-
-  // Helps with RoundRectPathSource and DiffRoundRectPathSource
-  void Dispatch(PathReceiver& receiver) const;
-
-  friend class RoundRectPathSource;
-  friend class DiffRoundRectPathSource;
-};
-
-class RoundRectPathSource : public PathSource {
- public:
-  explicit RoundRectPathSource(const RoundRect& round_rect);
-
-  ~RoundRectPathSource();
-
-  const RoundRect& GetRoundRect() const { return round_rect_; }
-
-  // |PathSource|
-  FillType GetFillType() const override;
-
-  // |PathSource|
-  Rect GetBounds() const override;
-
-  // |PathSource|
-  bool IsConvex() const override;
-
-  // |PathSource|
-  void Dispatch(PathReceiver& receiver) const override;
-
- private:
-  const RoundRect round_rect_;
-};
-
-class DiffRoundRectPathSource : public PathSource {
- public:
-  explicit DiffRoundRectPathSource(const RoundRect& outer,
-                                   const RoundRect& inner);
-
-  ~DiffRoundRectPathSource();
-
-  const RoundRect& GetOuter() const { return outer_; }
-  const RoundRect& GetInner() const { return inner_; }
-
-  // |PathSource|
-  FillType GetFillType() const override;
-
-  // |PathSource|
-  Rect GetBounds() const override;
-
-  // |PathSource|
-  bool IsConvex() const override;
-
-  // |PathSource|
-  void Dispatch(PathReceiver& receiver) const override;
-
- private:
-  const RoundRect outer_;
-  const RoundRect inner_;
 };
 
 }  // namespace impeller
 
 namespace std {
+
+inline std::ostream& operator<<(std::ostream& out,
+                                const impeller::RoundingRadii& rr) {
+  out << "("                               //
+      << "ul: " << rr.top_left << ", "     //
+      << "ur: " << rr.top_right << ", "    //
+      << "ll: " << rr.bottom_left << ", "  //
+      << "lr: " << rr.bottom_right         //
+      << ")";
+  return out;
+}
 
 inline std::ostream& operator<<(std::ostream& out,
                                 const impeller::RoundRect& rr) {

@@ -7,7 +7,6 @@
 #include "flutter/display_list/skia/dl_sk_canvas.h"
 
 #include "flutter/display_list/effects/image_filters/dl_blur_image_filter.h"
-#include "flutter/display_list/geometry/dl_geometry_conversions.h"
 #include "flutter/display_list/skia/dl_sk_conversions.h"
 #include "flutter/display_list/skia/dl_sk_dispatcher.h"
 #include "flutter/fml/trace_event.h"
@@ -140,33 +139,26 @@ DlMatrix DlSkCanvasAdapter::GetMatrix() const {
 }
 
 void DlSkCanvasAdapter::ClipRect(const DlRect& rect,
-                                 DlClipOp clip_op,
+                                 ClipOp clip_op,
                                  bool is_aa) {
   delegate_->clipRect(ToSkRect(rect), ToSk(clip_op), is_aa);
 }
 
 void DlSkCanvasAdapter::ClipOval(const DlRect& bounds,
-                                 DlClipOp clip_op,
+                                 ClipOp clip_op,
                                  bool is_aa) {
   delegate_->clipRRect(SkRRect::MakeOval(ToSkRect(bounds)), ToSk(clip_op),
                        is_aa);
 }
 
 void DlSkCanvasAdapter::ClipRoundRect(const DlRoundRect& rrect,
-                                      DlClipOp clip_op,
+                                      ClipOp clip_op,
                                       bool is_aa) {
   delegate_->clipRRect(ToSkRRect(rrect), ToSk(clip_op), is_aa);
 }
 
-void DlSkCanvasAdapter::ClipRoundSuperellipse(const DlRoundSuperellipse& rse,
-                                              DlClipOp clip_op,
-                                              bool is_aa) {
-  // Skia doesn't support round superellipse, thus fall back to round rectangle.
-  delegate_->clipRRect(ToApproximateSkRRect(rse), ToSk(clip_op), is_aa);
-}
-
 void DlSkCanvasAdapter::ClipPath(const DlPath& path,
-                                 DlClipOp clip_op,
+                                 ClipOp clip_op,
                                  bool is_aa) {
   path.WillRenderSkPath();
   delegate_->clipPath(path.GetSkPath(), ToSk(clip_op), is_aa);
@@ -198,7 +190,7 @@ void DlSkCanvasAdapter::DrawPaint(const DlPaint& paint) {
 }
 
 void DlSkCanvasAdapter::DrawColor(DlColor color, DlBlendMode mode) {
-  delegate_->drawColor(ToSkColor4f(color), ToSk(mode));
+  delegate_->drawColor(ToSk(color), ToSk(mode));
 }
 
 void DlSkCanvasAdapter::DrawLine(const DlPoint& p0,
@@ -214,7 +206,7 @@ void DlSkCanvasAdapter::DrawDashedLine(const DlPoint& p0,
                                        const DlPaint& paint) {
   SkPaint dashed_paint = ToStrokedSk(paint);
   SkScalar intervals[2] = {on_length, off_length};
-  dashed_paint.setPathEffect(SkDashPathEffect::Make({intervals, 2}, 0.0f));
+  dashed_paint.setPathEffect(SkDashPathEffect::Make(intervals, 2, 0.0f));
   delegate_->drawLine(ToSkPoint(p0), ToSkPoint(p1), dashed_paint);
 }
 
@@ -243,12 +235,6 @@ void DlSkCanvasAdapter::DrawDiffRoundRect(const DlRoundRect& outer,
   delegate_->drawDRRect(ToSkRRect(outer), ToSkRRect(inner), ToSk(paint));
 }
 
-void DlSkCanvasAdapter::DrawRoundSuperellipse(const DlRoundSuperellipse& rse,
-                                              const DlPaint& paint) {
-  // Skia doesn't support round superellipse, thus fall back to round rectangle.
-  delegate_->drawRRect(ToApproximateSkRRect(rse), ToSk(paint));
-}
-
 void DlSkCanvasAdapter::DrawPath(const DlPath& path, const DlPaint& paint) {
   path.WillRenderSkPath();
   delegate_->drawPath(path.GetSkPath(), ToSk(paint));
@@ -262,12 +248,11 @@ void DlSkCanvasAdapter::DrawArc(const DlRect& bounds,
   delegate_->drawArc(ToSkRect(bounds), start, sweep, useCenter, ToSk(paint));
 }
 
-void DlSkCanvasAdapter::DrawPoints(DlPointMode mode,
+void DlSkCanvasAdapter::DrawPoints(PointMode mode,
                                    uint32_t count,
                                    const DlPoint pts[],
                                    const DlPaint& paint) {
-  delegate_->drawPoints(ToSk(mode), {ToSkPoints(pts), count},
-                        ToStrokedSk(paint));
+  delegate_->drawPoints(ToSk(mode), count, ToSkPoints(pts), ToStrokedSk(paint));
 }
 
 void DlSkCanvasAdapter::DrawVertices(
@@ -292,7 +277,7 @@ void DlSkCanvasAdapter::DrawImageRect(const sk_sp<DlImage>& image,
                                       const DlRect& dst,
                                       DlImageSampling sampling,
                                       const DlPaint* paint,
-                                      DlSrcRectConstraint constraint) {
+                                      SrcRectConstraint constraint) {
   SkOptionalPaint sk_paint(paint);
   sk_sp<SkImage> sk_image = image->skia_image();
   delegate_->drawImageRect(sk_image.get(), ToSkRect(src), ToSkRect(dst),
@@ -311,7 +296,7 @@ void DlSkCanvasAdapter::DrawImageNine(const sk_sp<DlImage>& image,
 }
 
 void DlSkCanvasAdapter::DrawAtlas(const sk_sp<DlImage>& atlas,
-                                  const DlRSTransform xform[],
+                                  const SkRSXform xform[],
                                   const DlRect tex[],
                                   const DlColor colors[],
                                   int count,
@@ -326,9 +311,8 @@ void DlSkCanvasAdapter::DrawAtlas(const sk_sp<DlImage>& atlas,
   for (int i = 0; i < count; ++i) {
     sk_colors.push_back(colors[i].argb());
   }
-  delegate_->drawAtlas(sk_image.get(), {ToSk(xform), count},
-                       {ToSkRects(tex), count}, {sk_colors.data(), count},
-                       ToSk(mode), ToSk(sampling), ToSkRect(cullRect),
+  delegate_->drawAtlas(sk_image.get(), xform, ToSkRects(tex), sk_colors.data(),
+                       count, ToSk(mode), ToSk(sampling), ToSkRect(cullRect),
                        sk_paint());
 }
 
@@ -340,7 +324,7 @@ void DlSkCanvasAdapter::DrawDisplayList(const sk_sp<DisplayList> display_list,
   // if we need a saveLayer.
   if (opacity < SK_Scalar1 && !display_list->can_apply_group_opacity()) {
     TRACE_EVENT0("flutter", "Canvas::saveLayer");
-    delegate_->saveLayerAlphaf(ToSkRect(&display_list->GetBounds()), opacity);
+    delegate_->saveLayerAlphaf(&display_list->bounds(), opacity);
     opacity = SK_Scalar1;
   } else {
     delegate_->save();
@@ -348,8 +332,7 @@ void DlSkCanvasAdapter::DrawDisplayList(const sk_sp<DisplayList> display_list,
 
   DlSkCanvasDispatcher dispatcher(delegate_, opacity);
   if (display_list->has_rtree()) {
-    display_list->Dispatch(dispatcher,
-                           ToDlRect(delegate_->getLocalClipBounds()));
+    display_list->Dispatch(dispatcher, delegate_->getLocalClipBounds());
   } else {
     display_list->Dispatch(dispatcher);
   }
@@ -357,13 +340,19 @@ void DlSkCanvasAdapter::DrawDisplayList(const sk_sp<DisplayList> display_list,
   delegate_->restoreToCount(restore_count);
 }
 
-void DlSkCanvasAdapter::DrawText(const std::shared_ptr<DlText>& text,
-                                 SkScalar x,
-                                 SkScalar y,
-                                 const DlPaint& paint) {
-  auto blob = text->GetTextBlob();
-  FML_CHECK(blob) << "Impeller DlText cannot be drawn to a Skia canvas.";
+void DlSkCanvasAdapter::DrawTextBlob(const sk_sp<SkTextBlob>& blob,
+                                     SkScalar x,
+                                     SkScalar y,
+                                     const DlPaint& paint) {
   delegate_->drawTextBlob(blob, x, y, ToSk(paint));
+}
+
+void DlSkCanvasAdapter::DrawTextFrame(
+    const std::shared_ptr<impeller::TextFrame>& text_frame,
+    SkScalar x,
+    SkScalar y,
+    const DlPaint& paint) {
+  FML_CHECK(false);
 }
 
 void DlSkCanvasAdapter::DrawShadow(const DlPath& path,
@@ -377,13 +366,11 @@ void DlSkCanvasAdapter::DrawShadow(const DlPath& path,
 }
 
 void DlSkCanvasAdapter::Flush() {
-#if defined(SK_GANESH)
   auto dContext = GrAsDirectContext(delegate_->recordingContext());
 
   if (dContext) {
     dContext->flushAndSubmit();
   }
-#endif  // defined(SK_GANESH)
 }
 
 }  // namespace flutter

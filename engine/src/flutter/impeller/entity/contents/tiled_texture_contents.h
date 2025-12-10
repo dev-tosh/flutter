@@ -55,7 +55,11 @@ class TiledTextureContents final : public ColorSourceContents {
   std::optional<Snapshot> RenderToSnapshot(
       const ContentContext& renderer,
       const Entity& entity,
-      const SnapshotOptions& options) const override;
+      std::optional<Rect> coverage_limit = std::nullopt,
+      const std::optional<SamplerDescriptor>& sampler_descriptor = std::nullopt,
+      bool msaa_enabled = true,
+      int32_t mip_count = 1,
+      std::string_view label = "Tiled Texture Snapshot") const override;
 
  private:
   std::shared_ptr<Texture> CreateFilterTexture(

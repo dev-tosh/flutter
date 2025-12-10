@@ -5,17 +5,12 @@
 #ifndef FLUTTER_IMPELLER_TOOLKIT_INTEROP_PARAGRAPH_H_
 #define FLUTTER_IMPELLER_TOOLKIT_INTEROP_PARAGRAPH_H_
 
-#include "flutter/txt/src/txt/paragraph.h"
-#include "impeller/toolkit/interop/glyph_info.h"
+#include "flutter/third_party/txt/src/txt/paragraph.h"
 #include "impeller/toolkit/interop/impeller.h"
-#include "impeller/toolkit/interop/line_metrics.h"
 #include "impeller/toolkit/interop/object.h"
 
 namespace impeller::interop {
 
-/**
- * An immutable fully laid out paragraph.
- */
 class Paragraph final
     : public Object<Paragraph,
                     IMPELLER_INTERNAL_HANDLE_NAME(ImpellerParagraph)> {
@@ -46,20 +41,8 @@ class Paragraph final
 
   const std::unique_ptr<txt::Paragraph>& GetHandle() const;
 
-  ScopedObject<LineMetrics> GetLineMetrics() const;
-
-  ScopedObject<GlyphInfo> GetGlyphInfoAtCodeUnitIndex(
-      size_t code_unit_index) const;
-
-  ScopedObject<GlyphInfo> GetClosestGlyphInfoAtParagraphCoordinates(
-      double x,
-      double y) const;
-
-  ImpellerRange GetWordBoundary(size_t code_unit_index) const;
-
  private:
   std::unique_ptr<txt::Paragraph> paragraph_;
-  mutable ScopedObject<LineMetrics> lazy_line_metrics_;
 };
 
 }  // namespace impeller::interop

@@ -29,7 +29,10 @@ export 'package:logging/logging.dart' show LogRecord;
 /// which can be inspected by unit tetss.
 class Logger {
   /// Constructs a logger for use in the tool.
-  Logger({log.Level level = statusLevel}) : _logger = log.Logger.detached('et'), _test = false {
+  Logger({
+    log.Level level = statusLevel,
+  })  : _logger = log.Logger.detached('et'),
+        _test = false {
     _logger.level = level;
     _logger.onRecord.listen(_handler);
     _setupIoSink(io.stderr);
@@ -38,9 +41,11 @@ class Logger {
 
   /// Constructs a logger that invokes a [callback] for each log message.
   @visibleForTesting
-  Logger.test(void Function(log.LogRecord) onLog, {log.Level level = statusLevel})
-    : _logger = log.Logger.detached('et'),
-      _test = true {
+  Logger.test(
+    void Function(log.LogRecord) onLog, {
+    log.Level level = statusLevel,
+  })  : _logger = log.Logger.detached('et'),
+        _test = true {
     _logger.level = level;
     _logger.onRecord.listen(onLog);
   }
@@ -59,7 +64,8 @@ class Logger {
 
   static void _handler(log.LogRecord r) {
     final io.IOSink sink = r.level >= warningLevel ? io.stderr : io.stdout;
-    final prefix = r.level >= warningLevel ? '[${r.time}] ${r.level}: ' : '';
+    final String prefix =
+        r.level >= warningLevel ? '[${r.time}] ${r.level}: ' : '';
     _ioSinkWrite(sink, '$prefix${r.message}');
   }
 
@@ -74,18 +80,15 @@ class Logger {
     if (_stdioDone) {
       return;
     }
-    runZoned<void>(
-      () {
-        try {
-          sink.write(message);
-        } catch (_) {
-          _stdioDone = true;
-        }
-      },
-      onError: (Object e, StackTrace s) {
+    runZoned<void>(() {
+      try {
+        sink.write(message);
+      } catch (_) {
         _stdioDone = true;
-      },
-    );
+      }
+    }, onError: (Object e, StackTrace s) {
+      _stdioDone = true;
+    });
   }
 
   static void _setupIoSink(io.IOSink sink) {
@@ -110,28 +113,53 @@ class Logger {
   /// Record a log message level [Logger.error] and throw a FatalError.
   /// This should only be called when the program has entered an impossible
   /// to recover from state or when something isn't implemented yet.
-  Never fatal(Object? message, {int indent = 0, bool newline = true, bool fit = false}) {
+  Never fatal(
+    Object? message, {
+    int indent = 0,
+    bool newline = true,
+    bool fit = false,
+  }) {
     _emitLog(errorLevel, message, indent, newline, fit);
     throw FatalError(_formatMessage(message, indent, newline, fit));
   }
 
   /// Record a log message at level [Logger.error].
-  void error(Object? message, {int indent = 0, bool newline = true, bool fit = false}) {
+  void error(
+    Object? message, {
+    int indent = 0,
+    bool newline = true,
+    bool fit = false,
+  }) {
     _emitLog(errorLevel, message, indent, newline, fit);
   }
 
   /// Record a log message at level [Logger.warning].
-  void warning(Object? message, {int indent = 0, bool newline = true, bool fit = false}) {
+  void warning(
+    Object? message, {
+    int indent = 0,
+    bool newline = true,
+    bool fit = false,
+  }) {
     _emitLog(warningLevel, message, indent, newline, fit);
   }
 
   /// Record a log message at level [Logger.warning].
-  void status(Object? message, {int indent = 0, bool newline = true, bool fit = false}) {
+  void status(
+    Object? message, {
+    int indent = 0,
+    bool newline = true,
+    bool fit = false,
+  }) {
     _emitLog(statusLevel, message, indent, newline, fit);
   }
 
   /// Record a log message at level [Logger.info].
-  void info(Object? message, {int indent = 0, bool newline = true, bool fit = false}) {
+  void info(
+    Object? message, {
+    int indent = 0,
+    bool newline = true,
+    bool fit = false,
+  }) {
     _emitLog(infoLevel, message, indent, newline, fit);
   }
 
@@ -158,7 +186,9 @@ class Logger {
 
   /// Starts printing a progress spinner.
   @useResult
-  Spinner startSpinner({void Function()? onFinish}) {
+  Spinner startSpinner({
+    void Function()? onFinish,
+  }) {
     void finishCallback() {
       onFinish?.call();
       _status = null;
@@ -184,14 +214,20 @@ class Logger {
   }
 
   String _formatMessage(Object? message, int indent, bool newline, bool fit) {
-    var m = '${' ' * indent}$message${newline ? '\n' : ''}';
+    String m = '${' ' * indent}$message${newline ? '\n' : ''}';
     if (fit && io.stdout.hasTerminal) {
       m = fitToWidth(m, io.stdout.terminalColumns);
     }
     return m;
   }
 
-  void _emitLog(log.Level level, Object? message, int indent, bool newline, bool fit) {
+  void _emitLog(
+    log.Level level,
+    Object? message,
+    int indent,
+    bool newline,
+    bool fit,
+  ) {
     final String m = _formatMessage(message, indent, newline, fit);
     _status?.pause();
     _logger.log(level, m);
@@ -213,7 +249,7 @@ class Logger {
   @visibleForTesting
   static String fitToWidth(String s, int w) {
     // Preserve a trailing newline if needed.
-    final maybeNewline = s.endsWith('\n') ? '\n' : '';
+    final String maybeNewline = s.endsWith('\n') ? '\n' : '';
     if (w <= 0) {
       return maybeNewline;
     }
@@ -242,7 +278,9 @@ class Logger {
 class Spinner {
   /// Creates a progress spinner. If supplied the `onDone` callback will be
   /// called when `finish()` is called.
-  Spinner({this.onFinish});
+  Spinner({
+    this.onFinish,
+  });
 
   /// The callback called when `finish()` is called.
   final void Function()? onFinish;
@@ -266,7 +304,9 @@ class Spinner {
 /// A [Spinner] implementation that prints an animated "Flutter" banner.
 class FlutterSpinner extends Spinner {
   // ignore: public_member_api_docs
-  FlutterSpinner({super.onFinish});
+  FlutterSpinner({
+    super.onFinish,
+  });
 
   /// The frames of the animation.
   static const String frames = '⢸⡯⠭⠅⢸⣇⣀⡀⢸⣇⣸⡇⠈⢹⡏⠁⠈⢹⡏⠁⢸⣯⣭⡅⢸⡯⢕⡂⠀⠀';

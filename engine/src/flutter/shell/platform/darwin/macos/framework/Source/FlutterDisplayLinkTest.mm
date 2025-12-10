@@ -5,11 +5,9 @@
 #import "flutter/shell/platform/darwin/macos/framework/Source/FlutterDisplayLink.h"
 
 #import <AppKit/AppKit.h>
-
 #include <numeric>
 
 #include "flutter/fml/synchronization/waitable_event.h"
-#import "flutter/shell/platform/darwin/macos/InternalFlutterSwift/InternalFlutterSwift.h"
 #include "flutter/testing/testing.h"
 
 @interface TestDisplayLinkDelegate : NSObject <FlutterDisplayLinkDelegate> {
@@ -35,12 +33,7 @@
 
 @end
 
-class FlutterDisplayLinkTest : public testing::Test {
- public:
-  void SetUp() override { [FlutterRunLoop ensureMainLoopInitialized]; }
-};
-
-TEST_F(FlutterDisplayLinkTest, ViewAddedToWindowFirst) {
+TEST(FlutterDisplayLinkTest, ViewAddedToWindowFirst) {
   NSWindow* window = [[NSWindow alloc] initWithContentRect:NSMakeRect(0, 0, 100, 100)
                                                  styleMask:NSWindowStyleMaskTitled
                                                    backing:NSBackingStoreNonretained
@@ -48,32 +41,30 @@ TEST_F(FlutterDisplayLinkTest, ViewAddedToWindowFirst) {
   NSView* view = [[NSView alloc] initWithFrame:NSMakeRect(0, 0, 100, 100)];
   [window setContentView:view];
 
-  __block BOOL signalled = NO;
+  auto event = std::make_shared<fml::AutoResetWaitableEvent>();
 
   TestDisplayLinkDelegate* delegate = [[TestDisplayLinkDelegate alloc]
       initWithBlock:^(CFTimeInterval timestamp, CFTimeInterval targetTimestamp) {
-        signalled = YES;
+        event->Signal();
       }];
 
   FlutterDisplayLink* displayLink = [FlutterDisplayLink displayLinkWithView:view];
   displayLink.delegate = delegate;
   displayLink.paused = NO;
 
-  while (!signalled) {
-    [FlutterRunLoop.mainRunLoop pollFlutterMessagesOnce];
-  }
+  event->Wait();
 
   [displayLink invalidate];
 }
 
-TEST_F(FlutterDisplayLinkTest, ViewAddedToWindowLater) {
+TEST(FlutterDisplayLinkTest, ViewAddedToWindowLater) {
   NSView* view = [[NSView alloc] initWithFrame:NSMakeRect(0, 0, 100, 100)];
 
-  __block BOOL signalled = NO;
+  auto event = std::make_shared<fml::AutoResetWaitableEvent>();
 
   TestDisplayLinkDelegate* delegate = [[TestDisplayLinkDelegate alloc]
       initWithBlock:^(CFTimeInterval timestamp, CFTimeInterval targetTimestamp) {
-        signalled = YES;
+        event->Signal();
       }];
 
   FlutterDisplayLink* displayLink = [FlutterDisplayLink displayLinkWithView:view];
@@ -86,14 +77,12 @@ TEST_F(FlutterDisplayLinkTest, ViewAddedToWindowLater) {
                                                      defer:NO];
   [window setContentView:view];
 
-  while (!signalled) {
-    [FlutterRunLoop.mainRunLoop pollFlutterMessagesOnce];
-  }
+  event->Wait();
 
   [displayLink invalidate];
 }
 
-TEST_F(FlutterDisplayLinkTest, ViewRemovedFromWindow) {
+TEST(FlutterDisplayLinkTest, ViewRemovedFromWindow) {
   NSWindow* window = [[NSWindow alloc] initWithContentRect:NSMakeRect(0, 0, 100, 100)
                                                  styleMask:NSWindowStyleMaskTitled
                                                    backing:NSBackingStoreNonretained
@@ -101,39 +90,67 @@ TEST_F(FlutterDisplayLinkTest, ViewRemovedFromWindow) {
   NSView* view = [[NSView alloc] initWithFrame:NSMakeRect(0, 0, 100, 100)];
   [window setContentView:view];
 
-  __block BOOL signalled = NO;
+  auto event = std::make_shared<fml::AutoResetWaitableEvent>();
 
   TestDisplayLinkDelegate* delegate = [[TestDisplayLinkDelegate alloc]
       initWithBlock:^(CFTimeInterval timestamp, CFTimeInterval targetTimestamp) {
-        signalled = YES;
+        event->Signal();
       }];
 
   FlutterDisplayLink* displayLink = [FlutterDisplayLink displayLinkWithView:view];
   displayLink.delegate = delegate;
   displayLink.paused = NO;
 
-  while (!signalled) {
-    [FlutterRunLoop.mainRunLoop pollFlutterMessagesOnce];
-  }
+  event->Wait();
   displayLink.paused = YES;
 
-  signalled = false;
+  event->Reset();
 
   displayLink.paused = NO;
 
   [window setContentView:nil];
 
-  CFTimeInterval start = CACurrentMediaTime();
-  while (CACurrentMediaTime() < start + 0.1) {
-    [FlutterRunLoop.mainRunLoop pollFlutterMessagesOnce];
-  }
-
-  EXPECT_FALSE(signalled);
+  EXPECT_TRUE(event->WaitWithTimeout(fml::TimeDelta::FromMilliseconds(100)));
+  EXPECT_FALSE(event->IsSignaledForTest());
 
   [displayLink invalidate];
 }
 
-TEST_F(FlutterDisplayLinkTest, CVDisplayLinkInterval) {
+TEST(FlutterDisplayLinkTest, WorkaroundForFB13482573) {
+  NSWindow* window = [[NSWindow alloc] initWithContentRect:NSMakeRect(0, 0, 100, 100)
+                                                 styleMask:NSWindowStyleMaskTitled
+                                                   backing:NSBackingStoreNonretained
+                                                     defer:NO];
+  NSView* view = [[NSView alloc] initWithFrame:NSMakeRect(0, 0, 100, 100)];
+  [window setContentView:view];
+
+  auto event = std::make_shared<fml::AutoResetWaitableEvent>();
+
+  TestDisplayLinkDelegate* delegate = [[TestDisplayLinkDelegate alloc]
+      initWithBlock:^(CFTimeInterval timestamp, CFTimeInterval targetTimestamp) {
+        event->Signal();
+      }];
+
+  FlutterDisplayLink* displayLink = [FlutterDisplayLink displayLinkWithView:view];
+  displayLink.delegate = delegate;
+  displayLink.paused = NO;
+
+  event->Wait();
+  displayLink.paused = YES;
+
+  event->Reset();
+  [NSThread detachNewThreadWithBlock:^{
+    // Here pthread_self() will be same as pthread_self inside first invocation of
+    // display link callback, causing CVDisplayLinkStart to return error.
+    displayLink.paused = NO;
+  }];
+
+  event->Wait();
+
+  [displayLink invalidate];
+}
+
+TEST(FlutterDisplayLinkTest, CVDisplayLinkInterval) {
   CVDisplayLinkRef link;
   CVDisplayLinkCreateWithCGDisplay(CGMainDisplayID(), &link);
   __block CFTimeInterval last = 0;

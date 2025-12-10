@@ -56,7 +56,11 @@ bool Contents::IsOpaque(const Matrix& transform) const {
 std::optional<Snapshot> Contents::RenderToSnapshot(
     const ContentContext& renderer,
     const Entity& entity,
-    const Contents::SnapshotOptions& options) const {
+    std::optional<Rect> coverage_limit,
+    const std::optional<SamplerDescriptor>& sampler_descriptor,
+    bool msaa_enabled,
+    int32_t mip_count,
+    std::string_view label) const {
   auto coverage = GetCoverage(entity);
   if (!coverage.has_value()) {
     return std::nullopt;
@@ -72,10 +76,10 @@ std::optional<Snapshot> Contents::RenderToSnapshot(
   // behavior. Not doing so results in a coverage leak for filters that support
   // customizing the input sampling mode. Snapshots of contents should be
   // theoretically treated as infinite size just like layers.
-  coverage = coverage->Expand(options.coverage_expansion);
+  coverage = coverage->Expand(1);
 
-  if (options.coverage_limit.has_value()) {
-    coverage = coverage->Intersection(*options.coverage_limit);
+  if (coverage_limit.has_value()) {
+    coverage = coverage->Intersection(*coverage_limit);
     if (!coverage.has_value()) {
       return std::nullopt;
     }
@@ -83,19 +87,18 @@ std::optional<Snapshot> Contents::RenderToSnapshot(
 
   ISize subpass_size = ISize::Ceil(coverage->GetSize());
   fml::StatusOr<RenderTarget> render_target = renderer.MakeSubpass(
-      options.label, subpass_size, command_buffer,
+      label, subpass_size, command_buffer,
       [&contents = *this, &entity, &coverage](const ContentContext& renderer,
                                               RenderPass& pass) -> bool {
         Entity sub_entity;
-        sub_entity.SetBlendMode(BlendMode::kSrcOver);
+        sub_entity.SetBlendMode(BlendMode::kSourceOver);
         sub_entity.SetTransform(
             Matrix::MakeTranslation(Vector3(-coverage->GetOrigin())) *
             entity.GetTransform());
         return contents.Render(renderer, sub_entity, pass);
       },
-      options.msaa_enabled, /*depth_stencil_enabled=*/true,
-      std::min(options.mip_count,
-               static_cast<int32_t>(subpass_size.MipCount())));
+      msaa_enabled, /*depth_stencil_enabled=*/true,
+      std::min(mip_count, static_cast<int32_t>(subpass_size.MipCount())));
 
   if (!render_target.ok()) {
     return std::nullopt;
@@ -108,8 +111,8 @@ std::optional<Snapshot> Contents::RenderToSnapshot(
       .texture = render_target.value().GetRenderTargetTexture(),
       .transform = Matrix::MakeTranslation(coverage->GetOrigin()),
   };
-  if (options.sampler_descriptor.has_value()) {
-    snapshot.sampler_descriptor = options.sampler_descriptor.value();
+  if (sampler_descriptor.has_value()) {
+    snapshot.sampler_descriptor = sampler_descriptor.value();
   }
 
   return snapshot;

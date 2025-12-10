@@ -110,7 +110,6 @@ enum class PixelFormat : uint8_t {
   kB10G10R10XR,
   kB10G10R10XRSRGB,
   kB10G10R10A10XR,
-  kR32Float,
   // Depth and stencil formats.
   kS8UInt,
   kD24UnormS8Uint,
@@ -172,8 +171,6 @@ constexpr const char* PixelFormatToString(PixelFormat format) {
       return "D24UnormS8Uint";
     case PixelFormat::kD32FloatS8UInt:
       return "D32FloatS8UInt";
-    case PixelFormat::kR32Float:
-      return "R32Float";
   }
   FML_UNREACHABLE();
 }
@@ -343,7 +340,7 @@ enum class CullMode {
   kBackFace,
 };
 
-enum class IndexType : uint8_t {
+enum class IndexType {
   kUnknown,
   k16bit,
   k32bit,
@@ -355,13 +352,13 @@ enum class IndexType : uint8_t {
 enum class PrimitiveType : uint8_t {
   /// Draws a triangle for each separate set of three vertices.
   ///
-  /// Vertices [A, B, C, D, E, F] will produce triangles
+  /// Vertices [A, B, C, D, E, F] will produce triages
   /// [ABC, DEF].
   kTriangle,
 
   /// Draws a triangle for every adjacent three vertices.
   ///
-  /// Vertices [A, B, C, D, E, F] will produce triangles
+  /// Vertices [A, B, C, D, E, F] will produce triages
   /// [ABC, BCD, CDE, DEF].
   kTriangleStrip,
 
@@ -482,7 +479,6 @@ constexpr size_t BytesPerPixelForPixelFormat(PixelFormat format) {
     case PixelFormat::kB8G8R8A8UNormIntSRGB:
     case PixelFormat::kB10G10R10XRSRGB:
     case PixelFormat::kB10G10R10XR:
-    case PixelFormat::kR32Float:
       return 4u;
     case PixelFormat::kD24UnormS8Uint:
       return 4u;

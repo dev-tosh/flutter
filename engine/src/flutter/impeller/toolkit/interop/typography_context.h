@@ -7,9 +7,8 @@
 
 #include <memory>
 
-#include "flutter/fml/mapping.h"
 #include "flutter/third_party/skia/modules/skparagraph/include/TypefaceFontProvider.h"
-#include "flutter/txt/src/txt/font_collection.h"
+#include "flutter/third_party/txt/src/txt/font_collection.h"
 #include "impeller/toolkit/interop/impeller.h"
 #include "impeller/toolkit/interop/object.h"
 

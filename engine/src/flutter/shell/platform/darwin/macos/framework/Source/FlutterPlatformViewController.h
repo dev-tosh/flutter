@@ -14,7 +14,7 @@
 #include <map>
 #include <unordered_set>
 
-@interface FlutterPlatformViewController : NSObject
+@interface FlutterPlatformViewController : NSViewController
 @end
 
 @interface FlutterPlatformViewController ()
@@ -57,11 +57,6 @@
  * Removes platform views slated to be disposed via method handler calls.
  */
 - (void)disposePlatformViews;
-
-/**
- * Removes all platform views.
- */
-- (void)reset;
 
 @end
 

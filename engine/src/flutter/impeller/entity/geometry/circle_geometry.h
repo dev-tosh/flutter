@@ -30,19 +30,15 @@ class CircleGeometry final : public Geometry {
   // |Geometry|
   Scalar ComputeAlphaCoverage(const Matrix& transform) const override;
 
-  Scalar GetRadius() const;
-  Scalar GetStrokeWidth() const;
-  Point GetCenter() const;
-
-  // |Geometry|
-  std::optional<Rect> GetCoverage(const Matrix& transform) const override;
-
+ private:
   // |Geometry|
   GeometryResult GetPositionBuffer(const ContentContext& renderer,
                                    const Entity& entity,
                                    RenderPass& pass) const override;
 
- private:
+  // |Geometry|
+  std::optional<Rect> GetCoverage(const Matrix& transform) const override;
+
   Point center_;
   Scalar radius_;
   Scalar stroke_width_;

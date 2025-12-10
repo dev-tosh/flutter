@@ -14,19 +14,19 @@ namespace egl {
 
 int Manager::instance_count_ = 0;
 
-std::unique_ptr<Manager> Manager::Create(GpuPreference gpu_preference) {
+std::unique_ptr<Manager> Manager::Create() {
   std::unique_ptr<Manager> manager;
-  manager.reset(new Manager(gpu_preference));
+  manager.reset(new Manager());
   if (!manager->IsValid()) {
     return nullptr;
   }
   return std::move(manager);
 }
 
-Manager::Manager(GpuPreference gpu_preference) {
+Manager::Manager() {
   ++instance_count_;
 
-  if (!InitializeDisplay(gpu_preference)) {
+  if (!InitializeDisplay()) {
     return;
   }
 
@@ -46,47 +46,7 @@ Manager::~Manager() {
   --instance_count_;
 }
 
-bool Manager::InitializeDisplay(GpuPreference gpu_preference) {
-  // If the request for a low power GPU is provided,
-  // we will attempt to select GPU explicitly, via ANGLE extension
-  // that allows to specify the GPU to use via LUID.
-  std::optional<LUID> luid = std::nullopt;
-  switch (gpu_preference) {
-    case GpuPreference::LowPowerPreference:
-      luid = GetLowPowerGpuLuid();
-      break;
-    case GpuPreference::HighPerformancePreference:
-      luid = GetHighPerformanceGpuLuid();
-      break;
-    case GpuPreference::NoPreference:
-      break;
-  }
-
-  // These are preferred display attributes and request ANGLE's D3D11
-  // renderer (use only in case of valid LUID returned from above).
-  const EGLint d3d11_display_attributes_with_luid[] = {
-      EGL_PLATFORM_ANGLE_TYPE_ANGLE,
-      EGL_PLATFORM_ANGLE_TYPE_D3D11_ANGLE,
-
-      // EGL_PLATFORM_ANGLE_ENABLE_AUTOMATIC_TRIM_ANGLE is an option that will
-      // enable ANGLE to automatically call the IDXGIDevice3::Trim method on
-      // behalf of the application when it gets suspended.
-      EGL_PLATFORM_ANGLE_ENABLE_AUTOMATIC_TRIM_ANGLE,
-      EGL_TRUE,
-
-      // This extension allows angle to render directly on a D3D swapchain
-      // in the correct orientation on D3D11.
-      EGL_EXPERIMENTAL_PRESENT_PATH_ANGLE,
-      EGL_EXPERIMENTAL_PRESENT_PATH_FAST_ANGLE,
-
-      // Specify the LUID of the GPU to use.
-      EGL_PLATFORM_ANGLE_D3D_LUID_HIGH_ANGLE,
-      static_cast<EGLint>(luid.has_value() ? luid->HighPart : 0),
-      EGL_PLATFORM_ANGLE_D3D_LUID_LOW_ANGLE,
-      static_cast<EGLint>(luid.has_value() ? luid->LowPart : 0),
-      EGL_NONE,
-  };
-
+bool Manager::InitializeDisplay() {
   // These are preferred display attributes and request ANGLE's D3D11
   // renderer. eglInitialize will only succeed with these attributes if the
   // hardware supports D3D11 Feature Level 10_0+.
@@ -132,15 +92,11 @@ bool Manager::InitializeDisplay(GpuPreference gpu_preference) {
       EGL_NONE,
   };
 
-  std::vector<const EGLint*> display_attributes_configs;
-
-  if (luid) {
-    // If LUID value is present, obtain an adapter with that luid.
-    display_attributes_configs.push_back(d3d11_display_attributes_with_luid);
-  }
-  display_attributes_configs.push_back(d3d11_display_attributes);
-  display_attributes_configs.push_back(d3d11_fl_9_3_display_attributes);
-  display_attributes_configs.push_back(d3d11_warp_display_attributes);
+  std::vector<const EGLint*> display_attributes_configs = {
+      d3d11_display_attributes,
+      d3d11_fl_9_3_display_attributes,
+      d3d11_warp_display_attributes,
+  };
 
   PFNEGLGETPLATFORMDISPLAYEXTPROC egl_get_platform_display_EXT =
       reinterpret_cast<PFNEGLGETPLATFORMDISPLAYEXTPROC>(
@@ -338,47 +294,6 @@ Context* Manager::render_context() const {
 
 Context* Manager::resource_context() const {
   return resource_context_.get();
-}
-
-std::optional<LUID> Manager::GetGpuLuidByPreference(
-    DXGI_GPU_PREFERENCE preference) {
-  Microsoft::WRL::ComPtr<IDXGIFactory1> factory1;
-  HRESULT hr = ::CreateDXGIFactory1(IID_PPV_ARGS(&factory1));
-  if (FAILED(hr)) {
-    return std::nullopt;
-  }
-
-  Microsoft::WRL::ComPtr<IDXGIFactory6> factory6;
-  hr = factory1->QueryInterface(IID_PPV_ARGS(&factory6));
-  if (FAILED(hr)) {
-    // No support for IDXGIFactory6, so we will not use the selected GPU.
-    // We will follow with the default ANGLE selection.
-    return std::nullopt;
-  }
-
-  Microsoft::WRL::ComPtr<IDXGIAdapter1> adapter;
-  hr = factory6->EnumAdapterByGpuPreference(0, preference,
-                                            IID_PPV_ARGS(&adapter));
-  if (FAILED(hr) || !adapter) {
-    return std::nullopt;
-  }
-
-  // Get the LUID of the adapter.
-  DXGI_ADAPTER_DESC desc;
-  hr = adapter->GetDesc(&desc);
-  if (FAILED(hr)) {
-    return std::nullopt;
-  }
-
-  return desc.AdapterLuid;
-}
-
-std::optional<LUID> Manager::GetLowPowerGpuLuid() {
-  return GetGpuLuidByPreference(DXGI_GPU_PREFERENCE_MINIMUM_POWER);
-}
-
-std::optional<LUID> Manager::GetHighPerformanceGpuLuid() {
-  return GetGpuLuidByPreference(DXGI_GPU_PREFERENCE_HIGH_PERFORMANCE);
 }
 
 }  // namespace egl

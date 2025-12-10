@@ -15,53 +15,33 @@ typedef CanvasCallback = void Function(Canvas canvas);
 void main() {
   test('Vertices checks', () {
     try {
-      Vertices(VertexMode.triangles, const <Offset>[
-        Offset.zero,
-        Offset.zero,
-        Offset.zero,
-      ], indices: Uint16List.fromList(const <int>[0, 2, 5]));
+      Vertices(
+        VertexMode.triangles,
+        const <Offset>[Offset.zero, Offset.zero, Offset.zero],
+        indices: Uint16List.fromList(const <int>[0, 2, 5]),
+      );
       throw 'Vertices did not throw the expected error.';
     } on ArgumentError catch (e) {
-      expect(
-        '$e',
-        'Invalid argument(s): "indices" values must be valid indices in the positions list (i.e. numbers in the range 0..2), but indices[2] is 5, which is too big.',
-      );
+      expect('$e', 'Invalid argument(s): "indices" values must be valid indices in the positions list (i.e. numbers in the range 0..2), but indices[2] is 5, which is too big.');
     }
-    Vertices(
-      // This one does not throw.
+    Vertices( // This one does not throw.
       VertexMode.triangles,
       const <Offset>[Offset.zero],
     ).dispose();
-    Vertices(
-      // This one should not throw.
+    Vertices( // This one should not throw.
       VertexMode.triangles,
       const <Offset>[Offset.zero, Offset.zero, Offset.zero],
-      indices: Uint16List.fromList(const <int>[
-        0,
-        2,
-        1,
-        2,
-        0,
-        1,
-        2,
-        0,
-      ]), // Uint16List implements List<int> so this is ok.
+      indices: Uint16List.fromList(const <int>[0, 2, 1, 2, 0, 1, 2, 0]), // Uint16List implements List<int> so this is ok.
     ).dispose();
   });
 
   test('Vertices.raw checks', () {
-    expect(
-      () {
-        Vertices.raw(VertexMode.triangles, Float32List.fromList(const <double>[0.0]));
-      },
-      throwsA(
-        isA<ArgumentError>().having(
-          (ArgumentError e) => '$e',
-          'message',
-          'Invalid argument(s): "positions" must have an even number of entries (each coordinate is an x,y pair).',
-        ),
-      ),
-    );
+    expect(() {
+      Vertices.raw(
+        VertexMode.triangles,
+        Float32List.fromList(const <double>[0.0]),
+      );
+    }, throwsA(isA<ArgumentError>().having((ArgumentError e) => '$e', 'message', 'Invalid argument(s): "positions" must have an even number of entries (each coordinate is an x,y pair).')));
 
     Object? indicesError;
     try {
@@ -74,18 +54,13 @@ void main() {
     } on ArgumentError catch (e) {
       indicesError = e;
     }
-    expect(
-      '$indicesError',
-      'Invalid argument(s): "indices" values must be valid indices in the positions list (i.e. numbers in the range 0..2), but indices[2] is 5, which is too big.',
-    );
+    expect('$indicesError', 'Invalid argument(s): "indices" values must be valid indices in the positions list (i.e. numbers in the range 0..2), but indices[2] is 5, which is too big.');
 
-    Vertices.raw(
-      // This one does not throw.
+    Vertices.raw( // This one does not throw.
       VertexMode.triangles,
       Float32List.fromList(const <double>[0.0, 0.0]),
     ).dispose();
-    Vertices.raw(
-      // This one should not throw.
+    Vertices.raw( // This one should not throw.
       VertexMode.triangles,
       Float32List.fromList(const <double>[0.0, 0.0, 0.0, 0.0, 0.0, 0.0]),
       indices: Uint16List.fromList(const <int>[0, 2, 1, 2, 0, 1, 2, 0]),
@@ -95,13 +70,12 @@ void main() {
   test('BackdropFilter with multiple clips', () async {
     // Regression test for https://github.com/flutter/flutter/issues/144211
     Picture makePicture(CanvasCallback callback) {
-      final recorder = PictureRecorder();
-      final canvas = Canvas(recorder);
+      final PictureRecorder recorder = PictureRecorder();
+      final Canvas canvas = Canvas(recorder);
       callback(canvas);
       return recorder.endRecording();
     }
-
-    final sceneBuilder = SceneBuilder();
+    final SceneBuilder sceneBuilder = SceneBuilder();
 
     final Picture redClippedPicture = makePicture((Canvas canvas) {
       canvas.drawPaint(Paint()..color = const Color(0xFFFFFFFF));
@@ -111,7 +85,7 @@ void main() {
     });
     sceneBuilder.addPicture(Offset.zero, redClippedPicture);
 
-    final matrix = Float64List(16);
+    final Float64List matrix = Float64List(16);
     sceneBuilder.pushBackdropFilter(ImageFilter.matrix(matrix));
 
     final Picture whitePicture = makePicture((Canvas canvas) {
@@ -125,7 +99,7 @@ void main() {
     final ByteData data = (await image.toByteData())!;
     expect(data.buffer.asUint32List().length, 20 * 20);
     // If clipping went wrong as in the linked issue, there will be red pixels.
-    for (final int color in data.buffer.asUint32List()) {
+    for (final int color in  data.buffer.asUint32List()) {
       expect(color, 0xFFFFFFFF);
     }
 
@@ -137,34 +111,32 @@ void main() {
 
   Image backdropBlurWithTileMode(TileMode? tileMode) {
     Picture makePicture(CanvasCallback callback) {
-      final recorder = PictureRecorder();
-      final canvas = Canvas(recorder);
+      final PictureRecorder recorder = PictureRecorder();
+      final Canvas canvas = Canvas(recorder);
       callback(canvas);
       return recorder.endRecording();
     }
 
     const double rectSize = 10;
-    const count = 50;
+    const int count = 50;
     const double imgSize = rectSize * count;
 
     final Picture blueGreenGridPicture = makePicture((Canvas canvas) {
-      const white = Color(0xFFFFFFFF);
-      const purple = Color(0xFFFF00FF);
-      const blue = Color(0xFF0000FF);
-      const green = Color(0xFF00FF00);
-      const yellow = Color(0xFFFFFF00);
-      const red = Color(0xFFFF0000);
+      const Color white = Color(0xFFFFFFFF);
+      const Color purple = Color(0xFFFF00FF);
+      const Color blue = Color(0xFF0000FF);
+      const Color green = Color(0xFF00FF00);
+      const Color yellow = Color(0xFFFFFF00);
+      const Color red = Color(0xFFFF0000);
       canvas.drawColor(white, BlendMode.src);
-      for (var i = 0; i < count; i++) {
-        for (var j = 0; j < count; j++) {
-          final rectOdd = (i + j) & 1 == 0;
-          final fg = (i < count / 2)
-              ? ((j < count / 2) ? green : blue)
-              : ((j < count / 2) ? yellow : red);
-          canvas.drawRect(
-            Rect.fromLTWH(i * rectSize, j * rectSize, rectSize, rectSize),
-            Paint()..color = rectOdd ? fg : white,
-          );
+      for (int i = 0; i < count; i++) {
+        for (int j = 0; j < count; j++) {
+          final bool rectOdd = (i + j) & 1 == 0;
+          final Color fg = (i < count / 2)
+            ? ((j < count / 2) ? green : blue)
+            : ((j < count / 2) ? yellow : red);
+          canvas.drawRect(Rect.fromLTWH(i * rectSize, j * rectSize, rectSize, rectSize),
+                          Paint()..color = rectOdd ? fg : white);
         }
       }
       canvas.drawRect(const Rect.fromLTWH(0, 0, imgSize, 1), Paint()..color = purple);
@@ -173,7 +145,7 @@ void main() {
       canvas.drawRect(const Rect.fromLTWH(imgSize - 1, 0, 1, imgSize), Paint()..color = purple);
     });
 
-    final sceneBuilder = SceneBuilder();
+    final SceneBuilder sceneBuilder = SceneBuilder();
     sceneBuilder.addPicture(Offset.zero, blueGreenGridPicture);
     sceneBuilder.pushBackdropFilter(ImageFilter.blur(sigmaX: 20, sigmaY: 20, tileMode: tileMode));
 
@@ -238,7 +210,10 @@ void main() {
 
   test('ImageFilter.matrix defaults to FilterQuality.medium', () {
     final Float64List data = Matrix4.identity().storage;
-    expect(ImageFilter.matrix(data).toString(), 'ImageFilter.matrix($data, FilterQuality.medium)');
+    expect(
+      ImageFilter.matrix(data).toString(),
+      'ImageFilter.matrix($data, FilterQuality.medium)',
+    );
   });
 
   test('Picture.toImage generates mip maps', () async {
@@ -248,11 +223,11 @@ void main() {
     // of scale or number of pixels.
     late final Image image;
     {
-      final recorder = PictureRecorder();
-      final canvas = Canvas(recorder);
-      for (var i = 0; i < 20; i++) {
-        for (var j = 0; j < 20; j++) {
-          final color = (i + j).isEven ? const Color(0xFFFF0000) : const Color(0xFF0000FF);
+      final PictureRecorder recorder = PictureRecorder();
+      final Canvas canvas = Canvas(recorder);
+      for (int i = 0; i < 20; i++) {
+        for (int j = 0; j < 20; j++) {
+          final Color color = (i + j).isEven ? const Color(0xFFFF0000) : const Color(0xFF0000FF);
           canvas.drawRect(Rect.fromLTWH(i * 5, j * 5, 5, 5), Paint()..color = color);
         }
       }
@@ -260,8 +235,8 @@ void main() {
       image = await picture.toImage(100, 100);
     }
 
-    final recorder = PictureRecorder();
-    final canvas = Canvas(recorder);
+    final PictureRecorder recorder = PictureRecorder();
+    final Canvas canvas = Canvas(recorder);
     canvas.save();
     canvas.scale(0.25, 0.25);
     canvas.drawImage(image, Offset.zero, Paint()..filterQuality = FilterQuality.medium);
@@ -272,7 +247,7 @@ void main() {
     final ByteData data = (await resultImage.toByteData())!;
 
     final Int32List colors = data.buffer.asInt32List();
-    for (var i = 0; i < colors.length; i++) {
+    for (int i = 0; i < colors.length; i++) {
       expect(colors[i], isNot(const Color(0xFFFF0000)));
       expect(colors[i], isNot(const Color(0xFF0000FF)));
     }

@@ -15,11 +15,15 @@ int main() {
     final FileSystem fs = MemoryFileSystem();
     final String buildConfigPath = fs.path.join('flutter', 'ci', 'builders');
     final Directory buildConfigsDir = fs.directory(buildConfigPath);
-    final File buildConfigFile = buildConfigsDir.childFile('linux_test_build.json');
+    final File buildConfigFile = buildConfigsDir.childFile(
+      'linux_test_build.json',
+    );
     buildConfigFile.create(recursive: true);
     buildConfigFile.writeAsStringSync(fixtures.buildConfigJson);
 
-    final loader = BuildConfigLoader(buildConfigsDir: buildConfigsDir);
+    final BuildConfigLoader loader = BuildConfigLoader(
+      buildConfigsDir: buildConfigsDir,
+    );
 
     expect(loader.configs, isNotNull);
     expect(loader.errors, isEmpty);
@@ -35,10 +39,16 @@ int main() {
       'linux_test_build.json',
     );
     final Directory buildConfigsDir = fs.directory(buildConfigPath);
-    final loader = BuildConfigLoader(buildConfigsDir: buildConfigsDir);
+    final BuildConfigLoader loader = BuildConfigLoader(
+      buildConfigsDir: buildConfigsDir,
+    );
 
     expect(loader.configs, isNotNull);
-    expect(loader.errors[0], equals('flutter/ci/builders/linux_test_build.json does not exist.'));
+    expect(
+        loader.errors[0],
+        equals(
+          'flutter/ci/builders/linux_test_build.json does not exist.',
+        ));
     expect(loader.configs, equals(<String, BuilderConfig>{}));
   });
   return 0;

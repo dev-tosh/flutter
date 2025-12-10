@@ -183,7 +183,7 @@ public class KeyEmbedderResponder implements KeyboardManager.Responder {
               postSynchronize.add(
                   () ->
                       synthesizeEvent(
-                          false, key.logicalKey, eventPhysicalKey, event.getEventTime()));
+                          false, key.logicalKey, key.physicalKey, event.getEventTime()));
             }
             preEventStates[keyIdx] = nowStates[keyIdx];
             postEventAnyPressed = true;

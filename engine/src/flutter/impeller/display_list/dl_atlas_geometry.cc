@@ -11,11 +11,12 @@
 #include "impeller/entity/texture_fill.vert.h"
 #include "impeller/geometry/color.h"
 #include "impeller/geometry/point.h"
+#include "third_party/skia/include/core/SkPoint.h"
 
 namespace impeller {
 
 DlAtlasGeometry::DlAtlasGeometry(const std::shared_ptr<Texture>& atlas,
-                                 const RSTransform* xform,
+                                 const SkRSXform* xform,
                                  const flutter::DlRect* tex,
                                  const flutter::DlColor* colors,
                                  size_t count,
@@ -34,7 +35,7 @@ DlAtlasGeometry::DlAtlasGeometry(const std::shared_ptr<Texture>& atlas,
 DlAtlasGeometry::~DlAtlasGeometry() = default;
 
 bool DlAtlasGeometry::ShouldUseBlend() const {
-  return colors_ != nullptr && mode_ != BlendMode::kSrc;
+  return colors_ != nullptr && mode_ != BlendMode::kSource;
 }
 
 bool DlAtlasGeometry::ShouldSkip() const {
@@ -45,16 +46,18 @@ Rect DlAtlasGeometry::ComputeBoundingBox() const {
   if (cull_rect_.has_value()) {
     return cull_rect_.value();
   }
-  Rect bounding_box;
+  Rect bounding_box = {};
   for (size_t i = 0; i < count_; i++) {
-    auto bounds = xform_[i].GetBounds(tex_[i].GetSize());
-    bounding_box = Rect::Union(bounding_box, bounds);
+    auto matrix = skia_conversions::ToRSXForm(xform_[i]);
+    auto sample_rect = tex_[i];
+    auto bounds = Rect::MakeSize(sample_rect.GetSize()).TransformBounds(matrix);
+    bounding_box = bounds.Union(bounding_box);
   }
   cull_rect_ = bounding_box;
   return bounding_box;
 }
 
-const std::shared_ptr<Texture>& DlAtlasGeometry::GetAtlas() const {
+std::shared_ptr<Texture> DlAtlasGeometry::GetAtlas() const {
   return atlas_;
 }
 
@@ -67,21 +70,24 @@ BlendMode DlAtlasGeometry::GetBlendMode() const {
 }
 
 VertexBuffer DlAtlasGeometry::CreateSimpleVertexBuffer(
-    HostBuffer& data_host_buffer) const {
+    HostBuffer& host_buffer) const {
   using VS = TextureFillVertexShader;
+
   constexpr size_t indices[6] = {0, 1, 2, 1, 2, 3};
 
-  BufferView buffer_view = data_host_buffer.Emplace(
+  auto buffer_view = host_buffer.Emplace(
       sizeof(VS::PerVertexData) * count_ * 6, alignof(VS::PerVertexData),
       [&](uint8_t* raw_data) {
         VS::PerVertexData* data =
             reinterpret_cast<VS::PerVertexData*>(raw_data);
         int offset = 0;
-        ISize texture_size = atlas_->GetSize();
+        auto texture_size = atlas_->GetSize();
         for (auto i = 0u; i < count_; i++) {
           flutter::DlRect sample_rect = tex_[i];
+          Matrix matrix = skia_conversions::ToRSXForm(xform_[i]);
           auto points = sample_rect.GetPoints();
-          auto transformed_points = xform_[i].GetQuad(sample_rect.GetSize());
+          auto transformed_points = Rect::MakeSize(sample_rect.GetSize())
+                                        .GetTransformedPoints(matrix);
           for (size_t j = 0; j < 6; j++) {
             data[offset].position = transformed_points[indices[j]];
             data[offset].texture_coords = points[indices[j]] / texture_size;
@@ -99,21 +105,24 @@ VertexBuffer DlAtlasGeometry::CreateSimpleVertexBuffer(
 }
 
 VertexBuffer DlAtlasGeometry::CreateBlendVertexBuffer(
-    HostBuffer& data_host_buffer) const {
+    HostBuffer& host_buffer) const {
   using VS = PorterDuffBlendVertexShader;
+
   constexpr size_t indices[6] = {0, 1, 2, 1, 2, 3};
 
-  BufferView buffer_view = data_host_buffer.Emplace(
+  auto buffer_view = host_buffer.Emplace(
       sizeof(VS::PerVertexData) * count_ * 6, alignof(VS::PerVertexData),
       [&](uint8_t* raw_data) {
         VS::PerVertexData* data =
             reinterpret_cast<VS::PerVertexData*>(raw_data);
         int offset = 0;
-        ISize texture_size = atlas_->GetSize();
+        auto texture_size = atlas_->GetSize();
         for (auto i = 0u; i < count_; i++) {
           flutter::DlRect sample_rect = tex_[i];
+          Matrix matrix = skia_conversions::ToRSXForm(xform_[i]);
           auto points = sample_rect.GetPoints();
-          auto transformed_points = xform_[i].GetQuad(sample_rect.GetSize());
+          auto transformed_points = Rect::MakeSize(sample_rect.GetSize())
+                                        .GetTransformedPoints(matrix);
           for (size_t j = 0; j < 6; j++) {
             data[offset].vertices = transformed_points[indices[j]];
             data[offset].texture_coords = points[indices[j]] / texture_size;

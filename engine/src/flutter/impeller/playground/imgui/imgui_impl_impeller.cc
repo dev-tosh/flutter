@@ -6,13 +6,13 @@
 
 #include <algorithm>
 #include <climits>
-#include <format>
 #include <memory>
 #include <vector>
 
 #include "fml/mapping.h"
 #include "impeller/core/buffer_view.h"
 #include "impeller/core/host_buffer.h"
+#include "impeller/core/platform.h"
 #include "impeller/geometry/scalar.h"
 #include "impeller/geometry/vector.h"
 #include "impeller/playground/imgui/imgui_raster.frag.h"
@@ -100,7 +100,7 @@ bool ImGui_ImplImpeller_Init(
 
     blit_pass->AddCopy(impeller::DeviceBuffer::AsBufferView(device_buffer),
                        bd->font_texture);
-    blit_pass->EncodeCommands();
+    blit_pass->EncodeCommands(context->GetResourceAllocator());
 
     [[maybe_unused]] bool uploaded =
         context->GetCommandQueue()->Submit({command_buffer}).ok();
@@ -161,7 +161,7 @@ void ImGui_ImplImpeller_RenderDrawData(ImDrawData* draw_data,
   buffer_desc.storage_mode = impeller::StorageMode::kHostVisible;
 
   auto buffer = bd->context->GetResourceAllocator()->CreateBuffer(buffer_desc);
-  buffer->SetLabel("ImGui vertex+index buffer");
+  buffer->SetLabel(impeller::SPrintF("ImGui vertex+index buffer"));
 
   auto display_rect = impeller::Rect::MakeXYWH(
       draw_data->DisplayPos.x, draw_data->DisplayPos.y,
@@ -251,10 +251,10 @@ void ImGui_ImplImpeller_RenderDrawData(ImDrawData* draw_data,
           clip_rect = visible_clip.value();
         }
 
-        render_pass.SetCommandLabel(
-            std::format("ImGui draw list {} (command {})", draw_list_i, cmd_i));
+        render_pass.SetCommandLabel(impeller::SPrintF(
+            "ImGui draw list %d (command %d)", draw_list_i, cmd_i));
         render_pass.SetViewport(viewport);
-        render_pass.SetScissor(impeller::IRect32::RoundOut(clip_rect));
+        render_pass.SetScissor(impeller::IRect::RoundOut(clip_rect));
         render_pass.SetPipeline(bd->pipeline);
         VS::BindUniformBuffer(render_pass, vtx_uniforms);
         FS::BindTex(render_pass, bd->font_texture, bd->sampler);

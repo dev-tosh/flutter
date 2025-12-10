@@ -12,6 +12,7 @@
 #include "impeller/renderer/command_buffer.h"
 #include "impeller/renderer/render_pass.h"
 #include "impeller/renderer/render_target.h"
+#include "vulkan/vulkan_handles.hpp"
 
 namespace impeller {
 
@@ -34,7 +35,6 @@ class RenderPassVK final : public RenderPass {
   vk::CommandBuffer command_buffer_vk_;
   std::shared_ptr<Texture> color_image_vk_;
   std::shared_ptr<Texture> resolve_image_vk_;
-  uint32_t current_stencil_ = 0;
 
   // Per-command state.
   std::array<vk::DescriptorImageInfo, kMaxBindings> image_workspace_;
@@ -73,7 +73,7 @@ class RenderPassVK final : public RenderPass {
   void SetViewport(Viewport viewport) override;
 
   // |RenderPass|
-  void SetScissor(IRect32 scissor) override;
+  void SetScissor(IRect scissor) override;
 
   // |RenderPass|
   void SetElementCount(size_t count) override;
@@ -135,8 +135,7 @@ class RenderPassVK final : public RenderPass {
   SharedHandleVK<vk::RenderPass> CreateVKRenderPass(
       const ContextVK& context,
       const SharedHandleVK<vk::RenderPass>& recycled_renderpass,
-      const std::shared_ptr<CommandBufferVK>& command_buffer,
-      bool is_swapchain) const;
+      const std::shared_ptr<CommandBufferVK>& command_buffer) const;
 
   SharedHandleVK<vk::Framebuffer> CreateVKFramebuffer(
       const ContextVK& context,

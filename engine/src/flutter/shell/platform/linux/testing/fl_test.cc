@@ -7,7 +7,7 @@
 #include "flutter/shell/platform/linux/testing/fl_test.h"
 
 #include "flutter/shell/platform/linux/fl_engine_private.h"
-#include "flutter/shell/platform/linux/testing/mock_renderable.h"
+#include "flutter/shell/platform/linux/testing/mock_renderer.h"
 
 namespace {
 class ImModuleEnv : public ::testing::Environment {
@@ -58,6 +58,22 @@ gchar* bytes_to_hex_string(GBytes* bytes) {
     g_string_append_printf(hex_string, "%02x", data[i]);
   }
   return g_string_free(hex_string, FALSE);
+}
+
+FlEngine* make_mock_engine() {
+  g_autoptr(FlDartProject) project = fl_dart_project_new();
+  return make_mock_engine_with_project(project);
+}
+
+FlEngine* make_mock_engine_with_project(FlDartProject* project) {
+  g_autoptr(FlMockRenderer) renderer = fl_mock_renderer_new();
+  g_autoptr(FlEngine) engine =
+      fl_engine_new_with_renderer(project, FL_RENDERER(renderer));
+  g_autoptr(GError) engine_error = nullptr;
+  EXPECT_TRUE(fl_engine_start(engine, &engine_error));
+  EXPECT_EQ(engine_error, nullptr);
+
+  return static_cast<FlEngine*>(g_object_ref(engine));
 }
 
 void PrintTo(FlValue* v, std::ostream* os) {

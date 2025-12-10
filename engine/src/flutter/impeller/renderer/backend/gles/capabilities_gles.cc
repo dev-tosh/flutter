@@ -26,9 +26,6 @@ static const constexpr char* kMultisampledRenderToTextureExt =
 static const constexpr char* kMultisampledRenderToTexture2Ext =
     "GL_EXT_multisampled_render_to_texture2";
 
-// https://registry.khronos.org/OpenGL/extensions/OES/OES_element_index_uint.txt
-static const constexpr char* kElementIndexUintExt = "GL_OES_element_index_uint";
-
 CapabilitiesGLES::CapabilitiesGLES(const ProcTableGLES& gl) {
   {
     GLint value = 0;
@@ -127,10 +124,6 @@ CapabilitiesGLES::CapabilitiesGLES(const ProcTableGLES& gl) {
     supports_decal_sampler_address_mode_ = true;
   }
 
-  if (desc->HasExtension(kElementIndexUintExt)) {
-    supports_32bit_primitive_indices_ = true;
-  }
-
   if (desc->HasExtension(kMultisampledRenderToTextureExt)) {
     supports_implicit_msaa_ = true;
 
@@ -140,10 +133,6 @@ CapabilitiesGLES::CapabilitiesGLES(const ProcTableGLES& gl) {
       gl.GetIntegerv(GL_MAX_SAMPLES_EXT, &value);
       supports_offscreen_msaa_ = value >= 4;
     }
-  } else if (desc->GetGlVersion().major_version >= 3 && desc->IsES()) {
-    GLint value = 0;
-    gl.GetIntegerv(GL_MAX_SAMPLES, &value);
-    supports_offscreen_msaa_ = value >= 4;
   }
   is_es_ = desc->IsES();
   is_angle_ = desc->IsANGLE();
@@ -230,28 +219,12 @@ bool CapabilitiesGLES::SupportsPrimitiveRestart() const {
   return false;
 }
 
-bool CapabilitiesGLES::Supports32BitPrimitiveIndices() const {
-  return supports_32bit_primitive_indices_;
-}
-
-bool CapabilitiesGLES::SupportsExtendedRangeFormats() const {
-  return false;
-}
-
 PixelFormat CapabilitiesGLES::GetDefaultGlyphAtlasFormat() const {
   return default_glyph_atlas_format_;
 }
 
 ISize CapabilitiesGLES::GetMaximumRenderPassAttachmentSize() const {
   return max_texture_size;
-}
-
-size_t CapabilitiesGLES::GetMinimumUniformAlignment() const {
-  return 256;
-}
-
-bool CapabilitiesGLES::NeedsPartitionedHostBuffer() const {
-  return false;
 }
 
 }  // namespace impeller

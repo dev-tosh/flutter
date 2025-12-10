@@ -8,9 +8,11 @@
 
 #include "flutter/fml/logging.h"
 #include "flutter/testing/test_metal_context.h"
+#include "third_party/skia/include/core/SkCanvas.h"
 #include "third_party/skia/include/core/SkColorSpace.h"
 #include "third_party/skia/include/core/SkImage.h"
 #include "third_party/skia/include/core/SkRefCnt.h"
+#include "third_party/skia/include/core/SkSize.h"
 #include "third_party/skia/include/core/SkSurface.h"
 #include "third_party/skia/include/gpu/GpuTypes.h"
 #include "third_party/skia/include/gpu/ganesh/GrBackendSurface.h"
@@ -23,13 +25,13 @@ static_assert(__has_feature(objc_arc), "ARC must be enabled.");
 namespace flutter::testing {
 
 void TestMetalSurfaceImpl::Init(const TestMetalContext::TextureInfo& texture_info,
-                                const DlISize& surface_size) {
+                                const SkISize& surface_size) {
   id<MTLTexture> texture = (__bridge id<MTLTexture>)texture_info.texture;
 
   GrMtlTextureInfo skia_texture_info;
   skia_texture_info.fTexture.retain((__bridge GrMTLHandle)texture);
   GrBackendTexture backend_texture = GrBackendTextures::MakeMtl(
-      surface_size.width, surface_size.height, skgpu::Mipmapped::kNo, skia_texture_info);
+      surface_size.width(), surface_size.height(), skgpu::Mipmapped::kNo, skia_texture_info);
 
   sk_sp<SkSurface> surface = SkSurfaces::WrapBackendTexture(
       test_metal_context_.GetSkiaContext().get(), backend_texture, kTopLeft_GrSurfaceOrigin, 1,
@@ -47,7 +49,7 @@ void TestMetalSurfaceImpl::Init(const TestMetalContext::TextureInfo& texture_inf
 
 TestMetalSurfaceImpl::TestMetalSurfaceImpl(const TestMetalContext& test_metal_context,
                                            int64_t texture_id,
-                                           const DlISize& surface_size)
+                                           const SkISize& surface_size)
     : test_metal_context_(test_metal_context) {
   TestMetalContext::TextureInfo texture_info =
       const_cast<TestMetalContext&>(test_metal_context_).GetTextureInfo(texture_id);
@@ -55,9 +57,9 @@ TestMetalSurfaceImpl::TestMetalSurfaceImpl(const TestMetalContext& test_metal_co
 }
 
 TestMetalSurfaceImpl::TestMetalSurfaceImpl(const TestMetalContext& test_metal_context,
-                                           const DlISize& surface_size)
+                                           const SkISize& surface_size)
     : test_metal_context_(test_metal_context) {
-  if (surface_size.IsEmpty()) {
+  if (surface_size.isEmpty()) {
     FML_LOG(ERROR) << "Size of test Metal surface was empty.";
     return;
   }
@@ -85,7 +87,7 @@ sk_sp<SkImage> TestMetalSurfaceImpl::GetRasterSurfaceSnapshot() {
     return nullptr;
   }
 
-  auto host_snapshot = device_snapshot->makeRasterImage(nullptr);
+  auto host_snapshot = device_snapshot->makeRasterImage();
 
   if (!host_snapshot) {
     FML_LOG(ERROR) << "Could not create the host snapshot while attempting to "

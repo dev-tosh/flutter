@@ -14,8 +14,6 @@
 #include "flutter/impeller/renderer/backend/vulkan/swapchain/swapchain_vk.h"
 #include "flutter/shell/gpu/gpu_surface_vulkan_impeller.h"
 #include "flutter/vulkan/vulkan_native_surface_android.h"
-#include "impeller/renderer/backend/vulkan/swapchain/ahb/ahb_swapchain_vk.h"
-#include "impeller/toolkit/android/surface_transaction.h"
 
 namespace flutter {
 
@@ -26,6 +24,8 @@ AndroidSurfaceVKImpeller::AndroidSurfaceVKImpeller(
   auto& context_vk =
       impeller::ContextVK::Cast(*android_context->GetImpellerContext());
   surface_context_vk_ = context_vk.CreateSurfaceContext();
+  eager_gpu_surface_ =
+      std::make_unique<GPUSurfaceVulkanImpeller>(nullptr, surface_context_vk_);
 }
 
 AndroidSurfaceVKImpeller::~AndroidSurfaceVKImpeller() = default;
@@ -35,7 +35,7 @@ bool AndroidSurfaceVKImpeller::IsValid() const {
 }
 
 void AndroidSurfaceVKImpeller::TeardownOnScreenContext() {
-  surface_context_vk_->TeardownSwapchain();
+  // Nothing to do.
 }
 
 std::unique_ptr<Surface> AndroidSurfaceVKImpeller::CreateGPUSurface(
@@ -48,6 +48,14 @@ std::unique_ptr<Surface> AndroidSurfaceVKImpeller::CreateGPUSurface(
     return nullptr;
   }
 
+  if (eager_gpu_surface_) {
+    auto gpu_surface = std::move(eager_gpu_surface_);
+    if (!gpu_surface->IsValid()) {
+      return nullptr;
+    }
+    return gpu_surface;
+  }
+
   std::unique_ptr<GPUSurfaceVulkanImpeller> gpu_surface =
       std::make_unique<GPUSurfaceVulkanImpeller>(nullptr, surface_context_vk_);
 
@@ -58,9 +66,9 @@ std::unique_ptr<Surface> AndroidSurfaceVKImpeller::CreateGPUSurface(
   return gpu_surface;
 }
 
-bool AndroidSurfaceVKImpeller::OnScreenSurfaceResize(const DlISize& size) {
+bool AndroidSurfaceVKImpeller::OnScreenSurfaceResize(const SkISize& size) {
   surface_context_vk_->UpdateSurfaceSize(
-      impeller::ISize{size.width, size.height});
+      impeller::ISize{size.width(), size.height()});
   return true;
 }
 
@@ -73,8 +81,7 @@ bool AndroidSurfaceVKImpeller::ResourceContextClearCurrent() {
 }
 
 bool AndroidSurfaceVKImpeller::SetNativeWindow(
-    fml::RefPtr<AndroidNativeWindow> window,
-    const std::shared_ptr<PlatformViewAndroidJNI>& jni_facade) {
+    fml::RefPtr<AndroidNativeWindow> window) {
   if (window && (native_window_ == window)) {
     return OnScreenSurfaceResize(window->GetSize());
   }
@@ -85,19 +92,10 @@ bool AndroidSurfaceVKImpeller::SetNativeWindow(
     return false;
   }
 
-  impeller::CreateTransactionCB cb = [jni_facade = jni_facade]() {
-    FML_CHECK(jni_facade) << "JNI was nullptr";
-    ASurfaceTransaction* tx = jni_facade->createTransaction();
-    if (tx == nullptr) {
-      return impeller::android::SurfaceTransaction();
-    }
-    return impeller::android::SurfaceTransaction(tx);
-  };
-
   auto swapchain = impeller::SwapchainVK::Create(
       std::reinterpret_pointer_cast<impeller::Context>(
           surface_context_vk_->GetParent()),
-      window->handle(), cb);
+      window->handle());
 
   if (surface_context_vk_->SetSwapchain(std::move(swapchain))) {
     native_window_ = std::move(window);

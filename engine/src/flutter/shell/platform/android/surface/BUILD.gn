@@ -34,7 +34,6 @@ source_set("native_window") {
   public_configs = [ "//flutter:config" ]
 
   deps = [
-    "//flutter/display_list",
     "//flutter/fml",
     "//flutter/skia",
   ]

@@ -27,7 +27,10 @@ final class ReleaseVersion {
   /// ```
   ///
   /// Each number must be non-negative.
-  ReleaseVersion({required this.major, required this.minor}) {
+  ReleaseVersion({
+    required this.major,
+    required this.minor,
+  }) {
     RangeError.checkNotNegative(major, 'major');
     RangeError.checkNotNegative(minor, 'minor');
   }
@@ -54,7 +57,7 @@ final class ReleaseVersion {
   /// format (either empty/comments only, or missing a `major.minor` line in
   /// the format described in [ReleaseVersion.new]).
   static ReleaseVersion? parse(String fileContents) {
-    var parsedNone = false;
+    bool parsedNone = false;
     ReleaseVersion? parsed;
     for (final String line in LineSplitter.split(fileContents)) {
       final String trimmed = line.trim();
@@ -67,7 +70,10 @@ final class ReleaseVersion {
       }
       final List<String> parts = trimmed.split('.');
       if (parts.length != 2) {
-        throw FormatException('Expected "major.minor" format, got "$trimmed"', fileContents);
+        throw FormatException(
+          'Expected "major.minor" format, got "$trimmed"',
+          fileContents,
+        );
       }
       final int? major = int.tryParse(parts[0]);
       final int? minor = int.tryParse(parts[1]);
@@ -78,12 +84,21 @@ final class ReleaseVersion {
         );
       }
       if (parsed != null) {
-        throw FormatException('Multiple "major.minor" versions found', fileContents);
+        throw FormatException(
+          'Multiple "major.minor" versions found',
+          fileContents,
+        );
       }
-      parsed = ReleaseVersion(major: major, minor: minor);
+      parsed = ReleaseVersion(
+        major: major,
+        minor: minor,
+      );
     }
     if (parsed != null && parsedNone) {
-      throw FormatException('Both "none" and a "major.minor" version found', fileContents);
+      throw FormatException(
+        'Both "none" and a "major.minor" version found',
+        fileContents,
+      );
     }
     if (parsed != null) {
       return parsed;
@@ -102,7 +117,9 @@ final class ReleaseVersion {
 
   @override
   bool operator ==(Object other) {
-    return other is ReleaseVersion && other.major == major && other.minor == minor;
+    return other is ReleaseVersion &&
+        other.major == major &&
+        other.minor == minor;
   }
 
   @override

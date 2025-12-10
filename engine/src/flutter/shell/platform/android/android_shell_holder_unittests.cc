@@ -30,10 +30,6 @@ class MockPlatformViewAndroidJNI : public PlatformViewAndroidJNI {
                std::vector<std::vector<uint8_t>> string_attribute_args),
               (override));
   MOCK_METHOD(void,
-              FlutterViewSetApplicationLocale,
-              (const std::string locale),
-              (override));
-  MOCK_METHOD(void,
               FlutterViewUpdateCustomAccessibilityActions,
               (std::vector<uint8_t> actions_buffer,
                std::vector<std::string> strings),
@@ -95,29 +91,6 @@ class MockPlatformViewAndroidJNI : public PlatformViewAndroidJNI {
               (),
               (override));
   MOCK_METHOD(void, FlutterViewDestroyOverlaySurfaces, (), (override));
-  MOCK_METHOD(ASurfaceTransaction*, createTransaction, (), (override));
-  MOCK_METHOD(void, swapTransaction, (), (override));
-  MOCK_METHOD(void, applyTransaction, (), (override));
-  MOCK_METHOD(void, destroyOverlaySurface2, (), (override));
-  MOCK_METHOD(std::unique_ptr<PlatformViewAndroidJNI::OverlayMetadata>,
-              createOverlaySurface2,
-              (),
-              (override));
-  MOCK_METHOD(void,
-              onDisplayPlatformView2,
-              (int32_t view_id,
-               int32_t x,
-               int32_t y,
-               int32_t width,
-               int32_t height,
-               int32_t viewWidth,
-               int32_t viewHeight,
-               MutatorsStack mutators_stack),
-              (override));
-  MOCK_METHOD(void, hidePlatformView2, (int32_t view_id), (override));
-  MOCK_METHOD(void, onEndFrame2, (), (override));
-  MOCK_METHOD(void, showOverlaySurface2, (), (override));
-  MOCK_METHOD(void, hideOverlaySurface2, (), (override));
   MOCK_METHOD(std::unique_ptr<std::vector<std::string>>,
               FlutterViewComputePlatformResolvedLocale,
               (std::vector<std::string> supported_locales_data),
@@ -150,8 +123,7 @@ TEST(AndroidShellHolder, Create) {
   Settings settings;
   settings.enable_software_rendering = false;
   auto jni = std::make_shared<MockPlatformViewAndroidJNI>();
-  auto holder = std::make_unique<AndroidShellHolder>(
-      settings, jni, AndroidRenderingAPI::kImpellerOpenGLES);
+  auto holder = std::make_unique<AndroidShellHolder>(settings, jni);
   EXPECT_NE(holder.get(), nullptr);
   EXPECT_TRUE(holder->IsValid());
   EXPECT_NE(holder->GetPlatformView().get(), nullptr);
@@ -164,8 +136,7 @@ TEST(AndroidShellHolder, HandlePlatformMessage) {
   Settings settings;
   settings.enable_software_rendering = false;
   auto jni = std::make_shared<MockPlatformViewAndroidJNI>();
-  auto holder = std::make_unique<AndroidShellHolder>(
-      settings, jni, AndroidRenderingAPI::kImpellerOpenGLES);
+  auto holder = std::make_unique<AndroidShellHolder>(settings, jni);
   EXPECT_NE(holder.get(), nullptr);
   EXPECT_TRUE(holder->IsValid());
   EXPECT_NE(holder->GetPlatformView().get(), nullptr);
@@ -193,8 +164,7 @@ TEST(AndroidShellHolder, HandlePlatformMessage) {
 TEST(AndroidShellHolder, CreateWithMergedPlatformAndUIThread) {
   Settings settings;
   auto jni = std::make_shared<MockPlatformViewAndroidJNI>();
-  auto holder = std::make_unique<AndroidShellHolder>(
-      settings, jni, AndroidRenderingAPI::kImpellerOpenGLES);
+  auto holder = std::make_unique<AndroidShellHolder>(settings, jni);
   auto window = fml::MakeRefCounted<AndroidNativeWindow>(
       nullptr, /*is_fake_window=*/true);
   holder->GetPlatformView()->NotifyCreated(window);
@@ -206,11 +176,9 @@ TEST(AndroidShellHolder, CreateWithMergedPlatformAndUIThread) {
 
 TEST(AndroidShellHolder, CreateWithUnMergedPlatformAndUIThread) {
   Settings settings;
-  settings.merged_platform_ui_thread =
-      Settings::MergedPlatformUIThread::kDisabled;
+  settings.merged_platform_ui_thread = false;
   auto jni = std::make_shared<MockPlatformViewAndroidJNI>();
-  auto holder = std::make_unique<AndroidShellHolder>(
-      settings, jni, AndroidRenderingAPI::kImpellerOpenGLES);
+  auto holder = std::make_unique<AndroidShellHolder>(settings, jni);
   auto window = fml::MakeRefCounted<AndroidNativeWindow>(
       nullptr, /*is_fake_window=*/true);
   holder->GetPlatformView()->NotifyCreated(window);

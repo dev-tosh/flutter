@@ -9,21 +9,17 @@
 
 #include "flutter/display_list/dl_builder.h"
 #include "flutter/display_list/dl_color.h"
-#include "flutter/display_list/geometry/dl_path_builder.h"
-#include "flutter/txt/src/txt/font_style.h"
-#include "flutter/txt/src/txt/font_weight.h"
-#include "flutter/txt/src/txt/paragraph_style.h"
+#include "flutter/third_party/txt/src/txt/font_style.h"
+#include "flutter/third_party/txt/src/txt/font_weight.h"
+#include "flutter/third_party/txt/src/txt/paragraph_style.h"
 #include "impeller/entity/entity.h"
 #include "impeller/geometry/color.h"
 #include "impeller/geometry/matrix.h"
+#include "impeller/geometry/path_builder.h"
 #include "impeller/geometry/point.h"
 #include "impeller/geometry/rect.h"
 #include "impeller/geometry/size.h"
 #include "impeller/toolkit/interop/impeller.h"
-
-#include "flutter/third_party/skia/include/core/SkM44.h"
-#include "flutter/third_party/skia/include/core/SkPath.h"
-#include "flutter/third_party/skia/include/core/SkRRect.h"
 
 namespace impeller::interop {
 
@@ -36,14 +32,6 @@ constexpr std::optional<SkRect> ToSkiaType(const ImpellerRect* rect) {
 
 constexpr SkPoint ToSkiaType(const Point& point) {
   return SkPoint::Make(point.x, point.y);
-}
-
-constexpr SkColor ToSkiaType(const ImpellerColor& color) {
-  return SkColorSetARGB(color.alpha * 255,  //
-                        color.red * 255,    //
-                        color.green * 255,  //
-                        color.blue * 255    //
-  );
 }
 
 constexpr SkVector ToSkiaVector(const Size& point) {
@@ -94,7 +82,7 @@ constexpr flutter::DlColor ToDisplayListType(Color color) {
   );
 }
 
-inline SkMatrix ToSkMatrix(const Matrix& matrix) {
+constexpr SkMatrix ToSkMatrix(const Matrix& matrix) {
   return SkM44::ColMajor(matrix.m).asM33();
 }
 
@@ -138,25 +126,25 @@ constexpr flutter::DlBlendMode ToDisplayListType(BlendMode mode) {
   switch (mode) {
     case BlendMode::kClear:
       return Mode::kClear;
-    case BlendMode::kSrc:
+    case BlendMode::kSource:
       return Mode::kSrc;
-    case BlendMode::kDst:
+    case BlendMode::kDestination:
       return Mode::kDst;
-    case BlendMode::kSrcOver:
+    case BlendMode::kSourceOver:
       return Mode::kSrcOver;
-    case BlendMode::kDstOver:
+    case BlendMode::kDestinationOver:
       return Mode::kDstOver;
-    case BlendMode::kSrcIn:
+    case BlendMode::kSourceIn:
       return Mode::kSrcIn;
-    case BlendMode::kDstIn:
+    case BlendMode::kDestinationIn:
       return Mode::kDstIn;
-    case BlendMode::kSrcOut:
+    case BlendMode::kSourceOut:
       return Mode::kSrcOut;
-    case BlendMode::kDstOut:
+    case BlendMode::kDestinationOut:
       return Mode::kDstOut;
-    case BlendMode::kSrcATop:
+    case BlendMode::kSourceATop:
       return Mode::kSrcATop;
-    case BlendMode::kDstATop:
+    case BlendMode::kDestinationATop:
       return Mode::kDstATop;
     case BlendMode::kXor:
       return Mode::kXor;
@@ -286,14 +274,14 @@ constexpr FillType ToImpellerType(ImpellerFillType type) {
   return FillType::kNonZero;
 }
 
-constexpr flutter::DlClipOp ToImpellerType(ImpellerClipOperation op) {
+constexpr flutter::DlCanvas::ClipOp ToImpellerType(ImpellerClipOperation op) {
   switch (op) {
     case kImpellerClipOperationDifference:
-      return flutter::DlClipOp::kDifference;
+      return flutter::DlCanvas::ClipOp::kDifference;
     case kImpellerClipOperationIntersect:
-      return flutter::DlClipOp::kIntersect;
+      return flutter::DlCanvas::ClipOp::kIntersect;
   }
-  return flutter::DlClipOp::kDifference;
+  return flutter::DlCanvas::ClipOp::kDifference;
 }
 
 constexpr Color ToImpellerType(const ImpellerColor& color) {
@@ -310,25 +298,25 @@ constexpr BlendMode ToImpellerType(ImpellerBlendMode mode) {
     case kImpellerBlendModeClear:
       return BlendMode::kClear;
     case kImpellerBlendModeSource:
-      return BlendMode::kSrc;
+      return BlendMode::kSource;
     case kImpellerBlendModeDestination:
-      return BlendMode::kDst;
+      return BlendMode::kDestination;
     case kImpellerBlendModeSourceOver:
-      return BlendMode::kSrcOver;
+      return BlendMode::kSourceOver;
     case kImpellerBlendModeDestinationOver:
-      return BlendMode::kDstOver;
+      return BlendMode::kDestinationOver;
     case kImpellerBlendModeSourceIn:
-      return BlendMode::kSrcIn;
+      return BlendMode::kSourceIn;
     case kImpellerBlendModeDestinationIn:
-      return BlendMode::kDstIn;
+      return BlendMode::kDestinationIn;
     case kImpellerBlendModeSourceOut:
-      return BlendMode::kSrcOut;
+      return BlendMode::kSourceOut;
     case kImpellerBlendModeDestinationOut:
-      return BlendMode::kDstOut;
+      return BlendMode::kDestinationOut;
     case kImpellerBlendModeSourceATop:
-      return BlendMode::kSrcATop;
+      return BlendMode::kSourceATop;
     case kImpellerBlendModeDestinationATop:
-      return BlendMode::kDstATop;
+      return BlendMode::kDestinationATop;
     case kImpellerBlendModeXor:
       return BlendMode::kXor;
     case kImpellerBlendModePlus:
@@ -366,7 +354,7 @@ constexpr BlendMode ToImpellerType(ImpellerBlendMode mode) {
     case kImpellerBlendModeLuminosity:
       return BlendMode::kLuminosity;
   }
-  return BlendMode::kSrcOver;
+  return BlendMode::kSourceOver;
 }
 
 constexpr flutter::DlDrawStyle ToDisplayListType(ImpellerDrawStyle style) {
@@ -439,45 +427,28 @@ constexpr flutter::DlColor ToDisplayListType(ImpellerColor color) {
   );
 }
 
-constexpr txt::TextDecorationStyle ToTxtType(
-    ImpellerTextDecorationStyle style) {
-  switch (style) {
-    case kImpellerTextDecorationStyleSolid:
-      return txt::TextDecorationStyle::kSolid;
-    case kImpellerTextDecorationStyleDouble:
-      return txt::TextDecorationStyle::kDouble;
-    case kImpellerTextDecorationStyleDotted:
-      return txt::TextDecorationStyle::kDotted;
-    case kImpellerTextDecorationStyleDashed:
-      return txt::TextDecorationStyle::kDashed;
-    case kImpellerTextDecorationStyleWavy:
-      return txt::TextDecorationStyle::kWavy;
-  }
-  return txt::TextDecorationStyle::kSolid;
-}
-
-constexpr int ToTxtType(ImpellerFontWeight weight) {
+constexpr txt::FontWeight ToTxtType(ImpellerFontWeight weight) {
   switch (weight) {
     case kImpellerFontWeight100:
-      return 100;
+      return txt::FontWeight::w100;
     case kImpellerFontWeight200:
-      return 200;
+      return txt::FontWeight::w200;
     case kImpellerFontWeight300:
-      return 300;
+      return txt::FontWeight::w300;
     case kImpellerFontWeight400:
-      return 400;
+      return txt::FontWeight::w400;
     case kImpellerFontWeight500:
-      return 500;
+      return txt::FontWeight::w500;
     case kImpellerFontWeight600:
-      return 600;
+      return txt::FontWeight::w600;
     case kImpellerFontWeight700:
-      return 700;
+      return txt::FontWeight::w700;
     case kImpellerFontWeight800:
-      return 800;
+      return txt::FontWeight::w800;
     case kImpellerFontWeight900:
-      return 900;
+      return txt::FontWeight::w900;
   }
-  return txt::FontWeight::normal;
+  return txt::FontWeight::w400;
 }
 
 constexpr txt::FontStyle ToTxtType(ImpellerFontStyle style) {

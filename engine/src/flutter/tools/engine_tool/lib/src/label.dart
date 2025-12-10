@@ -103,22 +103,33 @@ final class Label {
   static FormatException? _checkPackage(String package) {
     // Must start with a double slash.
     if (!package.startsWith('//')) {
-      return FormatException('Package name must start with "//".', package);
+      return FormatException(
+        'Package name must start with "//".',
+        package,
+      );
     }
 
     // Cannot end with a slash.
     if (package.endsWith('/')) {
-      return FormatException('Package name must not end with a slash.', package);
+      return FormatException(
+        'Package name must not end with a slash.',
+        package,
+      );
     }
 
     // Check each component of the package name for valid identifier characters.
     // We use a standard loop to give a better error message.
-    var i = 2;
+    int i = 2;
     while (true) {
       final int j = package.indexOf('/', i);
-      final String component = j == -1 ? package.substring(i) : package.substring(i, j);
+      final String component =
+          j == -1 ? package.substring(i) : package.substring(i, j);
       if (!_identifier.hasMatch(component)) {
-        return FormatException('Package name component must be a valid identifier.', package, i);
+        return FormatException(
+          'Package name component must be a valid identifier.',
+          package,
+          i,
+        );
       }
       if (j == -1) {
         return null;
@@ -129,7 +140,10 @@ final class Label {
 
   static FormatException? _checkTarget(String target) {
     if (!_identifier.hasMatch(target)) {
-      return FormatException('Target name must be a valid identifier.', target);
+      return FormatException(
+        'Target name must be a valid identifier.',
+        target,
+      );
     }
     return null;
   }
@@ -152,7 +166,7 @@ final class TargetPattern {
   factory TargetPattern(String package, [String? target]) {
     // We are so close to a Label that we can reuse the same checks.
     // The only difference is that the package name can end with `...`.
-    var packageEndsWithWildcard = false;
+    bool packageEndsWithWildcard = false;
     if (package.endsWith('/...')) {
       packageEndsWithWildcard = true;
       package = package.substring(0, package.length - 4);
@@ -164,7 +178,7 @@ final class TargetPattern {
     }
 
     // Throws a FormatException if the package or target name is invalid.
-    final label = Label(package, target);
+    final Label label = Label(package, target);
     return TargetPattern._(
       packageEndsWithWildcard ? '${label.package}...' : label.package,
       packageEndsWithWildcard ? null : label.target,
@@ -181,7 +195,10 @@ final class TargetPattern {
     if (colon == -1) {
       return TargetPattern(pattern);
     }
-    return TargetPattern(pattern.substring(0, colon), pattern.substring(colon + 1));
+    return TargetPattern(
+      pattern.substring(0, colon),
+      pattern.substring(colon + 1),
+    );
   }
 
   /// A source-absolute package name optionally ending with `...`.
@@ -194,7 +211,9 @@ final class TargetPattern {
 
   @override
   bool operator ==(Object other) {
-    return other is TargetPattern && package == other.package && target == other.target;
+    return other is TargetPattern &&
+        package == other.package &&
+        target == other.target;
   }
 
   @override

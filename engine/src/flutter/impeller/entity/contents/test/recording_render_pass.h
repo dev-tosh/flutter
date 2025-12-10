@@ -34,7 +34,7 @@ class RecordingRenderPass : public RenderPass {
   void SetViewport(Viewport viewport) override;
 
   // |RenderPass|
-  void SetScissor(IRect32 scissor) override;
+  void SetScissor(IRect scissor) override;
 
   // |RenderPass|
   void SetInstanceCount(size_t count) override;

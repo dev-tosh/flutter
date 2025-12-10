@@ -4,6 +4,7 @@
 
 #include "flutter/display_list/testing/dl_test_surface_gl.h"
 
+#include "third_party/skia/include/core/SkCanvas.h"
 #include "third_party/skia/include/core/SkSurface.h"
 #include "third_party/skia/include/gpu/ganesh/SkSurfaceGanesh.h"
 
@@ -15,7 +16,7 @@ using PixelFormat = DlSurfaceProvider::PixelFormat;
 bool DlOpenGLSurfaceProvider::InitializeSurface(size_t width,
                                                 size_t height,
                                                 PixelFormat format) {
-  gl_surface_ = std::make_unique<TestGLSurface>(DlISize(width, height));
+  gl_surface_ = std::make_unique<TestGLSurface>(SkISize::Make(width, height));
   gl_surface_->MakeCurrent();
 
   primary_ = MakeOffscreenSurface(width, height, format);

@@ -29,7 +29,8 @@ void SurfaceTextureExternalTextureGLImpeller::ProcessFrame(
     desc.type = impeller::TextureType::kTextureExternalOES;
     desc.storage_mode = impeller::StorageMode::kDevicePrivate;
     desc.format = impeller::PixelFormat::kR8G8B8A8UNormInt;
-    desc.size = {1, 1};
+    desc.size = {static_cast<int>(bounds.width()),
+                 static_cast<int>(bounds.height())};
     desc.mip_count = 1;
     texture_ = std::make_shared<impeller::TextureGLES>(
         impeller_context_->GetReactor(), desc);
@@ -55,9 +56,6 @@ void SurfaceTextureExternalTextureGLImpeller::ProcessFrame(
 
 void SurfaceTextureExternalTextureGLImpeller::Detach() {
   SurfaceTextureExternalTexture::Detach();
-  // Detach will collect the texture handle.
-  // See also: https://github.com/flutter/flutter/issues/152459
-  texture_->Leak();
   texture_.reset();
 }
 

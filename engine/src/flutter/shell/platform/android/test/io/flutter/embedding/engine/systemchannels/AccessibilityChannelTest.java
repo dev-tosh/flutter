@@ -20,7 +20,9 @@ import org.junit.runner.RunWith;
 import org.robolectric.RobolectricTestRunner;
 import org.robolectric.annotation.Config;
 
-@Config(shadows = {})
+@Config(
+    manifest = Config.NONE,
+    shadows = {})
 @RunWith(RobolectricTestRunner.class)
 @TargetApi(API_LEVELS.API_24)
 public class AccessibilityChannelTest {

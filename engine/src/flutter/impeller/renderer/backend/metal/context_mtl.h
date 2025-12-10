@@ -67,19 +67,16 @@ class ContextMTL final : public Context,
                          public std::enable_shared_from_this<ContextMTL> {
  public:
   static std::shared_ptr<ContextMTL> Create(
-      const Flags& flags,
       const std::vector<std::string>& shader_library_paths,
       std::shared_ptr<const fml::SyncSwitch> is_gpu_disabled_sync_switch);
 
   static std::shared_ptr<ContextMTL> Create(
-      const Flags& flags,
       const std::vector<std::shared_ptr<fml::Mapping>>& shader_libraries_data,
       std::shared_ptr<const fml::SyncSwitch> is_gpu_disabled_sync_switch,
       const std::string& label,
       std::optional<PixelFormat> pixel_format_override = std::nullopt);
 
   static std::shared_ptr<ContextMTL> Create(
-      const Flags& flags,
       id<MTLDevice> device,
       id<MTLCommandQueue> command_queue,
       const std::vector<std::shared_ptr<fml::Mapping>>& shader_libraries_data,
@@ -146,9 +143,6 @@ class ContextMTL final : public Context,
   void StoreTaskForGPU(const fml::closure& task,
                        const fml::closure& failure) override;
 
-  // visible for testing.
-  void FlushTasksAwaitingGPU();
-
  private:
   class SyncSwitchObserver : public fml::SyncSwitch::Observer {
    public:
@@ -174,8 +168,8 @@ class ContextMTL final : public Context,
   std::shared_ptr<const Capabilities> device_capabilities_;
   std::shared_ptr<const fml::SyncSwitch> is_gpu_disabled_sync_switch_;
   Mutex tasks_awaiting_gpu_mutex_;
-  std::deque<PendingTasks> tasks_awaiting_gpu_
-      IPLR_GUARDED_BY(tasks_awaiting_gpu_mutex_);
+  std::deque<PendingTasks> tasks_awaiting_gpu_ IPLR_GUARDED_BY(
+      tasks_awaiting_gpu_mutex_);
   std::unique_ptr<SyncSwitchObserver> sync_switch_observer_;
   std::shared_ptr<CommandQueue> command_queue_ip_;
 #ifdef IMPELLER_DEBUG
@@ -184,8 +178,7 @@ class ContextMTL final : public Context,
 #endif  // IMPELLER_DEBUG
   bool is_valid_ = false;
 
-  ContextMTL(const Flags& flags,
-             id<MTLDevice> device,
+  ContextMTL(id<MTLDevice> device,
              id<MTLCommandQueue> command_queue,
              NSArray<id<MTLLibrary>>* shader_libraries,
              std::shared_ptr<const fml::SyncSwitch> is_gpu_disabled_sync_switch,
@@ -193,6 +186,8 @@ class ContextMTL final : public Context,
 
   std::shared_ptr<CommandBuffer> CreateCommandBufferInQueue(
       id<MTLCommandQueue> queue) const;
+
+  void FlushTasksAwaitingGPU();
 
   ContextMTL(const ContextMTL&) = delete;
 

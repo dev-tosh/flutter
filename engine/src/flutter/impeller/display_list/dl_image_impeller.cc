@@ -41,23 +41,15 @@ sk_sp<DlImageImpeller> DlImageImpeller::MakeFromYUVTextures(
   auto yuv_to_rgb_filter_contents = FilterContents::MakeYUVToRGBFilter(
       std::move(y_texture), std::move(uv_texture), yuv_color_space);
   impeller::Entity entity;
-  entity.SetBlendMode(impeller::BlendMode::kSrc);
-
-  // Disable the render target cache so that this snapshot's texture will not
-  // be reused later by other operations.
-  const auto& renderer = aiks_context->GetContentContext();
-  renderer.GetRenderTargetCache()->DisableCache();
-  fml::ScopedCleanupClosure restore_cache(
-      [&] { renderer.GetRenderTargetCache()->EnableCache(); });
-
-  std::optional<Snapshot> snapshot =
-      yuv_to_rgb_filter_contents->RenderToSnapshot(
-          renderer, entity,
-          {.coverage_limit = std::nullopt,
-           .sampler_descriptor = std::nullopt,
-           .msaa_enabled = true,
-           .mip_count = 1,
-           .label = "MakeYUVToRGBFilter Snapshot"});
+  entity.SetBlendMode(impeller::BlendMode::kSource);
+  auto snapshot = yuv_to_rgb_filter_contents->RenderToSnapshot(
+      aiks_context->GetContentContext(),  // renderer
+      entity,                             // entity
+      std::nullopt,                       // coverage_limit
+      std::nullopt,                       // sampler_descriptor
+      true,                               // msaa_enabled
+      /*mip_count=*/1,
+      "MakeYUVToRGBFilter Snapshot");  // label
   if (!snapshot.has_value()) {
     return nullptr;
   }
@@ -112,10 +104,9 @@ bool DlImageImpeller::isUIThreadSafe() const {
 }
 
 // |DlImage|
-flutter::DlISize DlImageImpeller::GetSize() const {
-  // texture |GetSize()| returns a 64-bit size, but we need a 32-bit size,
-  // so we need to convert to DlISize (the 32-bit variant) either way.
-  return texture_ ? flutter::DlISize(texture_->GetSize()) : flutter::DlISize();
+SkISize DlImageImpeller::dimensions() const {
+  const auto size = texture_ ? texture_->GetSize() : ISize{};
+  return SkISize::Make(size.width, size.height);
 }
 
 // |DlImage|

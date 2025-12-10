@@ -25,7 +25,6 @@ using DlPoint = flutter::DlPoint;
 using DlRect = flutter::DlRect;
 using DlIRect = flutter::DlIRect;
 using DlRoundRect = flutter::DlRoundRect;
-using DlRoundSuperellipse = flutter::DlRoundSuperellipse;
 using DlPath = flutter::DlPath;
 
 class DlDispatcherBase : public flutter::DlOpReceiver {
@@ -125,29 +124,18 @@ class DlDispatcherBase : public flutter::DlOpReceiver {
   void transformReset() override;
 
   // |flutter::DlOpReceiver|
-  void clipRect(const DlRect& rect,
-                flutter::DlClipOp clip_op,
-                bool is_aa) override;
+  void clipRect(const DlRect& rect, ClipOp clip_op, bool is_aa) override;
 
   // |flutter::DlOpReceiver|
-  void clipOval(const DlRect& bounds,
-                flutter::DlClipOp clip_op,
-                bool is_aa) override;
+  void clipOval(const DlRect& bounds, ClipOp clip_op, bool is_aa) override;
 
   // |flutter::DlOpReceiver|
   void clipRoundRect(const DlRoundRect& rrect,
-                     flutter::DlClipOp clip_op,
+                     ClipOp clip_op,
                      bool is_aa) override;
 
   // |flutter::DlOpReceiver|
-  void clipRoundSuperellipse(const DlRoundSuperellipse& rse,
-                             flutter::DlClipOp clip_op,
-                             bool is_aa) override;
-
-  // |flutter::DlOpReceiver|
-  void clipPath(const DlPath& path,
-                flutter::DlClipOp clip_op,
-                bool is_aa) override;
+  void clipPath(const DlPath& path, ClipOp clip_op, bool is_aa) override;
 
   // |flutter::DlOpReceiver|
   void drawColor(flutter::DlColor color, flutter::DlBlendMode mode) override;
@@ -181,9 +169,6 @@ class DlDispatcherBase : public flutter::DlOpReceiver {
                          const DlRoundRect& inner) override;
 
   // |flutter::DlOpReceiver|
-  void drawRoundSuperellipse(const DlRoundSuperellipse& rse) override;
-
-  // |flutter::DlOpReceiver|
   void drawPath(const DlPath& path) override;
 
   // |flutter::DlOpReceiver|
@@ -193,7 +178,7 @@ class DlDispatcherBase : public flutter::DlOpReceiver {
                bool use_center) override;
 
   // |flutter::DlOpReceiver|
-  void drawPoints(flutter::DlPointMode mode,
+  void drawPoints(PointMode mode,
                   uint32_t count,
                   const DlPoint points[]) override;
 
@@ -213,7 +198,7 @@ class DlDispatcherBase : public flutter::DlOpReceiver {
                      const DlRect& dst,
                      flutter::DlImageSampling sampling,
                      bool render_with_attributes,
-                     flutter::DlSrcRectConstraint constraint) override;
+                     SrcRectConstraint constraint) override;
 
   // |flutter::DlOpReceiver|
   void drawImageNine(const sk_sp<flutter::DlImage> image,
@@ -224,7 +209,7 @@ class DlDispatcherBase : public flutter::DlOpReceiver {
 
   // |flutter::DlOpReceiver|
   void drawAtlas(const sk_sp<flutter::DlImage> atlas,
-                 const RSTransform xform[],
+                 const SkRSXform xform[],
                  const DlRect tex[],
                  const flutter::DlColor colors[],
                  int count,
@@ -238,9 +223,14 @@ class DlDispatcherBase : public flutter::DlOpReceiver {
                        DlScalar opacity) override;
 
   // |flutter::DlOpReceiver|
-  void drawText(const std::shared_ptr<flutter::DlText>& text,
-                DlScalar x,
-                DlScalar y) override;
+  void drawTextBlob(const sk_sp<SkTextBlob> blob,
+                    DlScalar x,
+                    DlScalar y) override;
+
+  // |flutter::DlOpReceiver|
+  void drawTextFrame(const std::shared_ptr<impeller::TextFrame>& text_frame,
+                     DlScalar x,
+                     DlScalar y) override;
 
   // |flutter::DlOpReceiver|
   void drawShadow(const DlPath& path,
@@ -264,10 +254,9 @@ class CanvasDlDispatcher : public DlDispatcherBase {
  public:
   CanvasDlDispatcher(ContentContext& renderer,
                      RenderTarget& render_target,
-                     bool is_onscreen,
                      bool has_root_backdrop_filter,
                      flutter::DlBlendMode max_root_blend_mode,
-                     IRect32 cull_rect);
+                     IRect cull_rect);
 
   ~CanvasDlDispatcher() = default;
 
@@ -339,22 +328,19 @@ class FirstPassDispatcher : public flutter::IgnoreAttributeDispatchHelper,
   // 2x3 2D affine subset of a 4x4 transform in row major order
   void transform2DAffine(DlScalar mxx, DlScalar mxy, DlScalar mxt,
                          DlScalar myx, DlScalar myy, DlScalar myt) override;
-  // clang-format on
 
-  // clang-format off
   // full 4x4 transform in row major order
   void transformFullPerspective(
       DlScalar mxx, DlScalar mxy, DlScalar mxz, DlScalar mxt,
       DlScalar myx, DlScalar myy, DlScalar myz, DlScalar myt,
       DlScalar mzx, DlScalar mzy, DlScalar mzz, DlScalar mzt,
       DlScalar mwx, DlScalar mwy, DlScalar mwz, DlScalar mwt) override;
-  // clang-format on
 
   void transformReset() override;
 
-  void drawText(const std::shared_ptr<flutter::DlText>& text,
-                DlScalar x,
-                DlScalar y) override;
+  void drawTextFrame(const std::shared_ptr<impeller::TextFrame>& text_frame,
+                     DlScalar x,
+                     DlScalar y) override;
 
   void drawDisplayList(const sk_sp<flutter::DisplayList> display_list,
                        DlScalar opacity) override;
@@ -380,8 +366,7 @@ class FirstPassDispatcher : public flutter::IgnoreAttributeDispatchHelper,
   // |flutter::DlOpReceiver|
   void setImageFilter(const flutter::DlImageFilter* filter) override;
 
-  std::pair<std::unordered_map<int64_t, BackdropData>, size_t>
-  TakeBackdropData();
+  std::pair<std::unordered_map<int64_t, BackdropData>, size_t> TakeBackdropData();
 
  private:
   const Rect GetCurrentLocalCullingBounds() const;
@@ -403,19 +388,13 @@ std::shared_ptr<Texture> DisplayListToTexture(
     ISize size,
     AiksContext& context,
     bool reset_host_buffer = true,
-    bool generate_mips = false,
-    std::optional<PixelFormat> target_pixel_format = std::nullopt);
+    bool generate_mips = false);
 
-/// @brief Render the provided display list to the render target.
-///
-/// If [is_onscreen] is true, then the onscreen command buffer will be
-/// submitted via Context::SubmitOnscreen.
-bool RenderToTarget(ContentContext& context,
-                    RenderTarget render_target,
-                    const sk_sp<flutter::DisplayList>& display_list,
-                    Rect cull_rect,
-                    bool reset_host_buffer,
-                    bool is_onscreen = true);
+/// Render the provided display list to the render target.
+bool RenderToOnscreen(ContentContext& context, RenderTarget render_target,
+                         const sk_sp<flutter::DisplayList>& display_list,
+                         SkIRect cull_rect,
+                         bool reset_host_buffer);
 
 }  // namespace impeller
 

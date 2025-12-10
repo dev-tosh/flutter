@@ -9,9 +9,9 @@ import 'package:test/test.dart';
 
 void main() {
   test('Image constructor and dispose invokes onCreate once', () async {
-    var onCreateInvokedCount = 0;
+    int onCreateInvokedCount = 0;
     Image? createdImage;
-    var onDisposeInvokedCount = 0;
+    int onDisposeInvokedCount = 0;
     Image? disposedImage;
     Image.onCreate = (Image image) {
       onCreateInvokedCount++;
@@ -22,16 +22,14 @@ void main() {
       disposedImage = image;
     };
 
-    final Image image1 = await _createImage()
-      ..dispose();
+    final Image image1 = await _createImage()..dispose();
 
     expect(onCreateInvokedCount, 1);
     expect(createdImage, image1);
     expect(onDisposeInvokedCount, 1);
     expect(disposedImage, image1);
 
-    final Image image2 = await _createImage()
-      ..dispose();
+    final Image image2 = await _createImage()..dispose();
 
     expect(onCreateInvokedCount, 2);
     expect(createdImage, image2);
@@ -46,9 +44,9 @@ void main() {
 Future<Image> _createImage() => _createPicture().toImage(10, 10);
 
 Picture _createPicture() {
-  final recorder = PictureRecorder();
-  final canvas = Canvas(recorder);
-  const rect = Rect.fromLTWH(0.0, 0.0, 100.0, 100.0);
+  final PictureRecorder recorder = PictureRecorder();
+  final Canvas canvas = Canvas(recorder);
+  const Rect rect = Rect.fromLTWH(0.0, 0.0, 100.0, 100.0);
   canvas.clipRect(rect);
   return recorder.endRecording();
 }

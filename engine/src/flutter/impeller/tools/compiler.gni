@@ -13,9 +13,6 @@ import("//flutter/impeller/tools/args.gni")
 # * When the `single_invocation` argument is true, `impellerc` is only
 #   invoked once via `compiled_action` or `action`.
 template("_impellerc") {
-  if (!defined(invoker.mnemonic)) {
-    mnemonic = "IMPELLERC"
-  }
   if (invoker.single_invocation) {
     compiled_action(target_name) {
       forward_variables_from(invoker, "*")
@@ -97,7 +94,6 @@ template("impellerc") {
              ])
 
   _impellerc(target_name) {
-    forward_variables_from(invoker, [ "mnemonic" ])
     pool = "//build/toolchain:toolchain_pool"
     shader_bundle = defined(invoker.shader_bundle)
 
@@ -148,10 +144,6 @@ template("impellerc") {
     if (defined(invoker.require_framebuffer_fetch) &&
         invoker.require_framebuffer_fetch) {
       args += [ "--require-framebuffer-fetch" ]
-    }
-
-    if (defined(invoker.entry_point_prefix)) {
-      args += [ "--entry-point-prefix=${invoker.entry_point_prefix}" ]
     }
 
     if (json) {

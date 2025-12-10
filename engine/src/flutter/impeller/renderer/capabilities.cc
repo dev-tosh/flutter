@@ -11,10 +11,6 @@ Capabilities::Capabilities() = default;
 
 Capabilities::~Capabilities() = default;
 
-size_t Capabilities::GetMinimumStorageBufferAlignment() const {
-  return GetMinimumUniformAlignment();
-}
-
 class StandardCapabilities final : public Capabilities {
  public:
   // |Capabilities|
@@ -95,24 +91,6 @@ class StandardCapabilities final : public Capabilities {
   // |Capabilities|
   bool SupportsPrimitiveRestart() const override { return true; }
 
-  // |Capabilities|
-  bool Supports32BitPrimitiveIndices() const override { return true; }
-
-  // |Capabilities|
-  bool SupportsExtendedRangeFormats() const override {
-    return supports_extended_range_formats_;
-  }
-
-  // |Capabilities|
-  size_t GetMinimumUniformAlignment() const override {
-    return minimum_uniform_alignment_;
-  }
-
-  // |Capabilities|
-  bool NeedsPartitionedHostBuffer() const override {
-    return needs_partitioned_host_buffer_;
-  }
-
  private:
   StandardCapabilities(bool supports_offscreen_msaa,
                        bool supports_ssbo,
@@ -124,14 +102,11 @@ class StandardCapabilities final : public Capabilities {
                        bool supports_decal_sampler_address_mode,
                        bool supports_device_transient_textures,
                        bool supports_triangle_fan,
-                       bool supports_extended_range_formats,
                        PixelFormat default_color_format,
                        PixelFormat default_stencil_format,
                        PixelFormat default_depth_stencil_format,
                        PixelFormat default_glyph_atlas_format,
-                       ISize default_maximum_render_pass_attachment_size,
-                       size_t minimum_uniform_alignment,
-                       bool needs_partitioned_host_buffer)
+                       ISize default_maximum_render_pass_attachment_size)
       : supports_offscreen_msaa_(supports_offscreen_msaa),
         supports_ssbo_(supports_ssbo),
         supports_texture_to_texture_blits_(supports_texture_to_texture_blits),
@@ -143,15 +118,12 @@ class StandardCapabilities final : public Capabilities {
             supports_decal_sampler_address_mode),
         supports_device_transient_textures_(supports_device_transient_textures),
         supports_triangle_fan_(supports_triangle_fan),
-        supports_extended_range_formats_(supports_extended_range_formats),
-        needs_partitioned_host_buffer_(needs_partitioned_host_buffer),
         default_color_format_(default_color_format),
         default_stencil_format_(default_stencil_format),
         default_depth_stencil_format_(default_depth_stencil_format),
         default_glyph_atlas_format_(default_glyph_atlas_format),
         default_maximum_render_pass_attachment_size_(
-            default_maximum_render_pass_attachment_size),
-        minimum_uniform_alignment_(minimum_uniform_alignment) {}
+            default_maximum_render_pass_attachment_size) {}
 
   friend class CapabilitiesBuilder;
 
@@ -165,14 +137,11 @@ class StandardCapabilities final : public Capabilities {
   bool supports_decal_sampler_address_mode_ = false;
   bool supports_device_transient_textures_ = false;
   bool supports_triangle_fan_ = false;
-  bool supports_extended_range_formats_ = false;
-  bool needs_partitioned_host_buffer_ = false;
   PixelFormat default_color_format_ = PixelFormat::kUnknown;
   PixelFormat default_stencil_format_ = PixelFormat::kUnknown;
   PixelFormat default_depth_stencil_format_ = PixelFormat::kUnknown;
   PixelFormat default_glyph_atlas_format_ = PixelFormat::kUnknown;
   ISize default_maximum_render_pass_attachment_size_ = ISize(1, 1);
-  size_t minimum_uniform_alignment_ = 256;
 
   StandardCapabilities(const StandardCapabilities&) = delete;
 
@@ -269,45 +238,23 @@ CapabilitiesBuilder& CapabilitiesBuilder::SetMaximumRenderPassAttachmentSize(
   return *this;
 }
 
-CapabilitiesBuilder& CapabilitiesBuilder::SetSupportsExtendedRangeFormats(
-    bool value) {
-  supports_extended_range_formats_ = value;
-  return *this;
-}
-
-CapabilitiesBuilder& CapabilitiesBuilder::SetMinimumUniformAlignment(
-    size_t value) {
-  minimum_uniform_alignment_ = value;
-  return *this;
-}
-
-CapabilitiesBuilder& CapabilitiesBuilder::SetNeedsPartitionedHostBuffer(
-    bool value) {
-  needs_partitioned_host_buffer_ = value;
-  return *this;
-}
-
 std::unique_ptr<Capabilities> CapabilitiesBuilder::Build() {
-  // NOLINTNEXTLINE(clang-analyzer-cplusplus.NewDeleteLeaks)
-  return std::unique_ptr<StandardCapabilities>(new StandardCapabilities(   //
-      supports_offscreen_msaa_,                                            //
-      supports_ssbo_,                                                      //
-      supports_texture_to_texture_blits_,                                  //
-      supports_framebuffer_fetch_,                                         //
-      supports_compute_,                                                   //
-      supports_compute_subgroups_,                                         //
-      supports_read_from_resolve_,                                         //
-      supports_decal_sampler_address_mode_,                                //
-      supports_device_transient_textures_,                                 //
-      supports_triangle_fan_,                                              //
-      supports_extended_range_formats_,                                    //
-      default_color_format_.value_or(PixelFormat::kUnknown),               //
-      default_stencil_format_.value_or(PixelFormat::kUnknown),             //
-      default_depth_stencil_format_.value_or(PixelFormat::kUnknown),       //
-      default_glyph_atlas_format_.value_or(PixelFormat::kUnknown),         //
-      default_maximum_render_pass_attachment_size_.value_or(ISize{1, 1}),  //
-      minimum_uniform_alignment_,                                          //
-      needs_partitioned_host_buffer_                                       //
+  return std::unique_ptr<StandardCapabilities>(new StandardCapabilities(  //
+      supports_offscreen_msaa_,                                           //
+      supports_ssbo_,                                                     //
+      supports_texture_to_texture_blits_,                                 //
+      supports_framebuffer_fetch_,                                        //
+      supports_compute_,                                                  //
+      supports_compute_subgroups_,                                        //
+      supports_read_from_resolve_,                                        //
+      supports_decal_sampler_address_mode_,                               //
+      supports_device_transient_textures_,                                //
+      supports_triangle_fan_,                                             //
+      default_color_format_.value_or(PixelFormat::kUnknown),              //
+      default_stencil_format_.value_or(PixelFormat::kUnknown),            //
+      default_depth_stencil_format_.value_or(PixelFormat::kUnknown),      //
+      default_glyph_atlas_format_.value_or(PixelFormat::kUnknown),        //
+      default_maximum_render_pass_attachment_size_.value_or(ISize{1, 1})  //
       ));
 }
 

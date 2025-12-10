@@ -28,6 +28,23 @@
 #include "third_party/tonic/logging/dart_error.h"
 #include "third_party/tonic/typed_data/typed_list.h"
 
+namespace dart {
+namespace observatory {
+
+#if !OS_FUCHSIA && !FLUTTER_RELEASE
+
+// These two symbols are defined in |observatory_archive.cc| which is generated
+// by the |//third_party/dart/runtime/observatory:archive_observatory| rule.
+// Both of these symbols will be part of the data segment and therefore are read
+// only.
+extern unsigned int observatory_assets_archive_len;
+extern const uint8_t* observatory_assets_archive;
+
+#endif  // !OS_FUCHSIA && !FLUTTER_RELEASE
+
+}  // namespace observatory
+}  // namespace dart
+
 namespace flutter {
 
 // Arguments passed to the Dart VM in all configurations.
@@ -86,27 +103,17 @@ static std::string DartFileRecorderArgs(const std::string& path) {
   return oss.str();
 }
 
-// "Microtask" is included in all argument strings below, but "Microtask" stream
-// events will only be recorded by the VM's timeline recorders when
-// |Switch::ProfileMicrotasks| is set.
-
 [[maybe_unused]]
 static const char* kDartDefaultTraceStreamsArgs[]{
-    "--timeline_streams=Dart,Embedder,GC,Microtask",
+    "--timeline_streams=Dart,Embedder,GC",
 };
 
 static const char* kDartStartupTraceStreamsArgs[]{
-    "--timeline_streams=Compiler,Dart,Debugger,Embedder,GC,Isolate,Microtask,"
-    "VM,API",
+    "--timeline_streams=Compiler,Dart,Debugger,Embedder,GC,Isolate,VM,API",
 };
 
 static const char* kDartSystraceTraceStreamsArgs[] = {
-    "--timeline_streams=Compiler,Dart,Debugger,Embedder,GC,Isolate,Microtask,"
-    "VM,API",
-};
-
-static const char* kDartProfileMicrotasksArgs[]{
-    "--profile_microtasks",
+    "--timeline_streams=Compiler,Dart,Debugger,Embedder,GC,Isolate,VM,API",
 };
 
 static std::string DartOldGenHeapSizeArgs(uint64_t heap_size) {
@@ -151,6 +158,26 @@ bool DartFileModifiedCallback(const char* source_url, int64_t since_ms) {
 
 void ThreadExitCallback() {}
 
+Dart_Handle GetVMServiceAssetsArchiveCallback() {
+#if FLUTTER_RELEASE
+  return nullptr;
+#elif OS_FUCHSIA
+  fml::UniqueFD fd = fml::OpenFile("pkg/data/observatory.tar", false,
+                                   fml::FilePermission::kRead);
+  fml::FileMapping mapping(fd, {fml::FileMapping::Protection::kRead});
+  if (mapping.GetSize() == 0 || mapping.GetMapping() == nullptr) {
+    FML_LOG(ERROR) << "Fail to load Observatory archive";
+    return nullptr;
+  }
+  return tonic::DartConverter<tonic::Uint8List>::ToDart(mapping.GetMapping(),
+                                                        mapping.GetSize());
+#else
+  return tonic::DartConverter<tonic::Uint8List>::ToDart(
+      ::dart::observatory::observatory_assets_archive,
+      ::dart::observatory::observatory_assets_archive_len);
+#endif
+}
+
 static const char kStdoutStreamId[] = "Stdout";
 static const char kStderrStreamId[] = "Stderr";
 
@@ -177,8 +204,7 @@ bool DartVM::IsRunningPrecompiledCode() {
   return Dart_IsPrecompiledRuntime();
 }
 
-static std::vector<const char*> ProfilingFlags(bool enable_profiling,
-                                               bool profile_startup) {
+static std::vector<const char*> ProfilingFlags(bool enable_profiling) {
 // Disable Dart's built in profiler when building a debug build. This
 // works around a race condition that would sometimes stop a crash's
 // stack trace from being printed on Android.
@@ -190,7 +216,7 @@ static std::vector<const char*> ProfilingFlags(bool enable_profiling,
   // the VM enables the same by default. In either case, we have some profiling
   // flags.
   if (enable_profiling) {
-    std::vector<const char*> flags = {
+    return {
         // This is the default. But just be explicit.
         "--profiler",
         // This instructs the profiler to walk C++ frames, and to include
@@ -209,16 +235,6 @@ static std::vector<const char*> ProfilingFlags(bool enable_profiling,
         "--profile_period=1000",
 #endif  // FML_OS_IOS && FML_ARCH_CPU_ARM_FAMILY && FML_ARCH_CPU_ARMEL
     };
-
-    if (profile_startup) {
-      // This instructs the profiler to discard new samples once the profiler
-      // sample buffer is full. When this flag is not set, the profiler sample
-      // buffer is used as a ring buffer, meaning that once it is full, new
-      // samples start overwriting the oldest ones."
-      flags.push_back("--profile_startup");
-    }
-
-    return flags;
   } else {
     return {"--no-profiler"};
   }
@@ -312,8 +328,8 @@ DartVM::DartVM(const std::shared_ptr<const DartVMData>& vm_data,
   // it does not recognize, it exits immediately.
   args.push_back("--ignore-unrecognized-flags");
 
-  for (auto* const profiler_flag : ProfilingFlags(
-           settings_.enable_dart_profiling, settings_.profile_startup)) {
+  for (auto* const profiler_flag :
+       ProfilingFlags(settings_.enable_dart_profiling)) {
     args.push_back(profiler_flag);
   }
 
@@ -412,11 +428,6 @@ DartVM::DartVM(const std::shared_ptr<const DartVMData>& vm_data,
   }
 #endif  // defined(OS_FUCHSIA)
 
-  if (settings_.profile_microtasks) {
-    PushBackAll(&args, kDartProfileMicrotasksArgs,
-                std::size(kDartProfileMicrotasksArgs));
-  }
-
   std::string old_gen_heap_size_args;
   if (settings_.old_gen_heap_size >= 0) {
     old_gen_heap_size_args =
@@ -461,6 +472,7 @@ DartVM::DartVM(const std::shared_ptr<const DartVMData>& vm_data,
     params.file_write = dart::bin::WriteFile;
     params.file_close = dart::bin::CloseFile;
     params.entropy_source = dart::bin::GetEntropy;
+    params.get_service_assets = GetVMServiceAssetsArchiveCallback;
     DartVMInitializer::Initialize(&params,
                                   settings_.enable_timeline_event_handler,
                                   settings_.trace_systrace);

@@ -24,6 +24,8 @@
 #pragma mark - Static types and data.
 
 namespace {
+using flutter::KeyboardLayoutNotifier;
+using flutter::LayoutClue;
 
 // Use different device ID for mouse and pan/zoom events, since we can't differentiate the actual
 // device (mouse v.s. trackpad).
@@ -158,7 +160,7 @@ struct MouseState {
 /**
  * Private interface declaration for FlutterViewController.
  */
-@interface FlutterViewController () <FlutterViewDelegate, FlutterKeyboardManagerEventContext>
+@interface FlutterViewController () <FlutterViewDelegate>
 
 /**
  * The tracking area used to generate hover events, if enabled.
@@ -176,6 +178,17 @@ struct MouseState {
 @property(nonatomic) id keyUpMonitor;
 
 /**
+ * Pointer to a keyboard manager, a hub that manages how key events are
+ * dispatched to various Flutter key responders, and whether the event is
+ * propagated to the next NSResponder.
+ */
+@property(nonatomic, readonly, nonnull) FlutterKeyboardManager* keyboardManager;
+
+@property(nonatomic) KeyboardLayoutNotifier keyboardLayoutNotifier;
+
+@property(nonatomic) NSData* keyboardLayoutData;
+
+/**
  * Starts running |engine|, including any initial setup.
  */
 - (BOOL)launchEngine;
@@ -185,6 +198,11 @@ struct MouseState {
  * the correct mode if tracking is enabled, or removing it if not.
  */
 - (void)configureTrackingArea;
+
+/**
+ * Creates and registers keyboard related components.
+ */
+- (void)initializeKeyboard;
 
 /**
  * Calls dispatchMouseEvent:phase: with a phase determined by self.mouseState.
@@ -203,9 +221,31 @@ struct MouseState {
  */
 - (void)dispatchMouseEvent:(nonnull NSEvent*)event phase:(FlutterPointerPhase)phase;
 
+/**
+ * Called when the active keyboard input source changes.
+ *
+ * Input sources may be simple keyboard layouts, or more complex input methods involving an IME,
+ * such as Chinese, Japanese, and Korean.
+ */
+- (void)onKeyboardLayoutChanged;
+
 @end
 
 #pragma mark - FlutterViewWrapper implementation.
+
+/**
+ * NotificationCenter callback invoked on kTISNotifySelectedKeyboardInputSourceChanged events.
+ */
+static void OnKeyboardLayoutChanged(CFNotificationCenterRef center,
+                                    void* observer,
+                                    CFStringRef name,
+                                    const void* object,
+                                    CFDictionaryRef userInfo) {
+  FlutterViewController* controller = (__bridge FlutterViewController*)observer;
+  if (controller != nil) {
+    [controller onKeyboardLayoutChanged];
+  }
+}
 
 @implementation FlutterViewWrapper {
   FlutterView* _flutterView;
@@ -295,23 +335,16 @@ struct MouseState {
   FlutterDartProject* _project;
 
   std::shared_ptr<flutter::AccessibilityBridgeMac> _bridge;
+
+  // FlutterViewController does not actually uses the synchronizer, but only
+  // passes it to FlutterView.
+  FlutterThreadSynchronizer* _threadSynchronizer;
 }
 
 // Synthesize properties declared readonly.
 @synthesize viewIdentifier = _viewIdentifier;
 
 @dynamic accessibilityBridge;
-
-// Returns the text input plugin associated with this view controller.
-// This method only returns non nil instance if the text input plugin has active
-// client with viewId matching this controller's view identifier.
-- (FlutterTextInputPlugin*)activeTextInputPlugin {
-  if (_engine.textInputPlugin.currentViewController == self) {
-    return _engine.textInputPlugin;
-  } else {
-    return nil;
-  }
-}
 
 /**
  * Performs initialization that's common between the different init paths.
@@ -327,14 +360,21 @@ static void CommonInit(FlutterViewController* controller, FlutterEngine* engine)
             @"engine %@ before initialization.",
             controller.engine);
   [engine addViewController:controller];
-
   NSCAssert(controller.engine != nil,
             @"The FlutterViewController unexpectedly stays unattached after initialization. "
             @"In unit tests, this is likely because either the FlutterViewController or "
             @"the FlutterEngine is mocked. Please subclass these classes instead.",
             controller.engine, controller.viewIdentifier);
   controller->_mouseTrackingMode = kFlutterMouseTrackingModeInKeyWindow;
+  controller->_textInputPlugin = [[FlutterTextInputPlugin alloc] initWithViewController:controller];
+  [controller initializeKeyboard];
   [controller notifySemanticsEnabledChanged];
+  // macOS fires this message when changing IMEs.
+  CFNotificationCenterRef cfCenter = CFNotificationCenterGetDistributedCenter();
+  __weak FlutterViewController* weakSelf = controller;
+  CFNotificationCenterAddObserver(cfCenter, (__bridge void*)weakSelf, OnKeyboardLayoutChanged,
+                                  kTISNotifySelectedKeyboardInputSourceChanged, NULL,
+                                  CFNotificationSuspensionBehaviorDeliverImmediately);
 }
 
 - (instancetype)initWithCoder:(NSCoder*)coder {
@@ -376,7 +416,7 @@ static void CommonInit(FlutterViewController* controller, FlutterEngine* engine)
 }
 
 - (BOOL)isDispatchingKeyEvent:(NSEvent*)event {
-  return [_engine.keyboardManager isDispatchingKeyEvent:event];
+  return [_keyboardManager isDispatchingKeyEvent:event];
 }
 
 - (void)loadView {
@@ -419,15 +459,12 @@ static void CommonInit(FlutterViewController* controller, FlutterEngine* engine)
   _keyUpMonitor = nil;
 }
 
-- (void)dispose {
+- (void)dealloc {
   if ([self attached]) {
     [_engine removeViewController:self];
   }
-  [self.flutterView shutDown];
-}
-
-- (void)dealloc {
-  [self dispose];
+  CFNotificationCenterRef cfCenter = CFNotificationCenterGetDistributedCenter();
+  CFNotificationCenterRemoveEveryObserver(cfCenter, (__bridge void*)self);
 }
 
 #pragma mark - Public methods
@@ -451,6 +488,7 @@ static void CommonInit(FlutterViewController* controller, FlutterEngine* engine)
 }
 
 - (void)onPreEngineRestart {
+  [self initializeKeyboard];
 }
 
 - (void)notifySemanticsEnabledChanged {
@@ -474,14 +512,19 @@ static void CommonInit(FlutterViewController* controller, FlutterEngine* engine)
 }
 
 - (void)setUpWithEngine:(FlutterEngine*)engine
-         viewIdentifier:(FlutterViewIdentifier)viewIdentifier {
+         viewIdentifier:(FlutterViewIdentifier)viewIdentifier
+     threadSynchronizer:(FlutterThreadSynchronizer*)threadSynchronizer {
   NSAssert(_engine == nil, @"Already attached to an engine %@.", _engine);
   _engine = engine;
   _viewIdentifier = viewIdentifier;
+  _threadSynchronizer = threadSynchronizer;
+  [_threadSynchronizer registerView:_viewIdentifier];
 }
 
 - (void)detachFromEngine {
   NSAssert(_engine != nil, @"Not attached to any engine.");
+  [_threadSynchronizer deregisterView:_viewIdentifier];
+  _threadSynchronizer = nil;
   _engine = nil;
 }
 
@@ -551,7 +594,7 @@ static void CommonInit(FlutterViewController* controller, FlutterEngine* engine)
                                      NSResponder* firstResponder = [[event window] firstResponder];
                                      if (weakSelf.viewLoaded && weakSelf.flutterView &&
                                          (firstResponder == weakSelf.flutterView ||
-                                          firstResponder == weakSelf.activeTextInputPlugin) &&
+                                          firstResponder == weakSelf.textInputPlugin) &&
                                          ([event modifierFlags] & NSEventModifierFlagCommand) &&
                                          ([event type] == NSEventTypeKeyUp)) {
                                        [weakSelf keyUp:event];
@@ -592,6 +635,12 @@ static void CommonInit(FlutterViewController* controller, FlutterEngine* engine)
     [self.flutterView removeTrackingArea:_trackingArea];
     _trackingArea = nil;
   }
+}
+
+- (void)initializeKeyboard {
+  // TODO(goderbauer): Seperate keyboard/textinput stuff into ViewController specific and Engine
+  // global parts. Move the global parts to FlutterEngine.
+  _keyboardManager = [[FlutterKeyboardManager alloc] initWithViewDelegate:self];
 }
 
 - (void)dispatchMouseEvent:(nonnull NSEvent*)event {
@@ -759,7 +808,7 @@ static void CommonInit(FlutterViewController* controller, FlutterEngine* engine)
     }
   }
 
-  [_engine.keyboardManager syncModifiersIfNeeded:event.modifierFlags timestamp:event.timestamp];
+  [_keyboardManager syncModifiersIfNeeded:event.modifierFlags timestamp:event.timestamp];
   [_engine sendPointerEvent:flutterEvent];
 
   // Update tracking of state as reported to Flutter.
@@ -779,12 +828,12 @@ static void CommonInit(FlutterViewController* controller, FlutterEngine* engine)
 }
 
 - (void)onAccessibilityStatusChanged:(BOOL)enabled {
-  if (!enabled && self.viewLoaded && [self.activeTextInputPlugin isFirstResponder]) {
+  if (!enabled && self.viewLoaded && [_textInputPlugin isFirstResponder]) {
     // Normally TextInputPlugin, when editing, is child of FlutterViewWrapper.
-    // When accessibility is enabled the TextInputPlugin gets added as an indirect
+    // When accessiblity is enabled the TextInputPlugin gets added as an indirect
     // child to FlutterTextField. When disabling the plugin needs to be reparented
     // back.
-    [self.view addSubview:self.activeTextInputPlugin];
+    [self.view addSubview:_textInputPlugin];
   }
 }
 
@@ -798,7 +847,15 @@ static void CommonInit(FlutterViewController* controller, FlutterEngine* engine)
   return [[FlutterView alloc] initWithMTLDevice:device
                                    commandQueue:commandQueue
                                        delegate:self
+                             threadSynchronizer:_threadSynchronizer
                                  viewIdentifier:_viewIdentifier];
+}
+
+- (void)onKeyboardLayoutChanged {
+  _keyboardLayoutData = nil;
+  if (_keyboardLayoutNotifier != nil) {
+    _keyboardLayoutNotifier();
+  }
 }
 
 - (NSString*)lookupKeyForAsset:(NSString*)asset {
@@ -824,7 +881,7 @@ static void CommonInit(FlutterViewController* controller, FlutterEngine* engine)
   // Only allow FlutterView to become first responder if TextInputPlugin is
   // not active. Otherwise a mouse event inside FlutterView would cause the
   // TextInputPlugin to lose first responder status.
-  return !self.activeTextInputPlugin.isFirstResponder;
+  return !_textInputPlugin.isFirstResponder;
 }
 
 #pragma mark - FlutterPluginRegistry
@@ -839,8 +896,78 @@ static void CommonInit(FlutterViewController* controller, FlutterEngine* engine)
 
 #pragma mark - FlutterKeyboardViewDelegate
 
+/**
+ * Returns the current Unicode layout data (kTISPropertyUnicodeKeyLayoutData).
+ *
+ * To use the returned data, convert it to CFDataRef first, finds its bytes
+ * with CFDataGetBytePtr, then reinterpret it into const UCKeyboardLayout*.
+ * It's returned in NSData* to enable auto reference count.
+ */
+static NSData* CurrentKeyboardLayoutData() {
+  fml::CFRef<TISInputSourceRef> source(TISCopyCurrentKeyboardInputSource());
+  CFTypeRef layout_data = TISGetInputSourceProperty(source, kTISPropertyUnicodeKeyLayoutData);
+  if (layout_data == nil) {
+    // TISGetInputSourceProperty returns null with Japanese keyboard layout.
+    // Using TISCopyCurrentKeyboardLayoutInputSource to fix NULL return.
+    // https://github.com/microsoft/node-native-keymap/blob/5f0699ded00179410a14c0e1b0e089fe4df8e130/src/keyboard_mac.mm#L91
+    source.Reset(TISCopyCurrentKeyboardLayoutInputSource());
+    layout_data = TISGetInputSourceProperty(source, kTISPropertyUnicodeKeyLayoutData);
+  }
+  return (__bridge NSData*)layout_data;
+}
+
+- (void)sendKeyEvent:(const FlutterKeyEvent&)event
+            callback:(nullable FlutterKeyEventCallback)callback
+            userData:(nullable void*)userData {
+  [_engine sendKeyEvent:event callback:callback userData:userData];
+}
+
+- (id<FlutterBinaryMessenger>)getBinaryMessenger {
+  return _engine.binaryMessenger;
+}
+
 - (BOOL)onTextInputKeyEvent:(nonnull NSEvent*)event {
-  return [self.activeTextInputPlugin handleKeyEvent:event];
+  return [_textInputPlugin handleKeyEvent:event];
+}
+
+- (void)subscribeToKeyboardLayoutChange:(nullable KeyboardLayoutNotifier)callback {
+  _keyboardLayoutNotifier = callback;
+}
+
+- (LayoutClue)lookUpLayoutForKeyCode:(uint16_t)keyCode shift:(BOOL)shift {
+  if (_keyboardLayoutData == nil) {
+    _keyboardLayoutData = CurrentKeyboardLayoutData();
+  }
+  const UCKeyboardLayout* layout = reinterpret_cast<const UCKeyboardLayout*>(
+      CFDataGetBytePtr((__bridge CFDataRef)_keyboardLayoutData));
+
+  UInt32 deadKeyState = 0;
+  UniCharCount stringLength = 0;
+  UniChar resultChar;
+
+  UInt32 modifierState = ((shift ? shiftKey : 0) >> 8) & 0xFF;
+  UInt32 keyboardType = LMGetKbdLast();
+
+  bool isDeadKey = false;
+  OSStatus status =
+      UCKeyTranslate(layout, keyCode, kUCKeyActionDown, modifierState, keyboardType,
+                     kUCKeyTranslateNoDeadKeysBit, &deadKeyState, 1, &stringLength, &resultChar);
+  // For dead keys, press the same key again to get the printable representation of the key.
+  if (status == noErr && stringLength == 0 && deadKeyState != 0) {
+    isDeadKey = true;
+    status =
+        UCKeyTranslate(layout, keyCode, kUCKeyActionDown, modifierState, keyboardType,
+                       kUCKeyTranslateNoDeadKeysBit, &deadKeyState, 1, &stringLength, &resultChar);
+  }
+
+  if (status == noErr && stringLength == 1 && !std::iscntrl(resultChar)) {
+    return LayoutClue{resultChar, isDeadKey};
+  }
+  return LayoutClue{0, false};
+}
+
+- (nonnull NSDictionary*)getPressedState {
+  return [_keyboardManager getPressedState];
 }
 
 #pragma mark - NSResponder
@@ -850,15 +977,15 @@ static void CommonInit(FlutterViewController* controller, FlutterEngine* engine)
 }
 
 - (void)keyDown:(NSEvent*)event {
-  [_engine.keyboardManager handleEvent:event withContext:self];
+  [_keyboardManager handleEvent:event];
 }
 
 - (void)keyUp:(NSEvent*)event {
-  [_engine.keyboardManager handleEvent:event withContext:self];
+  [_keyboardManager handleEvent:event];
 }
 
 - (void)flagsChanged:(NSEvent*)event {
-  [_engine.keyboardManager handleEvent:event withContext:self];
+  [_keyboardManager handleEvent:event];
 }
 
 - (void)mouseEntered:(NSEvent*)event {

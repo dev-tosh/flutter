@@ -38,8 +38,9 @@ def GetFlutterEngineGitRevision(buildroot):
 
 
 def GetFuchsiaSdkVersion(buildroot):
-  with open(path.join(buildroot, 'third_party', 'fuchsia-sdk', 'sdk', 'meta', 'manifest.json'),
-            'r') as fuchsia_sdk_manifest:
+  with open(path.join(buildroot, 'fuchsia', 'sdk',
+                      'linux' if sys.platform.startswith('linux') else 'mac', 'meta',
+                      'manifest.json'), 'r') as fuchsia_sdk_manifest:
     return json.load(fuchsia_sdk_manifest)['id']
 
 
@@ -51,14 +52,10 @@ def main():
   parser.add_argument(
       '--buildroot', action='store', help='path to the flutter engine buildroot', required=True
   )
-  parser.add_argument(
-      '--engine-version', action='store', help='Flutter engine commit hash', required=True
-  )
   args = parser.parse_args()
 
   # Read, interpolate, write.
   with open(args.input, 'r') as i, open(args.output, 'w') as o:
-    # yapf: disable
     o.write(
         i.read().replace(
             '{{DART_SDK_GIT_REVISION}}',
@@ -68,7 +65,7 @@ def main():
             GetDartSdkSemanticVersion(args.buildroot).decode('utf-8')
         ).replace(
             '{{FLUTTER_ENGINE_GIT_REVISION}}',
-            args.engine_version
+            GetFlutterEngineGitRevision(args.buildroot).decode('utf-8')
         ).replace('{{FUCHSIA_SDK_VERSION}}', GetFuchsiaSdkVersion(args.buildroot))
     )
 

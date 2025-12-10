@@ -82,15 +82,6 @@ class Contents {
   /// render this contents.
   virtual bool IsOpaque(const Matrix& transform) const;
 
-  struct SnapshotOptions {
-    std::optional<Rect> coverage_limit = std::nullopt;
-    const std::optional<SamplerDescriptor>& sampler_descriptor = std::nullopt;
-    bool msaa_enabled = true;
-    int32_t mip_count = 1;
-    std::string_view label = "Snapshot";
-    int32_t coverage_expansion = 1;
-  };
-
   //----------------------------------------------------------------------------
   /// @brief Render this contents to a snapshot, respecting the entity's
   ///        transform, path, clip depth, and blend mode.
@@ -100,7 +91,11 @@ class Contents {
   virtual std::optional<Snapshot> RenderToSnapshot(
       const ContentContext& renderer,
       const Entity& entity,
-      const SnapshotOptions& options) const;
+      std::optional<Rect> coverage_limit = std::nullopt,
+      const std::optional<SamplerDescriptor>& sampler_descriptor = std::nullopt,
+      bool msaa_enabled = true,
+      int32_t mip_count = 1,
+      std::string_view label = "Snapshot") const;
 
   //----------------------------------------------------------------------------
   /// @brief  Return the color source's intrinsic size, if available.

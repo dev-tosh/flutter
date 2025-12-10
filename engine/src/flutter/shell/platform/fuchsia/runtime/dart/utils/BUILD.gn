@@ -5,7 +5,6 @@
 assert(is_fuchsia)
 
 import("//flutter/common/config.gni")
-import("//flutter/shell/version/version.gni")
 import("//flutter/testing/testing.gni")
 import("//flutter/tools/fuchsia/gn-sdk/src/gn_configs.gni")
 
@@ -44,8 +43,8 @@ template("make_utils") {
              "${fuchsia_sdk}/pkg/async-loop-cpp",
              "${fuchsia_sdk}/pkg/async-loop-default",
              "${fuchsia_sdk}/pkg/fdio",
-             "${fuchsia_sdk}/pkg/inspect_component_cpp",
              "${fuchsia_sdk}/pkg/sys_cpp",
+             "${fuchsia_sdk}/pkg/inspect_component_cpp",
              "${fuchsia_sdk}/pkg/trace",
              "${fuchsia_sdk}/pkg/vfs_cpp",
              "${fuchsia_sdk}/pkg/zx",
@@ -60,7 +59,8 @@ template("make_utils") {
 action("generate_build_info_cc_file") {
   inputs = [
     "build_info_in.cc",
-    "//third_party/fuchsia-sdk/sdk/meta/manifest.json",
+    "//flutter/.git/logs/HEAD",
+    "//fuchsia/sdk/$host_os/meta/manifest.json",
     "$dart_src/.git/logs/HEAD",
   ]
   outputs = [ "$target_gen_dir/build_info.cc" ]
@@ -73,8 +73,6 @@ action("generate_build_info_cc_file") {
     rebase_path(outputs[0], root_build_dir),
     "--buildroot",
     rebase_path("//", root_build_dir),
-    "--engine-version",
-    engine_version,
   ]
 }
 
@@ -103,7 +101,7 @@ executable("dart_utils_unittests") {
     ":utils",
     ":utils_fixtures",
     "$dart_src/runtime:libdart_jit",
-    "$dart_src/runtime/bin:common_embedder_dart_io",
+    "$dart_src/runtime/bin:dart_io_api",
     "${fuchsia_sdk}/pkg/inspect_component_cpp",
     "${fuchsia_sdk}/pkg/sys_cpp",
     "//flutter/testing",

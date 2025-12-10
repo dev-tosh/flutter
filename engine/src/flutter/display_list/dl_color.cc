@@ -4,8 +4,6 @@
 
 #include "flutter/display_list/dl_color.h"
 
-#include <algorithm>
-
 namespace flutter {
 
 namespace {
@@ -53,9 +51,8 @@ DlColor DlColor::withColorSpace(DlColorSpace color_space) const {
     case DlColorSpace::kExtendedSRGB:
       switch (color_space) {
         case DlColorSpace::kSRGB:
-          return DlColor(alpha_, std::clamp(red_, 0.0f, 1.0f),
-                         std::clamp(green_, 0.0f, 1.0f),
-                         std::clamp(blue_, 0.0f, 1.0f), DlColorSpace::kSRGB);
+          FML_CHECK(false) << "not implemented";
+          return *this;
         case DlColorSpace::kExtendedSRGB:
           return *this;
         case DlColorSpace::kDisplayP3:
@@ -65,8 +62,8 @@ DlColor DlColor::withColorSpace(DlColorSpace color_space) const {
     case DlColorSpace::kDisplayP3:
       switch (color_space) {
         case DlColorSpace::kSRGB:
-          return transform(*this, kP3ToSrgb, DlColorSpace::kExtendedSRGB)
-              .withColorSpace(DlColorSpace::kSRGB);
+          FML_CHECK(false) << "not implemented";
+          return *this;
         case DlColorSpace::kExtendedSRGB:
           return transform(*this, kP3ToSrgb, DlColorSpace::kExtendedSRGB);
         case DlColorSpace::kDisplayP3:

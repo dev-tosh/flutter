@@ -48,12 +48,19 @@ void registerBackgroundIsolate(List<Object?> args) {
 @pragma('vm:entry-point')
 Future<void> callDartPluginRegistrantFromBackgroundIsolate() async {
   final receivePort = ReceivePort();
-  final Isolate isolate = await Isolate.spawn(dartPluginRegistrantIsolate, receivePort.sendPort);
+  final isolate = await Isolate.spawn(
+    dartPluginRegistrantIsolate,
+    receivePort.sendPort,
+  );
   final didCallEntrypoint = await receivePort.first as bool;
   if (didCallEntrypoint) {
-    passMessage('_PluginRegistrant.register() was called on background isolate');
+    passMessage(
+      '_PluginRegistrant.register() was called on background isolate',
+    );
   } else {
-    passMessage('_PluginRegistrant.register() was not called on background isolate');
+    passMessage(
+      '_PluginRegistrant.register() was not called on background isolate',
+    );
   }
   isolate.kill();
 }
@@ -65,12 +72,19 @@ void noDartPluginRegistrantIsolate(SendPort sendPort) {
 @pragma('vm:entry-point')
 Future<void> dontCallDartPluginRegistrantFromBackgroundIsolate() async {
   final receivePort = ReceivePort();
-  final Isolate isolate = await Isolate.spawn(noDartPluginRegistrantIsolate, receivePort.sendPort);
+  final isolate = await Isolate.spawn(
+    noDartPluginRegistrantIsolate,
+    receivePort.sendPort,
+  );
   final didCallEntrypoint = await receivePort.first as bool;
   if (didCallEntrypoint) {
-    passMessage('_PluginRegistrant.register() was called on background isolate');
+    passMessage(
+      '_PluginRegistrant.register() was called on background isolate',
+    );
   } else {
-    passMessage('_PluginRegistrant.register() was not called on background isolate');
+    passMessage(
+      '_PluginRegistrant.register() was not called on background isolate',
+    );
   }
   isolate.kill();
 }
@@ -78,15 +92,19 @@ Future<void> dontCallDartPluginRegistrantFromBackgroundIsolate() async {
 @pragma('vm:entry-point')
 Future<void> registerBackgroundIsolateCallsDartPluginRegistrant() async {
   final receivePort = ReceivePort();
-  final Isolate isolate = await Isolate.spawn(registerBackgroundIsolate, [
+  final isolate = await Isolate.spawn(registerBackgroundIsolate, [
     receivePort.sendPort,
     RootIsolateToken.instance,
   ]);
   final didCallEntrypoint = await receivePort.first as bool;
   if (didCallEntrypoint) {
-    passMessage('_PluginRegistrant.register() was called on background isolate');
+    passMessage(
+      '_PluginRegistrant.register() was called on background isolate',
+    );
   } else {
-    passMessage('_PluginRegistrant.register() was not called on background isolate');
+    passMessage(
+      '_PluginRegistrant.register() was not called on background isolate',
+    );
   }
   isolate.kill();
 }

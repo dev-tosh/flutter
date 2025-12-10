@@ -5,7 +5,6 @@
 #ifndef FLUTTER_TESTING_TEST_VULKAN_CONTEXT_H_
 #define FLUTTER_TESTING_TEST_VULKAN_CONTEXT_H_
 
-#include "flutter/display_list/geometry/dl_geometry_types.h"
 #include "flutter/fml/macros.h"
 #include "flutter/fml/memory/ref_ptr.h"
 #include "flutter/testing/test_vulkan_image.h"
@@ -13,6 +12,7 @@
 #include "flutter/vulkan/vulkan_application.h"
 #include "flutter/vulkan/vulkan_device.h"
 
+#include "third_party/skia/include/core/SkSize.h"
 #include "third_party/skia/include/gpu/ganesh/GrDirectContext.h"
 
 namespace flutter::testing {
@@ -22,7 +22,7 @@ class TestVulkanContext : public fml::RefCountedThreadSafe<TestVulkanContext> {
   TestVulkanContext();
   ~TestVulkanContext();
 
-  std::optional<TestVulkanImage> CreateImage(const DlISize& size) const;
+  std::optional<TestVulkanImage> CreateImage(const SkISize& size) const;
 
   sk_sp<GrDirectContext> GetGrDirectContext() const;
 

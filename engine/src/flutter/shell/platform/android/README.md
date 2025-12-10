@@ -13,15 +13,15 @@ and is responsible for:
 > [!CAUTION]
 > This is a best effort attempt to document the Android embedder. It is not
 > guaranteed to be up to date or complete. If you find a discrepancy, please
-> [send a pull request](https://github.com/flutter/flutter/compare)!
+> [send a pull request](https://github.com/flutter/engine/compare)!
 
 See also:
 
 - [`../../tools/android_lint/bin/main.dart`](../../../tools/android_lint/bin/main.dart)
-- [Android Platform Views](https://github.com/flutter/flutter/blob/main/docs/platforms/android/Android-Platform-Views.md)
+- [Android Platform Views](https://github.com/flutter/flutter/wiki/Android-Platform-Views)
 - [Hosting native Android views in your Flutter app with Platform Views](https://docs.flutter.dev/platform-integration/android/platform-views)
-- [Testing Android Changes in the Devicelab on an Emulator](https://github.com/flutter/flutter/blob/main/docs/platforms/android/Testing-Android-Changes-in-the-Devicelab-on-an-Emulator.md)
-- [Texture Layer Hybrid Composition](https://github.com/flutter/flutter/blob/main/docs/platforms/android/Texture-Layer-Hybrid-Composition.md)
+- [Testing Android Changes in the Devicelab on an Emulator](https://github.com/flutter/flutter/wiki/Testing-Android-Changes-in-the-Devicelab-on-an-Emulator)
+- [Texture Layer Hybrid Composition](https://github.com/flutter/flutter/wiki/Texture-Layer-Hybrid-Composition)
 
 ## Testing
 
@@ -51,15 +51,7 @@ The easiest way (though not the quickest) is to use `run_tests.py`:
 ./testing/run_tests.py --type java --android-variant android_debug_unopt_arm64
 ```
 
-> [!TIP]
-> Trying to debug tests or timeouts/hangs?
->
-> Run the tests directly from Android Studio, or [set `maxParallelForks` to `1`](https://github.com/flutter/flutter/blob/1cd3ab16ca1cba35e187ae75063fce0915985b94/engine/src/flutter/shell/platform/android/test_runner/build.gradle#L55):
->
-> ```diff
-> + maxParallelForks availableProcessors // The CI bot has 8 CPUs.
-> - maxParallelForks 1
-> ```
+You may also be able to run the tests directly from Android Studio.
 
 ### Integration tests
 
@@ -107,7 +99,7 @@ flutter run \
 >
 > ... and rebuild the engine.
 
-See [our wiki](https://github.com/flutter/flutter/blob/main/docs/engine/testing/Testing-the-engine.md#java---android-embedding) also.
+See [our wiki](https://github.com/flutter/flutter/wiki/Testing-the-engine#java---android-embedding) also.
 
 ## Developing
 
@@ -116,12 +108,13 @@ How to edit and contribute to the Android embedder.
 > [!TIP]
 > This guide assumes you already have a working Engine development environment:
 >
-> - [Setting up the Engine development environment](https://github.com/flutter/flutter/blob/main/docs/engine/contributing/Setting-up-the-Engine-development-environment.md)
-> - [Compiling for Android](https://github.com/flutter/flutter/blob/main/docs/engine/contributing/Compiling-the-engine.md#compiling-for-android-from-macos-or-linux)
+> - [Setting up the Engine development environment](https://github.com/flutter/flutter/wiki/Setting-up-the-Engine-development-environment)
+> - [Compiling for Android](https://github.com/flutter/flutter/wiki/Compiling-the-engine#compiling-for-android-from-macos-or-linux)
 >
 > You should also have a working Android development environment:
 >
-> - [Android Studio and IntelliJ](https://docs.flutter.dev/tools/android-studio)
+> - [Android Studio](https://developer.android.com/studio)
+> - [Install Flutter > Test Drive](https://docs.flutter.dev/get-started/test-drive?tab=androidstudio)
 >
 > _It is also recommended (but not required) to install
 > [Visual Studio Code](https://code.visualstudio.com/)._
@@ -150,14 +143,13 @@ Some notable files include:
 - [`platform_view_android.h`](./platform_view_android.h): The main entry point
   for the Android embedder.
 
-See [VSCode with C/C++ Intellisense](https://github.com/flutter/flutter/blob/main/docs/engine/contributing/Setting-up-the-Engine-development-environment.md#vscode-with-cc-intellisense-cc)
+See [VSCode with C/C++ Intellisense](https://github.com/flutter/flutter/wiki/Setting-up-the-Engine-development-environment#vscode-with-cc-intellisense-cc)
 for how to use the [`clangd`](https://marketplace.visualstudio.com/items?itemName=llvm-vs-code-extensions.vscode-clangd) extension to get C++ code
 completion:
 
 ![Example](https://github.com/flutter/flutter/assets/168174/8a75dd27-66e1-4c4f-88af-667a73b909b6)
 
 > [!NOTE]
->
 > `--compile-commands-dir` must point to an Android build output:
 >
 > ```jsonc
@@ -189,7 +181,7 @@ Some notable files include:
   Registry of backend textures used by a Flutter View.
 
 It is non-trivial to get a working IDE setup for editing Java code in the
-Flutter engine. Some developers have had success [using VSCode as an IDE for the Android Embedding](https://github.com/flutter/flutter/blob/main/docs/engine/contributing/Setting-up-the-Engine-development-environment.md#using-vscode-as-an-ide-for-the-android-embedding-java),
+Flutter engine. Some developers have had success [using VSCode as an IDE for the Android Embedding](https://github.com/flutter/flutter/wiki/Setting-up-the-Engine-development-environment#using-vscode-as-an-ide-for-the-android-embedding-java),
 but the following instructions are for if that doesn't work, or you want to use
 Android Studio:
 
@@ -228,8 +220,7 @@ code completion in the `io/flutter` and `test/io/flutter` folders. For example, 
 ![Example](https://github.com/flutter/flutter/assets/168174/387550d4-eab7-4097-9da3-7713a6ec4da7)
 
 To get code coverage displayed in line: go to the test class you wish to run and
-
-1. Right click > Modify Run Configuration...,
+1. Right click > Modify Run Configuration..., 
 2. In the window that pops up click Modify options > Specify classes
-   and packages (under "code coverage").
+and packages (under "code coverage"). 
 3. In the new box that appears at the bottom of the window, click the + > Add package, and then add `io.flutter.*`.

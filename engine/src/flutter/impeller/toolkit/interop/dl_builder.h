@@ -59,15 +59,15 @@ class DisplayListBuilder final
 
   void RestoreToCount(uint32_t count);
 
-  void ClipRect(const Rect& rect, flutter::DlClipOp op);
+  void ClipRect(const Rect& rect, flutter::DlCanvas::ClipOp op);
 
-  void ClipOval(const Rect& rect, flutter::DlClipOp op);
+  void ClipOval(const Rect& rect, flutter::DlCanvas::ClipOp op);
 
   void ClipRoundedRect(const Rect& rect,
                        const RoundingRadii& radii,
-                       flutter::DlClipOp op);
+                       flutter::DlCanvas::ClipOp op);
 
-  void ClipPath(const Path& path, flutter::DlClipOp op);
+  void ClipPath(const Path& path, flutter::DlCanvas::ClipOp op);
 
   void DrawPaint(const Paint& paint);
 
@@ -109,12 +109,6 @@ class DisplayListBuilder final
   void DrawDisplayList(const DisplayList& dl, Scalar opacity);
 
   void DrawParagraph(const Paragraph& paragraph, Point point);
-
-  void DrawShadow(const Path& path,
-                  const flutter::DlColor& color,
-                  float elevation,
-                  bool occluder_is_transparent,
-                  float device_pixel_ratio);
 
   ScopedObject<DisplayList> Build();
 

@@ -65,9 +65,6 @@ void DlOpSpy::drawDiffRoundRect(const DlRoundRect& outer,
                                 const DlRoundRect& inner) {
   did_draw_ |= will_draw_;
 }
-void DlOpSpy::drawRoundSuperellipse(const DlRoundSuperellipse& rse) {
-  did_draw_ |= will_draw_;
-}
 void DlOpSpy::drawPath(const DlPath& path) {
   did_draw_ |= will_draw_;
 }
@@ -77,7 +74,7 @@ void DlOpSpy::drawArc(const DlRect& oval_bounds,
                       bool use_center) {
   did_draw_ |= will_draw_;
 }
-void DlOpSpy::drawPoints(DlPointMode mode,
+void DlOpSpy::drawPoints(PointMode mode,
                          uint32_t count,
                          const DlPoint points[]) {
   did_draw_ |= will_draw_;
@@ -102,7 +99,7 @@ void DlOpSpy::drawImageRect(const sk_sp<DlImage> image,
                             const DlRect& dst,
                             DlImageSampling sampling,
                             bool render_with_attributes,
-                            DlSrcRectConstraint constraint) {
+                            SrcRectConstraint constraint) {
   did_draw_ = true;
 }
 void DlOpSpy::drawImageNine(const sk_sp<DlImage> image,
@@ -113,7 +110,7 @@ void DlOpSpy::drawImageNine(const sk_sp<DlImage> image,
   did_draw_ = true;
 }
 void DlOpSpy::drawAtlas(const sk_sp<DlImage> atlas,
-                        const DlRSTransform xform[],
+                        const SkRSXform xform[],
                         const DlRect tex[],
                         const DlColor colors[],
                         int count,
@@ -132,10 +129,16 @@ void DlOpSpy::drawDisplayList(const sk_sp<DisplayList> display_list,
   display_list->Dispatch(receiver);
   did_draw_ |= receiver.did_draw();
 }
+void DlOpSpy::drawTextBlob(const sk_sp<SkTextBlob> blob,
+                           DlScalar x,
+                           DlScalar y) {
+  did_draw_ |= will_draw_;
+}
 
-void DlOpSpy::drawText(const std::shared_ptr<flutter::DlText>& text_frame,
-                       DlScalar x,
-                       DlScalar y) {
+void DlOpSpy::drawTextFrame(
+    const std::shared_ptr<impeller::TextFrame>& text_frame,
+    DlScalar x,
+    DlScalar y) {
   did_draw_ |= will_draw_;
 }
 

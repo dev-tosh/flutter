@@ -9,6 +9,8 @@
 #include <string>
 #include <vector>
 
+#include "vulkan/vulkan.h"
+
 #include "GLES3/gl3.h"
 #include "flutter/flow/raster_cache.h"
 #include "flutter/fml/file.h"
@@ -46,7 +48,7 @@ using EmbedderTest = testing::EmbedderTest;
 TEST_F(EmbedderTest, CanCreateOpenGLRenderingEngine) {
   auto& context = GetEmbedderContext<EmbedderTestContextGL>();
   EmbedderConfigBuilder builder(context);
-  builder.SetSurface(DlISize(1, 1));
+  builder.SetSurface(SkISize::Make(1, 1));
   auto engine = builder.LaunchEngine();
   ASSERT_TRUE(engine.is_valid());
 }
@@ -60,7 +62,7 @@ TEST_F(EmbedderTest,
        MustPreventEngineLaunchWhenRequiredCompositorArgsAreAbsent) {
   auto& context = GetEmbedderContext<EmbedderTestContextSoftware>();
   EmbedderConfigBuilder builder(context);
-  builder.SetSurface(DlISize(1, 1));
+  builder.SetSurface(SkISize::Make(1, 1));
   builder.SetCompositor();
   builder.GetCompositor().create_backing_store_callback = nullptr;
   builder.GetCompositor().collect_backing_store_callback = nullptr;
@@ -78,7 +80,7 @@ TEST_F(EmbedderTest,
 TEST_F(EmbedderTest, LaunchFailsWhenMultiplePresentCallbacks) {
   auto& context = GetEmbedderContext<EmbedderTestContextSoftware>();
   EmbedderConfigBuilder builder(context);
-  builder.SetSurface(DlISize(1, 1));
+  builder.SetSurface(SkISize::Make(1, 1));
   builder.SetCompositor();
   builder.GetCompositor().present_layers_callback =
       [](const FlutterLayer** layers, size_t layers_count, void* user_data) {
@@ -98,7 +100,7 @@ TEST_F(EmbedderTest, CompositorMustBeAbleToRenderToOpenGLFramebuffer) {
   auto& context = GetEmbedderContext<EmbedderTestContextGL>();
 
   EmbedderConfigBuilder builder(context);
-  builder.SetSurface(DlISize(800, 600));
+  builder.SetSurface(SkISize::Make(800, 600));
   builder.SetCompositor();
   builder.SetDartEntrypoint("can_composite_platform_views");
 
@@ -218,7 +220,7 @@ TEST_F(EmbedderTest, RasterCacheDisabledWithPlatformViews) {
   auto& context = GetEmbedderContext<EmbedderTestContextGL>();
 
   EmbedderConfigBuilder builder(context);
-  builder.SetSurface(DlISize(800, 600));
+  builder.SetSurface(SkISize::Make(800, 600));
   builder.SetCompositor();
   builder.SetDartEntrypoint("can_composite_platform_views_with_opacity");
 
@@ -351,7 +353,7 @@ TEST_F(EmbedderTest, RasterCacheEnabled) {
   auto& context = GetEmbedderContext<EmbedderTestContextGL>();
 
   EmbedderConfigBuilder builder(context);
-  builder.SetSurface(DlISize(800, 600));
+  builder.SetSurface(SkISize::Make(800, 600));
   builder.SetCompositor();
   builder.SetDartEntrypoint("can_composite_with_opacity");
 
@@ -437,7 +439,7 @@ TEST_F(EmbedderTest, CompositorMustBeAbleToRenderToOpenGLTexture) {
   auto& context = GetEmbedderContext<EmbedderTestContextGL>();
 
   EmbedderConfigBuilder builder(context);
-  builder.SetSurface(DlISize(800, 600));
+  builder.SetSurface(SkISize::Make(800, 600));
   builder.SetCompositor();
   builder.SetDartEntrypoint("can_composite_platform_views");
 
@@ -558,7 +560,7 @@ TEST_F(EmbedderTest, CompositorMustBeAbleToRenderToSoftwareBuffer) {
   auto& context = GetEmbedderContext<EmbedderTestContextGL>();
 
   EmbedderConfigBuilder builder(context);
-  builder.SetSurface(DlISize(800, 600));
+  builder.SetSurface(SkISize::Make(800, 600));
   builder.SetCompositor();
   builder.SetDartEntrypoint("can_composite_platform_views");
 
@@ -679,7 +681,7 @@ TEST_F(EmbedderTest, CompositorMustBeAbleToRenderKnownScene) {
   auto& context = GetEmbedderContext<EmbedderTestContextGL>();
 
   EmbedderConfigBuilder builder(context);
-  builder.SetSurface(DlISize(800, 600));
+  builder.SetSurface(SkISize::Make(800, 600));
   builder.SetCompositor();
   builder.SetDartEntrypoint("can_composite_platform_views_with_known_scene");
 
@@ -894,7 +896,7 @@ TEST_F(EmbedderTest, CustomCompositorMustWorkWithCustomTaskRunner) {
 
   EmbedderConfigBuilder builder(context);
 
-  builder.SetSurface(DlISize(800, 600));
+  builder.SetSurface(SkISize::Make(800, 600));
   builder.SetCompositor();
   builder.SetDartEntrypoint("can_composite_platform_views");
 
@@ -1061,7 +1063,7 @@ TEST_F(EmbedderTest, CompositorMustBeAbleToRenderWithRootLayerOnly) {
   auto& context = GetEmbedderContext<EmbedderTestContextGL>();
 
   EmbedderConfigBuilder builder(context);
-  builder.SetSurface(DlISize(800, 600));
+  builder.SetSurface(SkISize::Make(800, 600));
   builder.SetCompositor();
   builder.SetDartEntrypoint(
       "can_composite_platform_views_with_root_layer_only");
@@ -1143,7 +1145,7 @@ TEST_F(EmbedderTest, CompositorMustBeAbleToRenderWithPlatformLayerOnBottom) {
   auto& context = GetEmbedderContext<EmbedderTestContextGL>();
 
   EmbedderConfigBuilder builder(context);
-  builder.SetSurface(DlISize(800, 600));
+  builder.SetSurface(SkISize::Make(800, 600));
   builder.SetCompositor();
   builder.SetDartEntrypoint(
       "can_composite_platform_views_with_platform_layer_on_bottom");
@@ -1271,7 +1273,7 @@ TEST_F(EmbedderTest,
   auto& context = GetEmbedderContext<EmbedderTestContextGL>();
 
   EmbedderConfigBuilder builder(context);
-  builder.SetSurface(DlISize(600, 800));
+  builder.SetSurface(SkISize::Make(600, 800));
   builder.SetCompositor();
   builder.SetDartEntrypoint("can_composite_platform_views_with_known_scene");
 
@@ -1282,8 +1284,7 @@ TEST_F(EmbedderTest,
   // |CanRenderGradientWithoutCompositorWithXform| test to ensure that
   // transforms are consistent respected.
   const auto root_surface_transformation =
-      DlMatrix::MakeTranslation({0, 800}) *
-      DlMatrix::MakeRotationZ(DlDegrees(-90));
+      SkMatrix().preTranslate(0, 800).preRotate(-90, 0, 0);
 
   context.SetRootSurfaceTransformation(root_surface_transformation);
 
@@ -1491,7 +1492,7 @@ TEST_F(EmbedderTest, CanRenderSceneWithoutCustomCompositor) {
   EmbedderConfigBuilder builder(context);
 
   builder.SetDartEntrypoint("can_render_scene_without_custom_compositor");
-  builder.SetSurface(DlISize(800, 600));
+  builder.SetSurface(SkISize::Make(800, 600));
 
   auto rendered_scene = context.GetNextSceneImage();
 
@@ -1515,15 +1516,14 @@ TEST_F(EmbedderTest, CanRenderSceneWithoutCustomCompositorWithTransformation) {
   auto& context = GetEmbedderContext<EmbedderTestContextGL>();
 
   const auto root_surface_transformation =
-      DlMatrix::MakeTranslation({0, 800}) *
-      DlMatrix::MakeRotationZ(DlDegrees(-90));
+      SkMatrix().preTranslate(0, 800).preRotate(-90, 0, 0);
 
   context.SetRootSurfaceTransformation(root_surface_transformation);
 
   EmbedderConfigBuilder builder(context);
 
   builder.SetDartEntrypoint("can_render_scene_without_custom_compositor");
-  builder.SetSurface(DlISize(600, 800));
+  builder.SetSurface(SkISize::Make(600, 800));
 
   auto rendered_scene = context.GetNextSceneImage();
 
@@ -1550,7 +1550,7 @@ TEST_P(EmbedderTestMultiBackend, CanRenderGradientWithoutCompositor) {
   auto& context = GetEmbedderContext(backend);
   EmbedderConfigBuilder builder(context);
   builder.SetDartEntrypoint("render_gradient");
-  builder.SetSurface(DlISize(800, 600));
+  builder.SetSurface(SkISize::Make(800, 600));
 
   auto rendered_scene = context.GetNextSceneImage();
 
@@ -1574,14 +1574,13 @@ TEST_F(EmbedderTest, CanRenderGradientWithoutCompositorWithXform) {
   auto& context = GetEmbedderContext<EmbedderTestContextGL>();
 
   const auto root_surface_transformation =
-      DlMatrix::MakeTranslation({0, 800}) *
-      DlMatrix::MakeRotationZ(DlDegrees(-90));
+      SkMatrix().preTranslate(0, 800).preRotate(-90, 0, 0);
 
   context.SetRootSurfaceTransformation(root_surface_transformation);
 
   EmbedderConfigBuilder builder(context);
 
-  const auto surface_size = DlISize(600, 800);
+  const auto surface_size = SkISize::Make(600, 800);
 
   builder.SetDartEntrypoint("render_gradient");
   builder.SetSurface(surface_size);
@@ -1610,7 +1609,7 @@ TEST_P(EmbedderTestMultiBackend, CanRenderGradientWithCompositor) {
 
   EmbedderConfigBuilder builder(context);
   builder.SetDartEntrypoint("render_gradient");
-  builder.SetSurface(DlISize(800, 600));
+  builder.SetSurface(SkISize::Make(800, 600));
   builder.SetCompositor();
   builder.SetRenderTargetType(GetRenderTargetFromBackend(backend, true));
 
@@ -1639,15 +1638,14 @@ TEST_F(EmbedderTest, CanRenderGradientWithCompositorWithXform) {
   // |CanRenderGradientWithoutCompositorWithXform| test to ensure that
   // transforms are consistent respected.
   const auto root_surface_transformation =
-      DlMatrix::MakeTranslation({0, 800}) *
-      DlMatrix::MakeRotationZ(DlDegrees(-90));
+      SkMatrix().preTranslate(0, 800).preRotate(-90, 0, 0);
 
   context.SetRootSurfaceTransformation(root_surface_transformation);
 
   EmbedderConfigBuilder builder(context);
 
   builder.SetDartEntrypoint("render_gradient");
-  builder.SetSurface(DlISize(600, 800));
+  builder.SetSurface(SkISize::Make(600, 800));
   builder.SetCompositor();
   builder.SetRenderTargetType(
       EmbedderTestBackingStoreProducer::RenderTargetType::kOpenGLFramebuffer);
@@ -1677,7 +1675,7 @@ TEST_P(EmbedderTestMultiBackend,
 
   EmbedderConfigBuilder builder(context);
   builder.SetDartEntrypoint("render_gradient_on_non_root_backing_store");
-  builder.SetSurface(DlISize(800, 600));
+  builder.SetSurface(SkISize::Make(800, 600));
   builder.SetCompositor();
   builder.SetRenderTargetType(GetRenderTargetFromBackend(backend, true));
 
@@ -1810,15 +1808,14 @@ TEST_F(EmbedderTest, CanRenderGradientWithCompositorOnNonRootLayerWithXform) {
   // |CanRenderGradientWithoutCompositorWithXform| test to ensure that
   // transforms are consistent respected.
   const auto root_surface_transformation =
-      DlMatrix::MakeTranslation({0, 800}) *
-      DlMatrix::MakeRotationZ(DlDegrees(-90));
+      SkMatrix().preTranslate(0, 800).preRotate(-90, 0, 0);
 
   context.SetRootSurfaceTransformation(root_surface_transformation);
 
   EmbedderConfigBuilder builder(context);
 
   builder.SetDartEntrypoint("render_gradient_on_non_root_backing_store");
-  builder.SetSurface(DlISize(600, 800));
+  builder.SetSurface(SkISize::Make(600, 800));
   builder.SetCompositor();
   builder.SetRenderTargetType(
       EmbedderTestBackingStoreProducer::RenderTargetType::kOpenGLFramebuffer);
@@ -1955,22 +1952,20 @@ TEST_F(EmbedderTest, VerifyB141980393) {
   // The Flutter application is 800 x 600 but rendering on a surface that is 600
   // x 800 achieved using a root surface transformation.
   const auto root_surface_transformation =
-      DlMatrix::MakeTranslation({0, 800}) *
-      DlMatrix::MakeRotationZ(DlDegrees(-90));
-  const auto flutter_application_rect = DlRect::MakeWH(800, 600);
+      SkMatrix().preTranslate(0, 800).preRotate(-90, 0, 0);
+  const auto flutter_application_rect = SkRect::MakeWH(800, 600);
   const auto root_surface_rect =
-      flutter_application_rect.TransformAndClipBounds(
-          root_surface_transformation);
+      root_surface_transformation.mapRect(flutter_application_rect);
 
-  ASSERT_FLOAT_EQ(root_surface_rect.GetWidth(), 600.0f);
-  ASSERT_FLOAT_EQ(root_surface_rect.GetHeight(), 800.0f);
+  ASSERT_DOUBLE_EQ(root_surface_rect.width(), 600.0);
+  ASSERT_DOUBLE_EQ(root_surface_rect.height(), 800.0);
 
   // Configure the fixture for the surface transformation.
   context.SetRootSurfaceTransformation(root_surface_transformation);
 
   // Configure the Flutter project args for the root surface transformation.
   builder.SetSurface(
-      DlISize(root_surface_rect.GetWidth(), root_surface_rect.GetHeight()));
+      SkISize::Make(root_surface_rect.width(), root_surface_rect.height()));
 
   // Use a compositor instead of rendering directly to the surface.
   builder.SetCompositor();
@@ -2001,7 +1996,7 @@ TEST_F(EmbedderTest, VerifyB141980393) {
           // code and are free of root surface transformations.
           const double unxformed_top_margin = 31.0;
           const double unxformed_bottom_margin = 37.0;
-          const auto unxformed_platform_view_rect = DlRect::MakeXYWH(
+          const auto unxformed_platform_view_rect = SkRect::MakeXYWH(
               0.0,                   // x
               unxformed_top_margin,  // y (top margin)
               800,                   // width
@@ -2013,23 +2008,22 @@ TEST_F(EmbedderTest, VerifyB141980393) {
           // to this surface which it must account for in the coordinates it
           // receives here.
           const auto xformed_platform_view_rect =
-              unxformed_platform_view_rect.TransformAndClipBounds(
-                  root_surface_transformation);
+              root_surface_transformation.mapRect(unxformed_platform_view_rect);
 
           // Spell out the value that we are going to be checking below for
           // clarity.
           ASSERT_EQ(xformed_platform_view_rect,
-                    DlRect::MakeXYWH(31.0,   // x
+                    SkRect::MakeXYWH(31.0,   // x
                                      0.0,    // y
                                      532.0,  // width
                                      800.0   // height
                                      ));
 
           // Verify that the engine is giving us the right size and offset.
-          layer.offset = FlutterPointMake(xformed_platform_view_rect.GetX(),
-                                          xformed_platform_view_rect.GetY());
-          layer.size = FlutterSizeMake(xformed_platform_view_rect.GetWidth(),
-                                       xformed_platform_view_rect.GetHeight());
+          layer.offset = FlutterPointMake(xformed_platform_view_rect.x(),
+                                          xformed_platform_view_rect.y());
+          layer.size = FlutterSizeMake(xformed_platform_view_rect.width(),
+                                       xformed_platform_view_rect.height());
 
           ASSERT_EQ(*layers[0], layer);
         }
@@ -2045,8 +2039,8 @@ TEST_F(EmbedderTest, VerifyB141980393) {
 
   // The Flutter application is 800 x 600 rendering on a surface 600 x 800
   // achieved via a root surface transformation.
-  event.width = flutter_application_rect.GetWidth();
-  event.height = flutter_application_rect.GetHeight();
+  event.width = flutter_application_rect.width();
+  event.height = flutter_application_rect.height();
   event.pixel_ratio = 1.0;
   ASSERT_EQ(FlutterEngineSendWindowMetricsEvent(engine.get(), &event),
             kSuccess);
@@ -2075,7 +2069,7 @@ TEST_F(EmbedderTest, CanCreateEmbedderWithCustomRenderTaskRunner) {
   auto& context = GetEmbedderContext<EmbedderTestContextGL>();
   EmbedderConfigBuilder builder(context);
   builder.SetDartEntrypoint("can_render_scene_without_custom_compositor");
-  builder.SetSurface(DlISize(800, 600));
+  builder.SetSurface(SkISize::Make(800, 600));
   builder.SetRenderTaskRunner(
       &render_task_runner.GetFlutterTaskRunnerDescription());
 
@@ -2135,7 +2129,7 @@ TEST_P(EmbedderTestMultiBackend,
     auto& context = GetEmbedderContext(backend);
     EmbedderConfigBuilder builder(context);
     builder.SetDartEntrypoint("can_render_scene_without_custom_compositor");
-    builder.SetSurface(DlISize(800, 600));
+    builder.SetSurface(SkISize::Make(800, 600));
     builder.SetRenderTaskRunner(
         &common_task_runner.GetFlutterTaskRunnerDescription());
     builder.SetPlatformTaskRunner(
@@ -2191,7 +2185,7 @@ TEST_P(EmbedderTestMultiBackend,
   auto& context = GetEmbedderContext(backend);
 
   EmbedderConfigBuilder builder(context);
-  builder.SetSurface(DlISize(800, 600));
+  builder.SetSurface(SkISize::Make(800, 600));
   builder.SetCompositor();
   builder.SetDartEntrypoint("can_display_platform_view_with_pixel_ratio");
 
@@ -2309,7 +2303,7 @@ TEST_F(
   auto& context = GetEmbedderContext<EmbedderTestContextGL>();
 
   EmbedderConfigBuilder builder(context);
-  builder.SetSurface(DlISize(600, 800));
+  builder.SetSurface(SkISize::Make(600, 800));
   builder.SetCompositor();
   builder.SetDartEntrypoint("can_display_platform_view_with_pixel_ratio");
 
@@ -2317,8 +2311,7 @@ TEST_F(
       EmbedderTestBackingStoreProducer::RenderTargetType::kOpenGLTexture);
 
   const auto root_surface_transformation =
-      DlMatrix::MakeTranslation({0, 800}) *
-      DlMatrix::MakeRotationZ(DlDegrees(-90));
+      SkMatrix().preTranslate(0, 800).preRotate(-90, 0, 0);
 
   context.SetRootSurfaceTransformation(root_surface_transformation);
 
@@ -2433,7 +2426,7 @@ TEST_F(EmbedderTest,
   auto& context = GetEmbedderContext<EmbedderTestContextGL>();
 
   EmbedderConfigBuilder builder(context);
-  builder.SetSurface(DlISize(600, 1024));
+  builder.SetSurface(SkISize::Make(600, 1024));
   builder.SetCompositor();
   builder.SetDartEntrypoint("push_frames_over_and_over");
 
@@ -2441,8 +2434,7 @@ TEST_F(EmbedderTest,
       EmbedderTestBackingStoreProducer::RenderTargetType::kOpenGLTexture);
 
   const auto root_surface_transformation =
-      DlMatrix::MakeTranslation({0, 1024}) *
-      DlMatrix::MakeRotationZ(DlDegrees(-90));
+      SkMatrix().preTranslate(0, 1024).preRotate(-90, 0, 0);
 
   context.SetRootSurfaceTransformation(root_surface_transformation);
 
@@ -2478,12 +2470,11 @@ TEST_F(EmbedderTest,
   auto& context = GetEmbedderContext<EmbedderTestContextGL>();
 
   EmbedderConfigBuilder builder(context);
-  builder.SetSurface(DlISize(600, 1024));
+  builder.SetSurface(SkISize::Make(600, 1024));
   builder.SetDartEntrypoint("push_frames_over_and_over");
 
   const auto root_surface_transformation =
-      DlMatrix::MakeTranslation({0, 1024}) *
-      DlMatrix::MakeRotationZ(DlDegrees(-90));
+      SkMatrix().preTranslate(0, 1024).preRotate(-90, 0, 0);
 
   context.SetRootSurfaceTransformation(root_surface_transformation);
 
@@ -2519,7 +2510,7 @@ TEST_P(EmbedderTestMultiBackend, PlatformViewMutatorsAreValid) {
   auto& context = GetEmbedderContext(backend);
 
   EmbedderConfigBuilder builder(context);
-  builder.SetSurface(DlISize(800, 600));
+  builder.SetSurface(SkISize::Make(800, 600));
   builder.SetCompositor();
   builder.SetDartEntrypoint("platform_view_mutators");
 
@@ -2591,7 +2582,7 @@ TEST_P(EmbedderTestMultiBackend, PlatformViewMutatorsAreValid) {
               case kFlutterPlatformViewMutationTypeClipRect:
                 mutation.type = kFlutterPlatformViewMutationTypeClipRect;
                 mutation.clip_rect = FlutterRectMake(
-                    DlRect::MakeXYWH(10.0, 10.0, 800.0 - 20.0, 600.0 - 20.0));
+                    SkRect::MakeXYWH(10.0, 10.0, 800.0 - 20.0, 600.0 - 20.0));
                 break;
               case kFlutterPlatformViewMutationTypeOpacity:
                 mutation.type = kFlutterPlatformViewMutationTypeOpacity;
@@ -2628,7 +2619,7 @@ TEST_F(EmbedderTest, PlatformViewMutatorsAreValidWithPixelRatio) {
   auto& context = GetEmbedderContext<EmbedderTestContextGL>();
 
   EmbedderConfigBuilder builder(context);
-  builder.SetSurface(DlISize(800, 600));
+  builder.SetSurface(SkISize::Make(800, 600));
   builder.SetCompositor();
   builder.SetDartEntrypoint("platform_view_mutators_with_pixel_ratio");
 
@@ -2701,7 +2692,7 @@ TEST_F(EmbedderTest, PlatformViewMutatorsAreValidWithPixelRatio) {
               case kFlutterPlatformViewMutationTypeClipRect:
                 mutation.type = kFlutterPlatformViewMutationTypeClipRect;
                 mutation.clip_rect = FlutterRectMake(
-                    DlRect::MakeXYWH(5.0, 5.0, 400.0 - 10.0, 300.0 - 10.0));
+                    SkRect::MakeXYWH(5.0, 5.0, 400.0 - 10.0, 300.0 - 10.0));
                 break;
               case kFlutterPlatformViewMutationTypeOpacity:
                 mutation.type = kFlutterPlatformViewMutationTypeOpacity;
@@ -2709,8 +2700,8 @@ TEST_F(EmbedderTest, PlatformViewMutatorsAreValidWithPixelRatio) {
                 break;
               case kFlutterPlatformViewMutationTypeTransformation:
                 mutation.type = kFlutterPlatformViewMutationTypeTransformation;
-                mutation.transformation = FlutterTransformationMake(
-                    DlMatrix::MakeScale({2.0, 2.0, 1}));
+                mutation.transformation =
+                    FlutterTransformationMake(SkMatrix::Scale(2.0, 2.0));
                 break;
             }
 
@@ -2740,7 +2731,7 @@ TEST_F(EmbedderTest,
   auto& context = GetEmbedderContext<EmbedderTestContextGL>();
 
   EmbedderConfigBuilder builder(context);
-  builder.SetSurface(DlISize(800, 600));
+  builder.SetSurface(SkISize::Make(800, 600));
   builder.SetCompositor();
   builder.SetDartEntrypoint("platform_view_mutators_with_pixel_ratio");
 
@@ -2748,8 +2739,7 @@ TEST_F(EmbedderTest,
       EmbedderTestBackingStoreProducer::RenderTargetType::kOpenGLTexture);
 
   static const auto root_surface_transformation =
-      DlMatrix::MakeTranslation({0, 800}) *
-      DlMatrix::MakeRotationZ(DlDegrees(-90));
+      SkMatrix().preTranslate(0, 800).preRotate(-90, 0, 0);
 
   context.SetRootSurfaceTransformation(root_surface_transformation);
 
@@ -2819,7 +2809,7 @@ TEST_F(EmbedderTest,
               case kFlutterPlatformViewMutationTypeClipRect:
                 mutation.type = kFlutterPlatformViewMutationTypeClipRect;
                 mutation.clip_rect = FlutterRectMake(
-                    DlRect::MakeXYWH(5.0, 5.0, 400.0 - 10.0, 300.0 - 10.0));
+                    SkRect::MakeXYWH(5.0, 5.0, 400.0 - 10.0, 300.0 - 10.0));
                 break;
               case kFlutterPlatformViewMutationTypeOpacity:
                 mutation.type = kFlutterPlatformViewMutationTypeOpacity;
@@ -2858,7 +2848,7 @@ TEST_F(EmbedderTest, EmptySceneIsAcceptable) {
   auto& context = GetEmbedderContext<EmbedderTestContextGL>();
 
   EmbedderConfigBuilder builder(context);
-  builder.SetSurface(DlISize(800, 600));
+  builder.SetSurface(SkISize::Make(800, 600));
   builder.SetCompositor();
   builder.SetDartEntrypoint("empty_scene");
   fml::AutoResetWaitableEvent latch;
@@ -2884,7 +2874,7 @@ TEST_F(EmbedderTest, SceneWithNoRootContainerIsAcceptable) {
   auto& context = GetEmbedderContext<EmbedderTestContextGL>();
 
   EmbedderConfigBuilder builder(context);
-  builder.SetSurface(DlISize(800, 600));
+  builder.SetSurface(SkISize::Make(800, 600));
   builder.SetCompositor();
   builder.SetRenderTargetType(
       EmbedderTestBackingStoreProducer::RenderTargetType::kOpenGLFramebuffer);
@@ -2914,16 +2904,16 @@ TEST_F(EmbedderTest, ArcEndCapsAreDrawnCorrectly) {
   auto& context = GetEmbedderContext<EmbedderTestContextGL>();
 
   EmbedderConfigBuilder builder(context);
-  builder.SetSurface(DlISize(800, 1024));
+  builder.SetSurface(SkISize::Make(800, 1024));
   builder.SetCompositor();
   builder.SetDartEntrypoint("arc_end_caps_correct");
   builder.SetRenderTargetType(
       EmbedderTestBackingStoreProducer::RenderTargetType::kOpenGLFramebuffer);
 
-  const auto root_surface_transformation =
-      DlMatrix::MakeScale({1.0, -1.0, 1}) *
-      DlMatrix::MakeTranslation({1024.0f, -800.0f}) *
-      DlMatrix::MakeRotationZ(DlDegrees(90.0));
+  const auto root_surface_transformation = SkMatrix()
+                                               .preScale(1.0, -1.0)
+                                               .preTranslate(1024.0, -800.0)
+                                               .preRotate(90.0);
 
   context.SetRootSurfaceTransformation(root_surface_transformation);
 
@@ -2948,15 +2938,14 @@ TEST_F(EmbedderTest, ClipsAreCorrectlyCalculated) {
   auto& context = GetEmbedderContext<EmbedderTestContextGL>();
 
   EmbedderConfigBuilder builder(context);
-  builder.SetSurface(DlISize(400, 300));
+  builder.SetSurface(SkISize::Make(400, 300));
   builder.SetCompositor();
   builder.SetDartEntrypoint("scene_builder_with_clips");
   builder.SetRenderTargetType(
       EmbedderTestBackingStoreProducer::RenderTargetType::kOpenGLFramebuffer);
 
   const auto root_surface_transformation =
-      DlMatrix::MakeTranslation({0, 400}) *
-      DlMatrix::MakeRotationZ(DlDegrees(-90));
+      SkMatrix().preTranslate(0, 400).preRotate(-90, 0, 0);
 
   context.SetRootSurfaceTransformation(root_surface_transformation);
 
@@ -2995,14 +2984,13 @@ TEST_F(EmbedderTest, ClipsAreCorrectlyCalculated) {
                 // The test is only set up to supply one clip. Make sure it is
                 // the one we expect.
                 const auto rect_to_compare =
-                    DlRect::MakeLTRB(10.0, 10.0, 390, 290);
+                    SkRect::MakeLTRB(10.0, 10.0, 390, 290);
                 ASSERT_EQ(clip, FlutterRectMake(rect_to_compare));
 
                 // This maps the clip from device space into surface space.
-                ASSERT_TRUE(total_xformation.IsAligned2D());
-                DlRect mapped =
-                    rect_to_compare.TransformAndClipBounds(total_xformation);
-                ASSERT_EQ(mapped, DlRect::MakeLTRB(10, 10, 290, 390));
+                SkRect mapped;
+                ASSERT_TRUE(total_xformation.mapRect(&mapped, rect_to_compare));
+                ASSERT_EQ(mapped, SkRect::MakeLTRB(10, 10, 290, 390));
                 clip_assertions_checked = true;
               });
 
@@ -3030,15 +3018,14 @@ TEST_F(EmbedderTest, ComplexClipsAreCorrectlyCalculated) {
   auto& context = GetEmbedderContext<EmbedderTestContextGL>();
 
   EmbedderConfigBuilder builder(context);
-  builder.SetSurface(DlISize(1024, 600));
+  builder.SetSurface(SkISize::Make(1024, 600));
   builder.SetCompositor();
   builder.SetDartEntrypoint("scene_builder_with_complex_clips");
   builder.SetRenderTargetType(
       EmbedderTestBackingStoreProducer::RenderTargetType::kOpenGLFramebuffer);
 
   const auto root_surface_transformation =
-      DlMatrix::MakeTranslation({0, 1024}) *
-      DlMatrix::MakeRotationZ(DlDegrees(-90));
+      SkMatrix().preTranslate(0, 1024).preRotate(-90, 0, 0);
 
   context.SetRootSurfaceTransformation(root_surface_transformation);
 
@@ -3066,7 +3053,7 @@ TEST_F(EmbedderTest, ComplexClipsAreCorrectlyCalculated) {
 
           ASSERT_EQ(mutations[0]->type,
                     kFlutterPlatformViewMutationTypeTransformation);
-          ASSERT_EQ(DlMatrixMake(mutations[0]->transformation),
+          ASSERT_EQ(SkMatrixMake(mutations[0]->transformation),
                     root_surface_transformation);
 
           ASSERT_EQ(mutations[1]->type,
@@ -3076,8 +3063,8 @@ TEST_F(EmbedderTest, ComplexClipsAreCorrectlyCalculated) {
 
           ASSERT_EQ(mutations[2]->type,
                     kFlutterPlatformViewMutationTypeTransformation);
-          ASSERT_EQ(DlMatrixMake(mutations[2]->transformation),
-                    DlMatrix::MakeTranslation({512.0, 0.0}));
+          ASSERT_EQ(SkMatrixMake(mutations[2]->transformation),
+                    SkMatrix::Translate(512.0, 0.0));
 
           ASSERT_EQ(mutations[3]->type,
                     kFlutterPlatformViewMutationTypeClipRect);
@@ -3086,8 +3073,8 @@ TEST_F(EmbedderTest, ComplexClipsAreCorrectlyCalculated) {
 
           ASSERT_EQ(mutations[4]->type,
                     kFlutterPlatformViewMutationTypeTransformation);
-          ASSERT_EQ(DlMatrixMake(mutations[4]->transformation),
-                    DlMatrix::MakeTranslation({-256.0, 0.0}));
+          ASSERT_EQ(SkMatrixMake(mutations[4]->transformation),
+                    SkMatrix::Translate(-256.0, 0.0));
 
           ASSERT_EQ(mutations[5]->type,
                     kFlutterPlatformViewMutationTypeClipRect);
@@ -3115,7 +3102,7 @@ TEST_F(EmbedderTest, ComplexClipsAreCorrectlyCalculated) {
 TEST_F(EmbedderTest, ObjectsCanBePostedViaPorts) {
   auto& context = GetEmbedderContext<EmbedderTestContextGL>();
   EmbedderConfigBuilder builder(context);
-  builder.SetSurface(DlISize(800, 1024));
+  builder.SetSurface(SkISize::Make(800, 1024));
   builder.SetDartEntrypoint("objects_can_be_posted");
 
   // Synchronously acquire the send port from the Dart end. We will be using
@@ -3315,7 +3302,7 @@ TEST_F(EmbedderTest, CompositorCanPostZeroLayersForPresentation) {
   auto& context = GetEmbedderContext<EmbedderTestContextGL>();
 
   EmbedderConfigBuilder builder(context);
-  builder.SetSurface(DlISize(300, 200));
+  builder.SetSurface(SkISize::Make(300, 200));
   builder.SetCompositor();
   builder.SetDartEntrypoint("empty_scene_posts_zero_layers_to_compositor");
   builder.SetRenderTargetType(
@@ -3349,7 +3336,7 @@ TEST_F(EmbedderTest, CompositorCanPostOnlyPlatformViews) {
   auto& context = GetEmbedderContext<EmbedderTestContextGL>();
 
   EmbedderConfigBuilder builder(context);
-  builder.SetSurface(DlISize(300, 200));
+  builder.SetSurface(SkISize::Make(300, 200));
   builder.SetCompositor();
   builder.SetDartEntrypoint("compositor_can_post_only_platform_views");
   builder.SetRenderTargetType(
@@ -3413,7 +3400,7 @@ TEST_F(EmbedderTest, CompositorRenderTargetsAreRecycled) {
   auto& context = GetEmbedderContext<EmbedderTestContextGL>();
 
   EmbedderConfigBuilder builder(context);
-  builder.SetSurface(DlISize(300, 200));
+  builder.SetSurface(SkISize::Make(300, 200));
   builder.SetCompositor();
   builder.SetDartEntrypoint("render_targets_are_recycled");
   builder.SetRenderTargetType(
@@ -3459,7 +3446,7 @@ TEST_F(EmbedderTest, CompositorRenderTargetsAreInStableOrder) {
   auto& context = GetEmbedderContext<EmbedderTestContextGL>();
 
   EmbedderConfigBuilder builder(context);
-  builder.SetSurface(DlISize(300, 200));
+  builder.SetSurface(SkISize::Make(300, 200));
   builder.SetCompositor();
   builder.SetDartEntrypoint("render_targets_are_in_stable_order");
   builder.SetRenderTargetType(
@@ -3528,12 +3515,11 @@ TEST_F(EmbedderTest, CompositorRenderTargetsAreInStableOrder) {
 TEST_F(EmbedderTest, FrameInfoContainsValidWidthAndHeight) {
   auto& context = GetEmbedderContext<EmbedderTestContextGL>();
   const auto root_surface_transformation =
-      DlMatrix::MakeTranslation({0, 1024}) *
-      DlMatrix::MakeRotationZ(DlDegrees(-90));
+      SkMatrix().preTranslate(0, 1024).preRotate(-90, 0, 0);
   context.SetRootSurfaceTransformation(root_surface_transformation);
 
   EmbedderConfigBuilder builder(context);
-  builder.SetSurface(DlISize(600, 1024));
+  builder.SetSurface(SkISize::Make(600, 1024));
   builder.SetDartEntrypoint("push_frames_over_and_over");
   auto engine = builder.LaunchEngine();
 
@@ -3570,7 +3556,7 @@ TEST_F(EmbedderTest, MustNotRunWithBothFBOCallbacksSet) {
   context.SetOpenGLFBOCallBack();
 
   EmbedderConfigBuilder builder(context);
-  builder.SetSurface(DlISize(600, 1024));
+  builder.SetSurface(SkISize::Make(600, 1024));
 
   auto engine = builder.LaunchEngine();
   ASSERT_FALSE(engine.is_valid());
@@ -3581,7 +3567,7 @@ TEST_F(EmbedderTest, MustNotRunWithBothPresentCallbacksSet) {
   context.SetOpenGLPresentCallBack();
 
   EmbedderConfigBuilder builder(context);
-  builder.SetSurface(DlISize(600, 1024));
+  builder.SetSurface(SkISize::Make(600, 1024));
 
   auto engine = builder.LaunchEngine();
   ASSERT_FALSE(engine.is_valid());
@@ -3592,7 +3578,7 @@ TEST_F(EmbedderTest, MustStillRunWhenPopulateExistingDamageIsNotProvided) {
   context.GetRendererConfig().open_gl.populate_existing_damage = nullptr;
 
   EmbedderConfigBuilder builder(context);
-  builder.SetSurface(DlISize(1, 1));
+  builder.SetSurface(SkISize::Make(1, 1));
 
   auto engine = builder.LaunchEngine();
   ASSERT_TRUE(engine.is_valid());
@@ -3608,7 +3594,7 @@ TEST_F(EmbedderTest, MustRunWhenPopulateExistingDamageIsProvided) {
   };
 
   EmbedderConfigBuilder builder(context);
-  builder.SetSurface(DlISize(1, 1));
+  builder.SetSurface(SkISize::Make(1, 1));
   auto engine = builder.LaunchEngine();
   ASSERT_TRUE(engine.is_valid());
 }
@@ -3626,7 +3612,7 @@ TEST_F(EmbedderTest, MustRunWithPopulateExistingDamageAndFBOCallback) {
   };
 
   EmbedderConfigBuilder builder(context);
-  builder.SetSurface(DlISize(1, 1));
+  builder.SetSurface(SkISize::Make(1, 1));
   auto engine = builder.LaunchEngine();
   ASSERT_TRUE(engine.is_valid());
 }
@@ -3644,7 +3630,7 @@ TEST_F(EmbedderTest,
   };
 
   EmbedderConfigBuilder builder(context);
-  builder.SetSurface(DlISize(1, 1));
+  builder.SetSurface(SkISize::Make(1, 1));
   auto engine = builder.LaunchEngine();
   ASSERT_FALSE(engine.is_valid());
 }
@@ -3652,12 +3638,11 @@ TEST_F(EmbedderTest,
 TEST_F(EmbedderTest, PresentInfoContainsValidFBOId) {
   auto& context = GetEmbedderContext<EmbedderTestContextGL>();
   const auto root_surface_transformation =
-      DlMatrix::MakeTranslation({0, 1024}) *
-      DlMatrix::MakeRotationZ(DlDegrees(-90));
+      SkMatrix().preTranslate(0, 1024).preRotate(-90, 0, 0);
   context.SetRootSurfaceTransformation(root_surface_transformation);
 
   EmbedderConfigBuilder builder(context);
-  builder.SetSurface(DlISize(600, 1024));
+  builder.SetSurface(SkISize::Make(600, 1024));
   builder.SetDartEntrypoint("push_frames_over_and_over");
 
   auto engine = builder.LaunchEngine();
@@ -3711,7 +3696,7 @@ TEST_F(EmbedderTest,
       });
 
   EmbedderConfigBuilder builder(context);
-  builder.SetSurface(DlISize(800, 600));
+  builder.SetSurface(SkISize::Make(800, 600));
   builder.SetDartEntrypoint("render_gradient_retained");
   auto engine = builder.LaunchEngine();
   ASSERT_TRUE(engine.is_valid());
@@ -3791,7 +3776,7 @@ TEST_F(EmbedderTest, PresentInfoReceivesEmptyDamage) {
       });
 
   EmbedderConfigBuilder builder(context);
-  builder.SetSurface(DlISize(800, 600));
+  builder.SetSurface(SkISize::Make(800, 600));
   builder.SetDartEntrypoint("render_gradient_retained");
   auto engine = builder.LaunchEngine();
   ASSERT_TRUE(engine.is_valid());
@@ -3870,7 +3855,7 @@ TEST_F(EmbedderTest, PresentInfoReceivesPartialDamage) {
       });
 
   EmbedderConfigBuilder builder(context);
-  builder.SetSurface(DlISize(800, 600));
+  builder.SetSurface(SkISize::Make(800, 600));
   builder.SetDartEntrypoint("render_gradient_retained");
   auto engine = builder.LaunchEngine();
   ASSERT_TRUE(engine.is_valid());
@@ -3940,7 +3925,7 @@ TEST_F(EmbedderTest, PopulateExistingDamageReceivesValidID) {
   };
 
   EmbedderConfigBuilder builder(context);
-  builder.SetSurface(DlISize(800, 600));
+  builder.SetSurface(SkISize::Make(800, 600));
   builder.SetDartEntrypoint("render_gradient_retained");
   auto engine = builder.LaunchEngine();
   ASSERT_TRUE(engine.is_valid());
@@ -3979,7 +3964,7 @@ TEST_F(EmbedderTest, PopulateExistingDamageReceivesInvalidID) {
   };
 
   EmbedderConfigBuilder builder(context);
-  builder.SetSurface(DlISize(800, 600));
+  builder.SetSurface(SkISize::Make(800, 600));
   builder.SetDartEntrypoint("render_gradient_retained");
   auto engine = builder.LaunchEngine();
   ASSERT_TRUE(engine.is_valid());
@@ -4012,7 +3997,7 @@ TEST_F(EmbedderTest, SetSingleDisplayConfigurationWithDisplayId) {
   auto& context = GetEmbedderContext<EmbedderTestContextGL>();
 
   EmbedderConfigBuilder builder(context);
-  builder.SetSurface(DlISize(800, 600));
+  builder.SetSurface(SkISize::Make(800, 600));
   builder.SetCompositor();
   builder.SetDartEntrypoint("empty_scene");
   fml::AutoResetWaitableEvent latch;
@@ -4054,7 +4039,7 @@ TEST_F(EmbedderTest, SetSingleDisplayConfigurationWithoutDisplayId) {
   auto& context = GetEmbedderContext<EmbedderTestContextGL>();
 
   EmbedderConfigBuilder builder(context);
-  builder.SetSurface(DlISize(800, 600));
+  builder.SetSurface(SkISize::Make(800, 600));
   builder.SetCompositor();
   builder.SetDartEntrypoint("empty_scene");
   fml::AutoResetWaitableEvent latch;
@@ -4096,7 +4081,7 @@ TEST_F(EmbedderTest, SetValidMultiDisplayConfiguration) {
   auto& context = GetEmbedderContext<EmbedderTestContextGL>();
 
   EmbedderConfigBuilder builder(context);
-  builder.SetSurface(DlISize(800, 600));
+  builder.SetSurface(SkISize::Make(800, 600));
   builder.SetCompositor();
   builder.SetDartEntrypoint("empty_scene");
   fml::AutoResetWaitableEvent latch;
@@ -4145,7 +4130,7 @@ TEST_F(EmbedderTest, MultipleDisplaysWithSingleDisplayTrueIsInvalid) {
   auto& context = GetEmbedderContext<EmbedderTestContextGL>();
 
   EmbedderConfigBuilder builder(context);
-  builder.SetSurface(DlISize(800, 600));
+  builder.SetSurface(SkISize::Make(800, 600));
   builder.SetCompositor();
   builder.SetDartEntrypoint("empty_scene");
   fml::AutoResetWaitableEvent latch;
@@ -4191,7 +4176,7 @@ TEST_F(EmbedderTest, MultipleDisplaysWithSameDisplayIdIsInvalid) {
   auto& context = GetEmbedderContext<EmbedderTestContextGL>();
 
   EmbedderConfigBuilder builder(context);
-  builder.SetSurface(DlISize(800, 600));
+  builder.SetSurface(SkISize::Make(800, 600));
   builder.SetCompositor();
   builder.SetDartEntrypoint("empty_scene");
   fml::AutoResetWaitableEvent latch;
@@ -4237,7 +4222,7 @@ TEST_F(EmbedderTest, CompositorRenderTargetsNotRecycledWhenAvoidsCacheSet) {
   auto& context = GetEmbedderContext<EmbedderTestContextGL>();
 
   EmbedderConfigBuilder builder(context);
-  builder.SetSurface(DlISize(300, 200));
+  builder.SetSurface(SkISize::Make(300, 200));
   builder.SetCompositor(/*avoid_backing_store_cache=*/true);
   builder.SetDartEntrypoint("render_targets_are_recycled");
   builder.SetRenderTargetType(
@@ -4285,7 +4270,7 @@ TEST_F(EmbedderTest, SnapshotRenderTargetScalesDownToDriverMax) {
   auto& context = GetEmbedderContext<EmbedderTestContextGL>();
 
   EmbedderConfigBuilder builder(context);
-  builder.SetSurface(DlISize(800, 600));
+  builder.SetSurface(SkISize::Make(800, 600));
   builder.SetCompositor();
 
   auto max_size = context.GetCompositor().GetGrContext()->maxRenderTargetSize();
@@ -4327,7 +4312,7 @@ TEST_F(EmbedderTest, SnapshotRenderTargetScalesDownToDriverMax) {
 TEST_F(EmbedderTest, ObjectsPostedViaPortsServicedOnSecondaryTaskHeap) {
   auto& context = GetEmbedderContext<EmbedderTestContextGL>();
   EmbedderConfigBuilder builder(context);
-  builder.SetSurface(DlISize(800, 1024));
+  builder.SetSurface(SkISize::Make(800, 1024));
   builder.SetDartEntrypoint("objects_can_be_posted");
 
   // Synchronously acquire the send port from the Dart end. We will be using
@@ -4377,7 +4362,7 @@ TEST_F(EmbedderTest, ObjectsPostedViaPortsServicedOnSecondaryTaskHeap) {
 TEST_F(EmbedderTest, CreateInvalidBackingstoreOpenGLTexture) {
   auto& context = GetEmbedderContext<EmbedderTestContextGL>();
   EmbedderConfigBuilder builder(context);
-  builder.SetSurface(DlISize(800, 600));
+  builder.SetSurface(SkISize::Make(800, 600));
   builder.SetCompositor();
   builder.SetRenderTargetType(
       EmbedderTestBackingStoreProducer::RenderTargetType::kOpenGLTexture);
@@ -4440,7 +4425,7 @@ TEST_F(EmbedderTest, CreateInvalidBackingstoreOpenGLTexture) {
 TEST_F(EmbedderTest, CreateInvalidBackingstoreOpenGLFramebuffer) {
   auto& context = GetEmbedderContext<EmbedderTestContextGL>();
   EmbedderConfigBuilder builder(context);
-  builder.SetSurface(DlISize(800, 600));
+  builder.SetSurface(SkISize::Make(800, 600));
   builder.SetCompositor();
   builder.SetRenderTargetType(
       EmbedderTestBackingStoreProducer::RenderTargetType::kOpenGLFramebuffer);
@@ -4503,7 +4488,7 @@ TEST_F(EmbedderTest, CreateInvalidBackingstoreOpenGLFramebuffer) {
 TEST_F(EmbedderTest, CreateInvalidBackingstoreOpenGLSurface) {
   auto& context = GetEmbedderContext<EmbedderTestContextGL>();
   EmbedderConfigBuilder builder(context);
-  builder.SetSurface(DlISize(800, 600));
+  builder.SetSurface(SkISize::Make(800, 600));
   builder.SetCompositor();
   builder.SetRenderTargetType(
       EmbedderTestBackingStoreProducer::RenderTargetType::kOpenGLSurface);
@@ -4560,7 +4545,7 @@ TEST_F(EmbedderTest, CreateInvalidBackingstoreOpenGLSurface) {
 }
 
 TEST_F(EmbedderTest, ExternalTextureGLRefreshedTooOften) {
-  TestGLSurface surface(DlISize(100, 100));
+  TestGLSurface surface(SkISize::Make(100, 100));
   auto context = surface.GetGrContext();
 
   typedef void (*glGenTexturesProc)(uint32_t n, uint32_t* textures);
@@ -4600,19 +4585,19 @@ TEST_F(EmbedderTest, ExternalTextureGLRefreshedTooOften) {
       .canvas = &canvas,
       .gr_context = context.get(),
   };
-  texture_->Paint(ctx, DlRect::MakeXYWH(0, 0, 100, 100), false,
+  texture_->Paint(ctx, SkRect::MakeXYWH(0, 0, 100, 100), false,
                   DlImageSampling::kLinear);
 
   EXPECT_TRUE(resolve_called);
   resolve_called = false;
 
-  texture_->Paint(ctx, DlRect::MakeXYWH(0, 0, 100, 100), false,
+  texture_->Paint(ctx, SkRect::MakeXYWH(0, 0, 100, 100), false,
                   DlImageSampling::kLinear);
 
   EXPECT_FALSE(resolve_called);
 
   texture_->MarkNewFrameAvailable();
-  texture_->Paint(ctx, DlRect::MakeXYWH(0, 0, 100, 100), false,
+  texture_->Paint(ctx, SkRect::MakeXYWH(0, 0, 100, 100), false,
                   DlImageSampling::kLinear);
 
   EXPECT_TRUE(resolve_called);
@@ -4627,7 +4612,7 @@ TEST_F(
   context.GetRendererConfig().open_gl.populate_existing_damage = nullptr;
 
   EmbedderConfigBuilder builder(context);
-  builder.SetSurface(DlISize(800, 600));
+  builder.SetSurface(SkISize::Make(800, 600));
   builder.SetDartEntrypoint("render_gradient_retained");
   auto engine = builder.LaunchEngine();
   ASSERT_TRUE(engine.is_valid());
@@ -4710,7 +4695,7 @@ TEST_F(EmbedderTest,
       });
 
   EmbedderConfigBuilder builder(context);
-  builder.SetSurface(DlISize(800, 600));
+  builder.SetSurface(SkISize::Make(800, 600));
   builder.SetDartEntrypoint("render_gradient_retained");
   auto engine = builder.LaunchEngine();
   ASSERT_TRUE(engine.is_valid());
@@ -4782,7 +4767,7 @@ TEST_F(EmbedderTest, CanRenderWithImpellerOpenGL) {
 
   builder.AddCommandLineArgument("--enable-impeller");
   builder.SetDartEntrypoint("render_impeller_test");
-  builder.SetSurface(DlISize(800, 600));
+  builder.SetSurface(SkISize::Make(800, 600));
   builder.SetCompositor();
   builder.SetRenderTargetType(
       EmbedderTestBackingStoreProducer::RenderTargetType::kOpenGLFramebuffer);
@@ -4844,7 +4829,7 @@ TEST_F(EmbedderTest, ImpellerOpenGLImageSnapshot) {
   EmbedderConfigBuilder builder(context);
   builder.AddCommandLineArgument("--enable-impeller");
   builder.SetDartEntrypoint("render_impeller_image_snapshot_test");
-  builder.SetSurface(DlISize(800, 600));
+  builder.SetSurface(SkISize::Make(800, 600));
   builder.SetCompositor();
   builder.SetRenderTargetType(
       EmbedderTestBackingStoreProducer::RenderTargetType::kOpenGLFramebuffer);
@@ -4860,7 +4845,7 @@ TEST_F(EmbedderTest, CompositorMustBeAbleToRenderToOpenGLSurface) {
   auto& context = GetEmbedderContext<EmbedderTestContextGL>();
 
   EmbedderConfigBuilder builder(context);
-  builder.SetSurface(DlISize(800, 600));
+  builder.SetSurface(SkISize::Make(800, 600));
   builder.SetCompositor();
   builder.SetDartEntrypoint("can_composite_platform_views");
 
@@ -4976,7 +4961,7 @@ TEST_F(EmbedderTest, CompositorMustBeAbleToRenderKnownSceneToOpenGLSurfaces) {
   auto& context = GetEmbedderContext<EmbedderTestContextGL>();
 
   EmbedderConfigBuilder builder(context);
-  builder.SetSurface(DlISize(800, 600));
+  builder.SetSurface(SkISize::Make(800, 600));
   builder.SetCompositor();
   builder.SetDartEntrypoint("can_composite_platform_views_with_known_scene");
 

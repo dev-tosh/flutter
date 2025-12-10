@@ -13,6 +13,9 @@
 #include "flutter/fml/platform/darwin/cf_utils.h"
 #include "flutter/fml/trace_event.h"
 
+#include "third_party/skia/include/core/SkSurface.h"
+#include "third_party/skia/include/utils/mac/SkCGUtils.h"
+
 FLUTTER_ASSERT_ARC
 
 namespace flutter {
@@ -28,7 +31,7 @@ bool IOSSurfaceNoop::IsValid() const {
 
 void IOSSurfaceNoop::UpdateStorageSizeIfNecessary() {}
 
-std::unique_ptr<Surface> IOSSurfaceNoop::CreateGPUSurface() {
+std::unique_ptr<Surface> IOSSurfaceNoop::CreateGPUSurface(GrDirectContext* gr_context) {
   return std::make_unique<GPUSurfaceNoop>();
 }
 
